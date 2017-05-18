@@ -53,59 +53,59 @@ import (
 )
 
 type AWSClient struct {
-cfconn                *cloudformation.CloudFormation
-cloudfrontconn        *cloudfront.CloudFront
-cloudtrailconn        *cloudtrail.CloudTrail
-cloudwatchconn        *cloudwatch.CloudWatch
-cloudwatchlogsconn    *cloudwatchlogs.CloudWatchLogs
-cloudwatcheventsconn  *cloudwatchevents.CloudWatchEvents
-cognitoconn           *cognitoidentity.CognitoIdentity
-configconn            *configservice.ConfigService
-dmsconn               *databasemigrationservice.DatabaseMigrationService
-dsconn                *directoryservice.DirectoryService
-dynamodbconn          *dynamodb.DynamoDB
-ec2conn               *ec2.EC2
-ecrconn               *ecr.ECR
-ecsconn               *ecs.ECS
-efsconn               *efs.EFS
-elbconn               *elb.ELB
-elbv2conn             *elbv2.ELBV2
-emrconn               *emr.EMR
-//esconn                *elasticsearch.ElasticsearchService
-acmconn               *acm.ACM
-apigateway            *apigateway.APIGateway
-appautoscalingconn    *applicationautoscaling.ApplicationAutoScaling
-autoscalingconn       *autoscaling.AutoScaling
-//s3conn                *s3.S3
-sesConn               *ses.SES
-simpledbconn          *simpledb.SimpleDB
-sqsconn               *sqs.SQS
-snsconn               *sns.SNS
-stsconn               *sts.STS
-redshiftconn          *redshift.Redshift
-r53conn               *route53.Route53
-partition             string
-accountid             string
-supportedplatforms    []string
-region                string
-rdsconn               *rds.RDS
-iamconn               *iam.IAM
-kinesisconn           *kinesis.Kinesis
-kmsconn               *kms.KMS
-firehoseconn          *firehose.Firehose
-inspectorconn         *inspector.Inspector
-elasticacheconn       *elasticache.ElastiCache
-elasticbeanstalkconn  *elasticbeanstalk.ElasticBeanstalk
-elastictranscoderconn *elastictranscoder.ElasticTranscoder
-lambdaconn            *lambda.Lambda
-lightsailconn         *lightsail.Lightsail
-opsworksconn          *opsworks.OpsWorks
-glacierconn           *glacier.Glacier
-codebuildconn         *codebuild.CodeBuild
-codedeployconn        *codedeploy.CodeDeploy
-codecommitconn        *codecommit.CodeCommit
-codepipelineconn      *codepipeline.CodePipeline
-sfnconn               *sfn.SFN
-ssmconn               *ssm.SSM
-wafconn               *waf.WAF
+	cfconn                *cloudformation.CloudFormation
+	cloudfrontconn        *cloudfront.CloudFront
+	cloudtrailconn        *cloudtrail.CloudTrail
+	cloudwatchconn        *cloudwatch.CloudWatch
+	cloudwatchlogsconn    *cloudwatchlogs.CloudWatchLogs
+	cloudwatcheventsconn  *cloudwatchevents.CloudWatchEvents
+	cognitoconn           *cognitoidentity.CognitoIdentity
+	configconn            *configservice.ConfigService
+	dmsconn               *databasemigrationservice.DatabaseMigrationService
+	dsconn                *directoryservice.DirectoryService
+	dynamodbconn          *dynamodb.DynamoDB
+	ec2conn               *ec2.EC2
+	ecrconn               *ecr.ECR
+	ecsconn               *ecs.ECS
+	efsconn               *efs.EFS
+	elbconn               *elb.ELB
+	elbv2conn             *elbv2.ELBV2
+	emrconn               *emr.EMR
+	//esconn                *elasticsearch.ElasticsearchService
+	acmconn               *acm.ACM
+	apigateway            *apigateway.APIGateway
+	appautoscalingconn    *applicationautoscaling.ApplicationAutoScaling
+	autoscalingconn       *autoscaling.AutoScaling
+	//s3conn                *s3.S3
+	sesConn               *ses.SES
+	simpledbconn          *simpledb.SimpleDB
+	sqsconn               *sqs.SQS
+	snsconn               *sns.SNS
+	stsconn               *sts.STS
+	redshiftconn          *redshift.Redshift
+	r53conn               *route53.Route53
+	partition             string
+	accountid             string
+	supportedplatforms    []string
+	region                string
+	rdsconn               *rds.RDS
+	iamconn               *iam.IAM
+	kinesisconn           *kinesis.Kinesis
+	kmsconn               *kms.KMS
+	firehoseconn          *firehose.Firehose
+	inspectorconn         *inspector.Inspector
+	elasticacheconn       *elasticache.ElastiCache
+	elasticbeanstalkconn  *elasticbeanstalk.ElasticBeanstalk
+	elastictranscoderconn *elastictranscoder.ElasticTranscoder
+	lambdaconn            *lambda.Lambda
+	lightsailconn         *lightsail.Lightsail
+	opsworksconn          *opsworks.OpsWorks
+	glacierconn           *glacier.Glacier
+	codebuildconn         *codebuild.CodeBuild
+	codedeployconn        *codedeploy.CodeDeploy
+	codecommitconn        *codecommit.CodeCommit
+	codepipelineconn      *codepipeline.CodePipeline
+	sfnconn               *sfn.SFN
+	ssmconn               *ssm.SSM
+	wafconn               *waf.WAF
 }
