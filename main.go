@@ -2,10 +2,6 @@ package main
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"fmt"
 	"strings"
 	"os"
@@ -13,6 +9,10 @@ import (
 	"github.com/mitchellh/cli"
 	"sort"
 	"bytes"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/elb"
 )
 
 func main() {
@@ -33,24 +33,19 @@ func main() {
 	}))
 	region := *sess.Config.Region
 
-	conn := &AWSClient{
-		ec2conn: ec2.New(sess),
-		autoscalingconn: autoscaling.New(sess),
-		elbconn: elb.New(sess),
-		iamconn: iam.New(sess),
-	}
-
 	c.Commands = map[string]cli.CommandFactory{
 		"ec2": func() (cli.Command, error) {
 			return &Ec2DeleteCommand{
-				conn: *conn,
+				autoscalingconn: autoscaling.New(sess),
+				ec2conn: ec2.New(sess),
+				elbconn: elb.New(sess),
 				profile: profile,
 				region: region,
 			}, nil
 		},
 		"iam": func() (cli.Command, error) {
 			return &IamDeleteCommand{
-				conn: *conn,
+				conn: iam.New(sess),
 				profile: profile,
 				region: region,
 				prefix: prefix,

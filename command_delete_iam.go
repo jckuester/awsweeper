@@ -11,7 +11,7 @@ import (
 )
 
 type IamDeleteCommand struct {
-	conn AWSClient
+	conn *iam.IAM
 	profile string
 	region string
 	prefix string
@@ -58,10 +58,10 @@ func (c *IamDeleteCommand) Run(args []string) int {
 		Destroy: true,
 	}
 
-	deleteIamUser(p, d, &c.conn, c.prefix)
-	deleteIamRole(p, d, &c.conn, c.prefix)
-	deleteIamPolicy(p, d, &c.conn, c.prefix)
-	//deleteInstanceProfiles(p, d, &c.conn)
+	deleteIamUser(p, d, c.conn, c.prefix)
+	deleteIamRole(p, d, c.conn, c.prefix)
+	deleteIamPolicy(p, d, c.conn, c.prefix)
+	//deleteInstanceProfiles(p, d, c.conn)
 
 	return 0
 }
@@ -78,9 +78,7 @@ func (c *IamDeleteCommand) Synopsis() string {
 	return "Delete all Ec2 resources"
 }
 
-func deleteIamUser(p terraform.ResourceProvider, d *terraform.InstanceDiff, meta interface{}, prefix string) {
-	conn := meta.(*AWSClient).iamconn
-
+func deleteIamUser(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *iam.IAM, prefix string) {
 	users, err := conn.ListUsers(&iam.ListUsersInput{})
 	if err == nil {
 		for _, u := range users.Users {
@@ -140,9 +138,7 @@ func deleteIamUser(p terraform.ResourceProvider, d *terraform.InstanceDiff, meta
 	}
 }
 
-func deleteIamPolicy(p terraform.ResourceProvider, d *terraform.InstanceDiff, meta interface{}, prefix string) {
-	conn := meta.(*AWSClient).iamconn
-
+func deleteIamPolicy(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *iam.IAM, prefix string) {
 	ps, err := conn.ListPolicies(&iam.ListPoliciesInput{})
 	if err == nil {
 		for _, pol := range ps.Policies {
@@ -165,9 +161,7 @@ func deleteIamPolicy(p terraform.ResourceProvider, d *terraform.InstanceDiff, me
 	}
 }
 
-func deleteIamRole(p terraform.ResourceProvider, d *terraform.InstanceDiff, meta interface{}, prefix string) {
-	conn := meta.(*AWSClient).iamconn
-
+func deleteIamRole(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *iam.IAM, prefix string) {
 	roles, err := conn.ListRoles(&iam.ListRolesInput{})
 	if err == nil {
 		for _, role := range roles.Roles {
@@ -236,9 +230,7 @@ func deleteIamRole(p terraform.ResourceProvider, d *terraform.InstanceDiff, meta
 	}
 }
 
-func deleteInstanceProfiles(p terraform.ResourceProvider, d *terraform.InstanceDiff, meta interface{}) {
-	conn := meta.(*AWSClient).iamconn
-
+func deleteInstanceProfiles(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *iam.IAM) {
 	instps, err := conn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
 	if err == nil {
 		for _, instp := range instps.InstanceProfiles {
