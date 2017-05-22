@@ -49,23 +49,19 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 		os.Exit(1)
 	}
 
-	d := &terraform.InstanceDiff{
-		Destroy: true,
-	}
-
-	deleteASGs(p, d, c.autoscalingconn)
-	deleteLCs(p, d, c.autoscalingconn)
-	deleteInstances(p, d, c.ec2conn)
-	deleteInternetGateways(p, d, c.ec2conn)
-	deleteEips(p, d, c.ec2conn)
-	deleteELBs(p, d, c.elbconn)
-	deleteVpcEndpoints(p, d, c.ec2conn)
-	deleteNatGateways(p, d, c.ec2conn)
-	deleteRouteTables(p, d, c.ec2conn)
-	deleteSecurityGroups(p, d, c.ec2conn)
+	deleteASGs(p, c.autoscalingconn, "aws_autoscaling_group")
+	deleteLCs(p, c.autoscalingconn, "aws_launch_configuration")
+	deleteInstances(p, c.ec2conn, "aws_instance")
+	deleteInternetGateways(p, c.ec2conn, "aws_internet_gateway")
+	deleteEips(p, c.ec2conn, "aws_eip")
+	deleteELBs(p, c.elbconn,  "aws_elb")
+	deleteVpcEndpoints(p, c.ec2conn, "aws_vpc_endpoint")
+	deleteNatGateways(p, c.ec2conn, "aws_nat_gateway")
+	deleteSecurityGroups(p, c.ec2conn, "aws_security_group")
 	//deleteNetworkAcls(c.ec2conn)
-	deleteSubnets(p, d, c.ec2conn)
-	deleteVpcs(p, d, c.ec2conn)
+	deleteSubnets(p, c.ec2conn, "aws_subnet")
+	deleteVpcs(p, c.ec2conn, "aws_vpc")
+	deleteRouteTables(p, c.ec2conn, "aws_route_table")
 
 	//resourceAwsAlbDelete
 	//resourceAwsAlbListenerDelete
@@ -80,6 +76,7 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 	//resourceAwsApiGatewayClientCertificateDelete
 	return 0
 }
+
 func (c *Ec2DeleteCommand) Help() string {
 	helpText := `
 Usage: awsweeper env ec2
@@ -93,7 +90,7 @@ func (c *Ec2DeleteCommand) Synopsis() string {
 	return "Delete all Ec2 resources"
 }
 
-func deleteASGs(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *autoscaling.AutoScaling) {
+func deleteASGs(p terraform.ResourceProvider, conn *autoscaling.AutoScaling, resource_type string) {
 	asgs, err := conn.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
 	if err == nil {
 		for _, asg := range asgs.AutoScalingGroups {
@@ -103,42 +100,24 @@ func deleteASGs(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *a
 					"force_delete":        "true",
 				},
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_autoscaling_group",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteLCs(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *autoscaling.AutoScaling) {
+func deleteLCs(p terraform.ResourceProvider, conn *autoscaling.AutoScaling, resource_type string) {
 	lcs, err := conn.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
 	if err == nil {
 		for _, lc := range lcs.LaunchConfigurations {
 			s := &terraform.InstanceState{
 				ID: *lc.LaunchConfigurationName,
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_launch_configuration",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteInstances(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteInstances(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	resp, err := conn.DescribeInstances(&ec2.DescribeInstancesInput{})
 	if err == nil {
 		for _, r := range resp.Reservations {
@@ -146,22 +125,13 @@ func deleteInstances(p terraform.ResourceProvider, d *terraform.InstanceDiff, co
 				s := &terraform.InstanceState{
 					ID: *i.InstanceId,
 				}
-
-				i := &terraform.InstanceInfo{
-					Type: "aws_instance",
-				}
-
-				_, err = p.Apply(i, s, d)
-				if err != nil {
-					fmt.Printf("err: %s\n", err)
-					os.Exit(1)
-				}
+				deleteResource(p, s, resource_type)
 			}
 		}
 	}
 }
 
-func deleteInternetGateways(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteInternetGateways(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	igs, err := conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{})
 	if err == nil {
 		for _, ig := range igs.InternetGateways {
@@ -171,189 +141,128 @@ func deleteInternetGateways(p terraform.ResourceProvider, d *terraform.InstanceD
 					"vpc_id":        *ig.Attachments[0].VpcId,
 				},
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_internet_gateway",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteNatGateways(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteNatGateways(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	ngs, err := conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{})
 	if err == nil {
 		for _, ng := range ngs.NatGateways {
 			s := &terraform.InstanceState{
 				ID: *ng.NatGatewayId,
 			}
-
-			d := &terraform.InstanceDiff{
-				Destroy: true,
-			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_nat_gateway",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteRouteTables(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteRouteTables(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	rts, err := conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{})
 	if err == nil {
 		for _, rt := range rts.RouteTables {
+			for _, a := range rt.Associations {
+				s := &terraform.InstanceState{
+					ID: *a.RouteTableAssociationId,
+				}
+				deleteResource(p, s, "aws_route_table_association")
+			}
 
 			s := &terraform.InstanceState{
 				ID: *rt.RouteTableId,
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_route_table",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteSecurityGroups(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteSecurityGroups(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	sgs, err := conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{})
 	if err == nil {
 		for _, sg := range sgs.SecurityGroups {
-			s := &terraform.InstanceState{
-				ID: *sg.GroupId,
-			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_security_group",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
+			if *sg.GroupName != "default" {
+				s := &terraform.InstanceState{
+					ID: *sg.GroupId,
+				}
+				deleteResource(p, s, resource_type)
 			}
 		}
 	}
 }
 
-func deleteELBs(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *elb.ELB) {
+func deleteELBs(p terraform.ResourceProvider, conn *elb.ELB, resource_type string) {
 	elbs, err := conn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
 	if err == nil {
 		for _, elb := range elbs.LoadBalancerDescriptions {
 			s := &terraform.InstanceState{
 				ID: *elb.LoadBalancerName,
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_elb",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteVpcEndpoints(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteVpcEndpoints(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	eps, err := conn.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{})
 	if err == nil {
 		for _, ep := range eps.VpcEndpoints {
 			s := &terraform.InstanceState{
 				ID: *ep.VpcEndpointId,
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_vpc_endpoint",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteEips(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteEips(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	addrs, err := conn.DescribeAddresses(&ec2.DescribeAddressesInput{})
 	if err == nil {
 		for _, addr := range addrs.Addresses {
 			s := &terraform.InstanceState{
 				ID: *addr.AllocationId,
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_eip",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteSubnets(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteSubnets(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	subs, err := conn.DescribeSubnets(&ec2.DescribeSubnetsInput{})
 	if err == nil {
 		for _, sub := range subs.Subnets {
 			s := &terraform.InstanceState{
 				ID: *sub.SubnetId,
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_subnet",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
 	}
 }
 
-func deleteVpcs(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *ec2.EC2) {
+func deleteVpcs(p terraform.ResourceProvider, conn *ec2.EC2, resource_type string) {
 	vpcs, err := conn.DescribeVpcs(&ec2.DescribeVpcsInput{})
 	if err == nil {
 		for _, v := range vpcs.Vpcs {
 			s := &terraform.InstanceState{
 				ID: *v.VpcId,
 			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_vpc",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			deleteResource(p, s, resource_type)
 		}
+	}
+}
+
+func deleteResource(p terraform.ResourceProvider, s *terraform.InstanceState, resource_type string) {
+	i := &terraform.InstanceInfo{
+		Type: resource_type,
+	}
+
+	d := &terraform.InstanceDiff{
+		Destroy: true,
+	}
+
+	_, err := p.Apply(i, s, d)
+	if err != nil {
+		fmt.Printf("err: %s\n", err)
+		os.Exit(1)
 	}
 }
