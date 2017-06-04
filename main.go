@@ -20,6 +20,9 @@ func main() {
 	profile := os.Args[1]
 	prefix := "bla"
 
+	log.SetFlags(0)
+	log.SetOutput(ioutil.Discard)
+
 	c := &cli.CLI{
 		Name: app,
 		Version: "0.0.1",
