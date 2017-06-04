@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/hashicorp/terraform/terraform"
 	"io/ioutil"
 )
@@ -44,6 +46,8 @@ func main() {
 				autoscalingconn: autoscaling.New(sess),
 				ec2conn: ec2.New(sess),
 				elbconn: elb.New(sess),
+				r53conn: route53.New(sess),
+				cfconn: cloudformation.New(sess),
 				profile: profile,
 				region: region,
 			}, nil
