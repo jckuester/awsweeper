@@ -54,14 +54,10 @@ func (c *IamDeleteCommand) Run(args []string) int {
 		os.Exit(1)
 	}
 
-	d := &terraform.InstanceDiff{
-		Destroy: true,
-	}
-
-	deleteIamUser(p, d, c.conn, c.prefix)
-	deleteIamRole(p, d, c.conn, c.prefix)
-	deleteIamPolicy(p, d, c.conn, c.prefix)
-	//deleteInstanceProfiles(p, d, c.conn)
+	deleteIamUser(p, c.conn, "aws_iam_user", c.prefix)
+	deleteIamRole(p, c.conn, "aws_iam_role", c.prefix)
+	deleteIamPolicy(p, c.conn, "aws_iam_policy", c.prefix)
+	deleteInstanceProfiles(p, c.conn, "aws_iam_instance_profile")
 
 	return 0
 }
@@ -78,7 +74,9 @@ func (c *IamDeleteCommand) Synopsis() string {
 	return "Delete all Ec2 resources"
 }
 
-func deleteIamUser(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *iam.IAM, prefix string) {
+func deleteIamUser(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
+	fmt.Printf("Start deleting resources: %s\n", resourceType)
+
 	users, err := conn.ListUsers(&iam.ListUsersInput{})
 	if err == nil {
 		for _, u := range users.Users {
@@ -104,16 +102,7 @@ func deleteIamUser(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn
 								"policy_arn": *upol.PolicyArn,
 							},
 						}
-
-						i := &terraform.InstanceInfo{
-							Type: "aws_iam_user_policy_attachment",
-						}
-
-						_, err = p.Apply(i, s, d)
-						if err != nil {
-							fmt.Printf("err: %s\n", err)
-							os.Exit(1)
-						}
+						deleteResource(p, s, "aws_iam_user_policy_attachment")
 					}
 				}
 
@@ -123,22 +112,15 @@ func deleteIamUser(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn
 						"force_destroy":        "true",
 					},
 				}
-
-				i := &terraform.InstanceInfo{
-					Type: "aws_iam_user",
-				}
-
-				_, err = p.Apply(i, s, d)
-				if err != nil {
-					fmt.Printf("err: %s\n", err)
-					os.Exit(1)
-				}
+				deleteResource(p, s, resourceType)
 			}
 		}
 	}
 }
 
-func deleteIamPolicy(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *iam.IAM, prefix string) {
+func deleteIamPolicy(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
+	fmt.Printf("Start deleting resources: %s\n", resourceType)
+
 	ps, err := conn.ListPolicies(&iam.ListPoliciesInput{})
 	if err == nil {
 		for _, pol := range ps.Policies {
@@ -146,22 +128,15 @@ func deleteIamPolicy(p terraform.ResourceProvider, d *terraform.InstanceDiff, co
 				s := &terraform.InstanceState{
 					ID: *pol.Arn,
 				}
-
-				i := &terraform.InstanceInfo{
-					Type: "aws_iam_policy",
-				}
-
-				_, err = p.Apply(i, s, d)
-				if err != nil {
-					fmt.Printf("err: %s\n", err)
-					os.Exit(1)
-				}
+				deleteResource(p, s, resourceType)
 			}
 		}
 	}
 }
 
-func deleteIamRole(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *iam.IAM, prefix string) {
+func deleteIamRole(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
+	fmt.Printf("Start deleting resources: %s\n", resourceType)
+
 	roles, err := conn.ListRoles(&iam.ListRolesInput{})
 	if err == nil {
 		for _, role := range roles.Roles {
@@ -178,16 +153,7 @@ func deleteIamRole(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn
 								"policy_arn": *rpol.PolicyArn,
 							},
 						}
-
-						i := &terraform.InstanceInfo{
-							Type: "aws_iam_role_policy_attachment",
-						}
-
-						_, err = p.Apply(i, s, d)
-						if err != nil {
-							fmt.Printf("err: %s\n", err)
-							os.Exit(1)
-						}
+						deleteResource(p, s, "aws_iam_role_policy_attachment")
 					}
 				}
 
@@ -199,55 +165,36 @@ func deleteIamRole(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn
 						s := &terraform.InstanceState{
 							ID: *role.RoleName + ":" + *rp,
 						}
+						deleteResource(p, s, "aws_iam_role_policy")
 
-						i := &terraform.InstanceInfo{
-							Type: "aws_iam_role_policy",
-						}
-
-						_, err = p.Apply(i, s, d)
-						if err != nil {
-							fmt.Printf("err: %s\n", err)
-							os.Exit(1)
-						}
 					}
 				}
 
 				s := &terraform.InstanceState{
 					ID: *role.RoleName,
 				}
-
-				i := &terraform.InstanceInfo{
-					Type: "aws_iam_role",
-				}
-
-				_, err = p.Apply(i, s, d)
-				if err != nil {
-					fmt.Printf("err: %s\n", err)
-					os.Exit(1)
-				}
+				deleteResource(p, s, resourceType)
 			}
 		}
 	}
 }
 
-func deleteInstanceProfiles(p terraform.ResourceProvider, d *terraform.InstanceDiff, conn *iam.IAM) {
-	instps, err := conn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
+func deleteInstanceProfiles(p terraform.ResourceProvider, conn *iam.IAM, resourceType string) {
+	fmt.Printf("Start deleting resources: %s\n", resourceType)
+
+	res, err := conn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
 	if err == nil {
-		for _, instp := range instps.InstanceProfiles {
-			fmt.Println(instp)
+		for _, r := range res.InstanceProfiles {
+			fmt.Println(r)
 
-			s := &terraform.InstanceState{
-				ID: *instp.InstanceProfileId,
-			}
-
-			i := &terraform.InstanceInfo{
-				Type: "aws_iam_instance_profile",
-			}
-
-			_, err = p.Apply(i, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
+			for _, role := range r.Roles {
+				s := &terraform.InstanceState{
+					ID: *r.InstanceProfileName,
+					Attributes: map[string]string{
+						"role":        *role.RoleName,
+					},
+				}
+				deleteResource(p, s, resourceType)
 			}
 		}
 	}

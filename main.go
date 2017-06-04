@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/hashicorp/terraform/terraform"
+	"io/ioutil"
 )
 
 func main() {
@@ -108,3 +110,22 @@ func BasicHelpFunc(app string) cli.HelpFunc {
 	}
 }
 
+func deleteResource(p terraform.ResourceProvider, s *terraform.InstanceState, resourceType string) {
+	i := &terraform.InstanceInfo{
+		Type: resourceType,
+	}
+
+	d := &terraform.InstanceDiff{
+		Destroy: true,
+	}
+
+	_, err := p.Apply(i, s, d)
+	if err != nil {
+		fmt.Printf("err: %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func printType(resourceType string, numberOfResources int) {
+	fmt.Printf("\n###\nType: %s\nFound: %d\n###\n\n", resourceType, numberOfResources)
+}
