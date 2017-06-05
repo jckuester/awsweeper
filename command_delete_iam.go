@@ -5,62 +5,23 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/terraform/terraform"
-	"os"
-	"github.com/hashicorp/terraform/config"
-	"github.com/hashicorp/terraform/builtin/providers/aws"
 )
 
 type IamDeleteCommand struct {
 	conn *iam.IAM
-	profile string
-	region string
+	provider *terraform.ResourceProvider
 	prefix string
 }
 
-/*
-IAM
-- Users
-- Groups
-- Customer Manged Policies
-- Roles
-- Instance Profiles
-*/
 func (c *IamDeleteCommand) Run(args []string) int {
-	p := aws.Provider()
-
-	cfg := map[string]interface{}{
-		"region":     c.region,
-		"profile":     c.profile,
-	}
-
-	rc, err := config.NewRawConfig(cfg)
-	if err != nil {
-		fmt.Printf("bad: %s\n", err)
-		os.Exit(1)
-	}
-	conf := terraform.NewResourceConfig(rc)
-
-	warns, errs := p.Validate(conf)
-	if len(warns) > 0 {
-		fmt.Printf("warnings: %s\n", warns)
-	}
-	if len(errs) > 0 {
-		fmt.Printf("errors: %s\n", errs)
-		os.Exit(1)
-	}
-
-	if err := p.Configure(conf); err != nil {
-		fmt.Printf("err: %s\n", err)
-		os.Exit(1)
-	}
-
-	deleteIamUser(p, c.conn, "aws_iam_user", c.prefix)
-	deleteIamRole(p, c.conn, "aws_iam_role", c.prefix)
-	deleteIamPolicy(p, c.conn, "aws_iam_policy", c.prefix)
-	deleteInstanceProfiles(p, c.conn, "aws_iam_instance_profile")
+	deleteIamUser(c.provider, c.conn, "aws_iam_user", c.prefix)
+	deleteIamRole(c.provider, c.conn, "aws_iam_role", c.prefix)
+	deleteIamPolicy(c.provider, c.conn, "aws_iam_policy", c.prefix)
+	deleteInstanceProfiles(c.provider, c.conn, "aws_iam_instance_profile")
 
 	return 0
 }
+
 func (c *IamDeleteCommand) Help() string {
 	helpText := `
 Usage: awsweeper env iam
@@ -74,7 +35,7 @@ func (c *IamDeleteCommand) Synopsis() string {
 	return "Delete all Ec2 resources"
 }
 
-func deleteIamUser(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
+func deleteIamUser(p *terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
 	users, err := conn.ListUsers(&iam.ListUsersInput{})
 
 	if err == nil {
@@ -120,7 +81,7 @@ func deleteIamUser(p terraform.ResourceProvider, conn *iam.IAM, resourceType str
 	}
 }
 
-func deleteIamPolicy(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
+func deleteIamPolicy(p *terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
 	ps, err := conn.ListPolicies(&iam.ListPoliciesInput{})
 
 	if err == nil {
@@ -135,7 +96,7 @@ func deleteIamPolicy(p terraform.ResourceProvider, conn *iam.IAM, resourceType s
 	}
 }
 
-func deleteIamRole(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
+func deleteIamRole(p *terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
 	roles, err := conn.ListRoles(&iam.ListRolesInput{})
 
 	if err == nil {
@@ -182,7 +143,7 @@ func deleteIamRole(p terraform.ResourceProvider, conn *iam.IAM, resourceType str
 	}
 }
 
-func deleteInstanceProfiles(p terraform.ResourceProvider, conn *iam.IAM, resourceType string) {
+func deleteInstanceProfiles(p *terraform.ResourceProvider, conn *iam.IAM, resourceType string) {
 	res, err := conn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
 
 	if err == nil {

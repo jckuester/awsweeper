@@ -17,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/hashicorp/terraform/terraform"
 	"io/ioutil"
+	"github.com/hashicorp/terraform/builtin/providers/aws"
+	"github.com/hashicorp/terraform/config"
 )
 
 func main() {
@@ -40,6 +42,8 @@ func main() {
 	}))
 	region := *sess.Config.Region
 
+	p:= initAwsProvider(profile, region)
+
 	c.Commands = map[string]cli.CommandFactory{
 		"ec2": func() (cli.Command, error) {
 			return &Ec2DeleteCommand{
@@ -48,15 +52,13 @@ func main() {
 				elbconn: elb.New(sess),
 				r53conn: route53.New(sess),
 				cfconn: cloudformation.New(sess),
-				profile: profile,
-				region: region,
+				provider: p,
 			}, nil
 		},
 		"iam": func() (cli.Command, error) {
 			return &IamDeleteCommand{
 				conn: iam.New(sess),
-				profile: profile,
-				region: region,
+				provider: p,
 				prefix: prefix,
 			}, nil
 		},
@@ -68,6 +70,38 @@ func main() {
 	}
 
 	os.Exit(exitStatus)
+}
+
+func initAwsProvider(profile string, region string) *terraform.ResourceProvider {
+	p := aws.Provider()
+
+	cfg := map[string]interface{}{
+		"region":     region,
+		"profile":    profile,
+	}
+
+	rc, err := config.NewRawConfig(cfg)
+	if err != nil {
+		fmt.Printf("bad: %s\n", err)
+		os.Exit(1)
+	}
+	conf := terraform.NewResourceConfig(rc)
+
+	warns, errs := p.Validate(conf)
+	if len(warns) > 0 {
+		fmt.Printf("warnings: %s\n", warns)
+	}
+	if len(errs) > 0 {
+		fmt.Printf("errors: %s\n", errs)
+		os.Exit(1)
+	}
+
+	if err := p.Configure(conf); err != nil {
+		fmt.Printf("err: %s\n", err)
+		os.Exit(1)
+	}
+
+	return &p
 }
 
 func BasicHelpFunc(app string) cli.HelpFunc {
@@ -114,7 +148,7 @@ func BasicHelpFunc(app string) cli.HelpFunc {
 	}
 }
 
-func deleteResources(p terraform.ResourceProvider, ids []*string, resourceType string, attributes ...[]*map[string]string) {
+func deleteResources(p *terraform.ResourceProvider, ids []*string, resourceType string, attributes ...[]*map[string]string) {
 	if len(ids) == 0 {
 		return
 	}
@@ -150,7 +184,7 @@ func deleteResources(p terraform.ResourceProvider, ids []*string, resourceType s
 				}
 			}
 
-			_, err := p.Apply(ii, s, d)
+			_, err := (*p).Apply(ii, s, d)
 			if err != nil {
 				fmt.Printf("err: %s\n", err)
 				os.Exit(1)
