@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"fmt"
 )
 
 type Ec2DeleteCommand struct {
@@ -19,33 +20,118 @@ type Ec2DeleteCommand struct {
 	provider	*terraform.ResourceProvider
 }
 
+
+
 func (c *Ec2DeleteCommand) Run(args []string) int {
-	c.deleteASGs("aws_autoscaling_group")
-	c.deleteLCs("aws_launch_configuration")
-	c.deleteInstances("aws_instance")
-	c.deleteInternetGateways("aws_internet_gateway")
-	c.deleteEips("aws_eip")
-	c.deleteELBs("aws_elb")
-	c.deleteVpcEndpoints("aws_vpc_endpoint")
-	c.deleteNatGateways("aws_nat_gateway")
-	c.deleteNetworkInterfaces("aws_network_interface")
-	c.deleteRouteTables("aws_route_table")
-	c.deleteSecurityGroups("aws_security_group")
-	c.deleteNetworkAcls("aws_network_acl")
-	c.deleteSubnets("aws_subnet")
-	c.deleteCloudformationStacks("aws_cloudformation_stack")
-	c.deleteRoute53Record("aws_route53_record")
-	c.deleteRoute53Zone("aws_route53_zone")
-	c.deleteVpcs("aws_vpc")
+
+	awsTypes := []string{
+		"aws_autoscaling_group",
+		"aws_launch_configuration",
+		"aws_instance",
+		"aws_internet_gateway",
+		"aws_eip",
+		"aws_elb",
+		"aws_vpc_endpoint",
+		"aws_nat_gateway",
+		"aws_network_interface",
+		"aws_route_table",
+		"aws_security_group",
+		"aws_network_acl",
+		"aws_subnet",
+		"aws_cloudformation_stack",
+		"aws_route53_record",
+		"aws_route53_zone",
+		"aws_vpc",
+	}
+
+	if len(args) > 0 {
+		switch args[0] {
+		case awsTypes[0]:
+			c.deleteASGs(args[0])
+		case awsTypes[1]:
+			c.deleteLCs(args[0])
+		case awsTypes[2]:
+			c.deleteInstances(args[0])
+		case awsTypes[3]:
+			c.deleteInternetGateways(args[0])
+		case awsTypes[4]:
+			c.deleteEips(args[0])
+		case awsTypes[5]:
+			c.deleteELBs(args[0])
+		case awsTypes[6]:
+			c.deleteVpcEndpoints(args[0])
+		case awsTypes[7]:
+			c.deleteNatGateways(args[0])
+		case awsTypes[8]:
+			c.deleteNetworkInterfaces(args[0])
+		case awsTypes[9]:
+			c.deleteRouteTables(args[0])
+		case awsTypes[10]:
+			c.deleteSecurityGroups(args[0])
+		case awsTypes[11]:
+			c.deleteNetworkAcls(args[0])
+		case awsTypes[12]:
+			c.deleteSubnets(args[0])
+		case awsTypes[13]:
+			c.deleteCloudformationStacks(args[0])
+		case awsTypes[14]:
+			c.deleteRoute53Record(awsTypes[14])
+		case awsTypes[15]:
+			c.deleteRoute53Zone(awsTypes[15])
+		case awsTypes[16]:
+			c.deleteVpcs(awsTypes[16])
+		default:
+			fmt.Println(c.Help())
+			return 1
+		}
+	} else {
+		c.deleteASGs(awsTypes[0])
+		c.deleteLCs(awsTypes[1])
+		c.deleteInstances(awsTypes[2])
+		c.deleteInternetGateways(awsTypes[3])
+		c.deleteEips(awsTypes[4])
+		c.deleteELBs(awsTypes[5])
+		c.deleteVpcEndpoints(awsTypes[6])
+		c.deleteNatGateways(awsTypes[7])
+		c.deleteNetworkInterfaces(awsTypes[8])
+		c.deleteRouteTables(awsTypes[9])
+		c.deleteSecurityGroups(awsTypes[10])
+		c.deleteNetworkAcls(awsTypes[11])
+		c.deleteSubnets(awsTypes[12])
+		c.deleteCloudformationStacks(awsTypes[13])
+		c.deleteRoute53Record(awsTypes[14])
+		c.deleteRoute53Zone(awsTypes[15])
+		c.deleteVpcs(awsTypes[16])
+	}
 
 	return 0
 }
 
 func (c *Ec2DeleteCommand) Help() string {
 	helpText := `
-Usage: awsweeper env ec2
+Usage: awsweeper env ec2 [aws_resource_type]
 
-  Delete all EC2 resources
+  Delete all EC2 resources, or if provided, only a specific resource type
+
+  Currently supported resource types are:
+
+ 	aws_autoscaling_group
+	aws_launch_configuration
+	aws_instance
+	aws_internet_gateway
+	aws_eip
+	aws_elb
+	aws_vpc_endpoint
+	aws_nat_gateway
+	aws_network_interface
+	aws_route_table
+	aws_security_group
+	aws_network_acl
+	aws_subnet
+	aws_cloudformation_stack
+	aws_route53_record
+	aws_route53_zone
+	aws_vpc
 `
 	return strings.TrimSpace(helpText)
 }
