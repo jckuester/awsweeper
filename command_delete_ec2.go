@@ -100,279 +100,223 @@ func (c *Ec2DeleteCommand) Synopsis() string {
 
 func deleteASGs(p terraform.ResourceProvider, conn *autoscaling.AutoScaling, resourceType string) {
 	res, err := conn.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
-	printType(resourceType, len(res.AutoScalingGroups))
 
 	if err == nil {
-		for _, r := range res.AutoScalingGroups {
-			fmt.Println("Delete: " + *r.AutoScalingGroupName)
-			s := &terraform.InstanceState{
-				ID: *r.AutoScalingGroupName,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.AutoScalingGroups))
+		for i, r := range res.AutoScalingGroups {
+			ids[i] = r.AutoScalingGroupName
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteLCs(p terraform.ResourceProvider, conn *autoscaling.AutoScaling, resourceType string) {
 	res, err := conn.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
-	printType(resourceType, len(res.LaunchConfigurations))
 
 	if err == nil {
-		for _, r := range res.LaunchConfigurations {
-			fmt.Println(r.LaunchConfigurationName)
-			s := &terraform.InstanceState{
-				ID: *r.LaunchConfigurationName,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.LaunchConfigurations))
+		for i, r := range res.LaunchConfigurations {
+			ids[i] = r.LaunchConfigurationName
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteInstances(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeInstances(&ec2.DescribeInstancesInput{})
-	//printType(resourceType, len(res.Reservations[0].Instances))
 
 	if err == nil {
 		for _, r := range res.Reservations {
-			for _, i := range r.Instances {
-				if *i.State.Name != "terminated" {
-					fmt.Println(i.KeyName)
-					s := &terraform.InstanceState{
-						ID: *i.InstanceId,
-					}
-					deleteResource(p, s, resourceType)
+			ids := make([]*string, len(r.Instances))
+			for i, in := range r.Instances {
+				if *in.State.Name != "terminated" {
+					ids[i] = in.InstanceId
 				}
 			}
+			deleteResources(p, ids, resourceType)
 		}
 	}
 }
 
 func deleteInternetGateways(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{})
-	printType(resourceType, len(res.InternetGateways))
 
 	if err == nil {
-		for _, r := range res.InternetGateways {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.InternetGatewayId,
-				Attributes: map[string]string{
-					"vpc_id":        *r.Attachments[0].VpcId,
-				},
+		ids := make([]*string, len(res.InternetGateways))
+		attributes := make([]*map[string]string, len(res.InternetGateways))
+		for i, r := range res.InternetGateways {
+			ids[i] = r.InternetGatewayId
+			attributes[i] = &map[string]string{
+				"vpc_id":        *r.Attachments[0].VpcId,
 			}
-			deleteResource(p, s, resourceType)
 		}
+		deleteResources(p, ids, resourceType, attributes)
 	}
 }
 
 func deleteNatGateways(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{})
-	printType(resourceType, len(res.NatGateways))
 
 	if err == nil {
-		for _, r := range res.NatGateways {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.NatGatewayId,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.NatGateways))
+		for i, r := range res.NatGateways {
+			ids[i] = r.NatGatewayId
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteRouteTables(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{})
-	printType(resourceType, len(res.RouteTables))
 
 	if err == nil {
-		for _, r := range res.RouteTables {
-			for _, a := range r.Associations {
+		rIds := make([]*string, len(res.RouteTables))
+		for i, r := range res.RouteTables {
+			aIds := make([]*string, len(r.Associations))
+			for j, a := range r.Associations {
 				if ! *a.Main {
-					fmt.Println(a)
-					s := &terraform.InstanceState{
-						ID: *a.RouteTableAssociationId,
-					}
-					deleteResource(p, s, "aws_route_table_association")
-
-					fmt.Println(r)
-					s2 := &terraform.InstanceState{
-						ID: *r.RouteTableId,
-					}
-					deleteResource(p, s2, resourceType)
+					aIds[j] = a.RouteTableAssociationId
 				}
 			}
-
+			deleteResources(p, aIds, "aws_route_table_association")
+			rIds[i] = r.RouteTableId
 		}
+		deleteResources(p, rIds, resourceType)
 	}
 }
 
 func deleteSecurityGroups(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{})
-	printType(resourceType, len(res.SecurityGroups))
 
 	if err == nil {
-		for _, r := range res.SecurityGroups {
+		ids := make([]*string, len(res.SecurityGroups))
+		for i, r := range res.SecurityGroups {
 			if *r.GroupName != "default" {
-				fmt.Println(r)
-				s := &terraform.InstanceState{
-					ID: *r.GroupId,
-				}
-				deleteResource(p, s, resourceType)
+				ids[i] = r.GroupId
 			}
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteNetworkAcls(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{})
-	printType(resourceType, len(res.NetworkAcls))
 
 	if err == nil {
-		for _, r := range res.NetworkAcls {
-			if ! *r.IsDefault {
-				fmt.Println(r)
-				s := &terraform.InstanceState{
-					ID: *r.NetworkAclId,
-				}
-				deleteResource(p, s, resourceType)
-			}
+		ids := make([]*string, len(res.NetworkAcls))
+		for i, r := range res.NetworkAcls {
+			ids[i] = r.NetworkAclId
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteNetworkInterfaces(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{})
-	printType(resourceType, len(res.NetworkInterfaces))
 
 	if err == nil {
-		for _, r := range res.NetworkInterfaces {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.NetworkInterfaceId,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.NetworkInterfaces))
+		for i, r := range res.NetworkInterfaces{
+			ids[i] = r.NetworkInterfaceId
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteELBs(p terraform.ResourceProvider, conn *elb.ELB, resourceType string) {
 	res, err := conn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
-	printType(resourceType, len(res.LoadBalancerDescriptions))
 
 	if err == nil {
-		for _, r := range res.LoadBalancerDescriptions {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.LoadBalancerName,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.LoadBalancerDescriptions))
+		for i, r := range res.LoadBalancerDescriptions {
+			ids[i] = r.LoadBalancerName
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteVpcEndpoints(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{})
-	printType(resourceType, len(res.VpcEndpoints))
 
 	if err == nil {
-		for _, r := range res.VpcEndpoints {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.VpcEndpointId,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.VpcEndpoints))
+		for i, r := range res.VpcEndpoints {
+			ids[i] = r.VpcEndpointId
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteEips(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeAddresses(&ec2.DescribeAddressesInput{})
-	printType(resourceType, len(res.Addresses))
 
 	if err == nil {
-		for _, r := range res.Addresses {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.AllocationId,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.Addresses))
+		for i, r := range res.Addresses {
+			ids[i] = r.AllocationId
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteSubnets(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeSubnets(&ec2.DescribeSubnetsInput{})
-	printType(resourceType, len(res.Subnets))
 
 	if err == nil {
-		for _, r := range res.Subnets {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.SubnetId,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.Subnets))
+		for i, r := range res.Subnets {
+			ids[i] = r.SubnetId
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteVpcs(p terraform.ResourceProvider, conn *ec2.EC2, resourceType string) {
 	res, err := conn.DescribeVpcs(&ec2.DescribeVpcsInput{})
-	printType(resourceType, len(res.Vpcs))
 
 	if err == nil {
-		for _, r := range res.Vpcs {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.VpcId,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.Vpcs))
+		for i, r := range res.Vpcs {
+			ids[i] = r.VpcId
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteRoute53Record(p terraform.ResourceProvider, conn *route53.Route53, resourceType string) {
 	res, err := conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{})
-	printType(resourceType, len(res.ResourceRecordSets))
 
 	if err == nil {
 		for _, r := range res.ResourceRecordSets {
-			fmt.Println(r)
-			for _, rr := range r.ResourceRecords {
-				s := &terraform.InstanceState{
-					ID: *rr.Value,
-				}
-				deleteResource(p, s, resourceType)
+			ids := make([]*string, len(r.ResourceRecords))
+			for i, rr := range r.ResourceRecords {
+				ids[i] = rr.Value
 			}
+			deleteResources(p, ids, resourceType)
 		}
 	}
 }
 
 func deleteRoute53Zone(p terraform.ResourceProvider, conn *route53.Route53, resourceType string) {
 	res, err := conn.ListHostedZones(&route53.ListHostedZonesInput{})
-	printType(resourceType, len(res.HostedZones))
 
 	if err == nil {
-		for _, r := range res.HostedZones {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.Id,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.HostedZones))
+		for i, r := range res.HostedZones {
+			ids[i] = r.Id
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteCloudformationStacks(p terraform.ResourceProvider, conn *cloudformation.CloudFormation, resourceType string) {
 	res, err := conn.DescribeStacks(&cloudformation.DescribeStacksInput{})
-	printType(resourceType, len(res.Stacks))
 
 	if err == nil {
-		for _, r := range res.Stacks {
-			fmt.Println(r)
-			s := &terraform.InstanceState{
-				ID: *r.StackId,
-			}
-			deleteResource(p, s, resourceType)
+		ids := make([]*string, len(res.Stacks))
+		for i, r := range res.Stacks {
+			ids[i] = r.StackId
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }

@@ -75,11 +75,13 @@ func (c *IamDeleteCommand) Synopsis() string {
 }
 
 func deleteIamUser(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
-	fmt.Printf("Start deleting resources: %s\n", resourceType)
-
 	users, err := conn.ListUsers(&iam.ListUsersInput{})
+
 	if err == nil {
-		for _, u := range users.Users {
+		uIds := make([]*string, len(users.Users))
+		uAttributes := make([]*map[string]string, len(users.Users))
+
+		for i, u := range users.Users {
 			if strings.HasPrefix(*u.UserName, prefix) {
 				ups, err := conn.ListUserPolicies(&iam.ListUserPoliciesInput{
 					UserName: u.UserName,
@@ -94,108 +96,109 @@ func deleteIamUser(p terraform.ResourceProvider, conn *iam.IAM, resourceType str
 					UserName: u.UserName,
 				})
 				if err == nil {
-					for _, upol := range upols.AttachedPolicies {
-						s := &terraform.InstanceState{
-							ID: *upol.PolicyArn,
-							Attributes: map[string]string{
-								"user":        *u.UserName,
-								"policy_arn": *upol.PolicyArn,
-							},
+					upolIds := make([]*string, len(upols.AttachedPolicies))
+					attributes := make([]*map[string]string, len(upols.AttachedPolicies))
+
+					for j, upol := range upols.AttachedPolicies {
+						upolIds[j] = upol.PolicyArn
+						attributes[j] =  &map[string]string{
+							"user":        *u.UserName,
+							"policy_arn": *upol.PolicyArn,
 						}
-						deleteResource(p, s, "aws_iam_user_policy_attachment")
 					}
+					deleteResources(p, upolIds, "aws_iam_user_policy_attachment", attributes)
+
 				}
 
-				s := &terraform.InstanceState{
-					ID: *u.UserName,
-					Attributes: map[string]string{
-						"force_destroy":        "true",
-					},
+				uIds[i] = u.UserName
+				uAttributes[i] = &map[string]string{
+					"force_destroy":        "true",
 				}
-				deleteResource(p, s, resourceType)
 			}
 		}
+		deleteResources(p, uIds, resourceType, uAttributes)
 	}
 }
 
 func deleteIamPolicy(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
-	fmt.Printf("Start deleting resources: %s\n", resourceType)
-
 	ps, err := conn.ListPolicies(&iam.ListPoliciesInput{})
+
 	if err == nil {
-		for _, pol := range ps.Policies {
+		ids := make([]*string, len(ps.Policies))
+
+		for i, pol := range ps.Policies {
 			if strings.HasPrefix(*pol.PolicyName, prefix) {
-				s := &terraform.InstanceState{
-					ID: *pol.Arn,
-				}
-				deleteResource(p, s, resourceType)
+				ids[i] = pol.Arn
 			}
 		}
+		deleteResources(p, ids, resourceType)
 	}
 }
 
 func deleteIamRole(p terraform.ResourceProvider, conn *iam.IAM, resourceType string, prefix string) {
-	fmt.Printf("Start deleting resources: %s\n", resourceType)
-
 	roles, err := conn.ListRoles(&iam.ListRolesInput{})
+
 	if err == nil {
-		for _, role := range roles.Roles {
+		rIds := make([]*string, len(roles.Roles))
+
+		for i, role := range roles.Roles {
 			if strings.HasPrefix(*role.RoleName, prefix) {
 				rpols, err := conn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
 					RoleName: role.RoleName,
 				})
+
 				if err == nil {
-					for _, rpol := range rpols.AttachedPolicies {
-						s := &terraform.InstanceState{
-							ID: *rpol.PolicyArn,
-							Attributes: map[string]string{
-								"role":        *role.RoleName,
-								"policy_arn": *rpol.PolicyArn,
-							},
+					rpolIds := make([]*string, len(rpols.AttachedPolicies))
+					rpolAttributes := make([]*map[string]string, len(roles.Roles))
+
+					for j, rpol := range rpols.AttachedPolicies {
+						rpolIds[j] = rpol.PolicyArn
+						rpolAttributes[j] = &map[string]string{
+							"role":        *role.RoleName,
+							"policy_arn": *rpol.PolicyArn,
 						}
-						deleteResource(p, s, "aws_iam_role_policy_attachment")
 					}
+					deleteResources(p, rpolIds, "aws_iam_role_policy_attachment", rpolAttributes)
 				}
 
 				rps, err := conn.ListRolePolicies(&iam.ListRolePoliciesInput{
 					RoleName: role.RoleName,
 				})
+
 				if err == nil {
-					for _, rp := range rps.PolicyNames {
-						s := &terraform.InstanceState{
-							ID: *role.RoleName + ":" + *rp,
-						}
-						deleteResource(p, s, "aws_iam_role_policy")
+					pIds := make([]*string, len(rps.PolicyNames))
 
+					for k, rp := range rps.PolicyNames {
+						bla := *role.RoleName + ":" + *rp
+						pIds[k] = &bla
 					}
+					deleteResources(p, pIds, "aws_iam_role_policy")
 				}
 
-				s := &terraform.InstanceState{
-					ID: *role.RoleName,
-				}
-				deleteResource(p, s, resourceType)
+				rIds[i] = role.RoleName
 			}
 		}
+		deleteResources(p, rIds, resourceType)
 	}
 }
 
 func deleteInstanceProfiles(p terraform.ResourceProvider, conn *iam.IAM, resourceType string) {
-	fmt.Printf("Start deleting resources: %s\n", resourceType)
-
 	res, err := conn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
+
 	if err == nil {
 		for _, r := range res.InstanceProfiles {
 			fmt.Println(r)
+			rIds := make([]*string, len(r.Roles))
+			rAttributes := make([]*map[string]string, len(r.Roles))
 
-			for _, role := range r.Roles {
-				s := &terraform.InstanceState{
-					ID: *r.InstanceProfileName,
-					Attributes: map[string]string{
-						"role":        *role.RoleName,
-					},
+			for j, role := range r.Roles {
+				rIds[j] = r.InstanceProfileName
+				rAttributes[j] = &map[string]string{
+					"role":        *role.RoleName,
 				}
-				deleteResource(p, s, resourceType)
 			}
+			deleteResources(p, rIds, resourceType, rAttributes)
 		}
 	}
 }
+

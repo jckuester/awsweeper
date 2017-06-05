@@ -22,7 +22,7 @@ import (
 func main() {
 	app :=  "awsweeper"
 	profile := os.Args[1]
-	prefix := "bla"
+	prefix := "ml"
 
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
@@ -114,8 +114,14 @@ func BasicHelpFunc(app string) cli.HelpFunc {
 	}
 }
 
-func deleteResource(p terraform.ResourceProvider, s *terraform.InstanceState, resourceType string) {
-	i := &terraform.InstanceInfo{
+func deleteResources(p terraform.ResourceProvider, ids []*string, resourceType string, attributes ...[]*map[string]string) {
+	if len(ids) == 0 {
+		return
+	}
+
+	printType(resourceType, len(ids))
+
+	ii := &terraform.InstanceInfo{
 		Type: resourceType,
 	}
 
@@ -123,13 +129,37 @@ func deleteResource(p terraform.ResourceProvider, s *terraform.InstanceState, re
 		Destroy: true,
 	}
 
-	_, err := p.Apply(i, s, d)
-	if err != nil {
-		fmt.Printf("err: %s\n", err)
-		os.Exit(1)
+	a := make([]*map[string]string, len(ids))
+	if len(attributes) > 0 {
+		a = attributes[0]
 	}
+
+	for i, id := range ids {
+		if id != nil {
+			fmt.Println("Deleting: " + *id)
+
+			var s *terraform.InstanceState
+			if a[i] == nil {
+				s = &terraform.InstanceState{
+					ID: *id,
+				}
+			} else {
+				s = &terraform.InstanceState{
+					ID: *id,
+					Attributes: *a[i],
+				}
+			}
+
+			_, err := p.Apply(ii, s, d)
+			if err != nil {
+				fmt.Printf("err: %s\n", err)
+				os.Exit(1)
+			}
+		}
+	}
+	fmt.Println("---\n")
 }
 
 func printType(resourceType string, numberOfResources int) {
-	fmt.Printf("\n###\nType: %s\nFound: %d\n###\n\n", resourceType, numberOfResources)
+	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", resourceType, numberOfResources)
 }
