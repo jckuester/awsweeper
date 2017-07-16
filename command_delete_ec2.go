@@ -115,15 +115,16 @@ func (c *Ec2DeleteCommand) deleteInstances(resourceType string) {
 	res, err := c.ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{})
 
 	if err == nil {
+		ids := []*string{}
 		for _, r := range res.Reservations {
-			ids := make([]*string, len(r.Instances))
-			for i, in := range r.Instances {
+			for _, in := range r.Instances {
 				if *in.State.Name != "terminated" {
-					ids[i] = in.InstanceId
+					ids = append(ids, in.InstanceId)
 				}
 			}
-			deleteResources(c.provider, ids, resourceType)
+
 		}
+		deleteResources(c.provider, ids, resourceType)
 	}
 }
 
