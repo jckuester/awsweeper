@@ -15,93 +15,45 @@ type Ec2DeleteCommand struct {
 	ec2conn         *ec2.EC2
 	autoscalingconn *autoscaling.AutoScaling
 	elbconn         *elb.ELB
-	r53conn  	*route53.Route53
+	r53conn         *route53.Route53
 	cfconn          *cloudformation.CloudFormation
-	provider	*terraform.ResourceProvider
+	provider        *terraform.ResourceProvider
 }
-
-
 
 func (c *Ec2DeleteCommand) Run(args []string) int {
 
-	awsTypes := []string{
-		"aws_autoscaling_group",
-		"aws_launch_configuration",
-		"aws_instance",
-		"aws_internet_gateway",
-		"aws_eip",
-		"aws_elb",
-		"aws_vpc_endpoint",
-		"aws_nat_gateway",
-		"aws_network_interface",
-		"aws_route_table",
-		"aws_security_group",
-		"aws_network_acl",
-		"aws_subnet",
-		"aws_cloudformation_stack",
-		"aws_route53_record",
-		"aws_route53_zone",
-		"aws_vpc",
+	awsTypes := map[string]func(string){
+		"aws_autoscaling_group": c.deleteASGs,
+		"aws_launch_configuration": c.deleteLCs,
+		"aws_instance": c.deleteInstances,
+		"aws_internet_gateway": c.deleteInternetGateways,
+		"aws_eip": c.deleteEips,
+		"aws_elb": c.deleteELBs,
+		"aws_vpc_endpoint": c.deleteVpcEndpoints,
+		"aws_nat_gateway": c.deleteNatGateways,
+		"aws_network_interface": c.deleteNetworkInterfaces,
+		"aws_route_table": c.deleteRouteTables,
+		"aws_security_group": c.deleteSecurityGroups,
+		"aws_network_acl": c.deleteNetworkAcls,
+		"aws_subnet": c.deleteSubnets,
+		"aws_cloudformation_stack": c.deleteCloudformationStacks,
+		"aws_route53_record": c.deleteRoute53Record,
+		"aws_route53_zone": c.deleteRoute53Zone,
+		"aws_vpc": c.deleteVpcs,
 	}
 
 	if len(args) > 0 {
-		switch args[0] {
-		case awsTypes[0]:
-			c.deleteASGs(args[0])
-		case awsTypes[1]:
-			c.deleteLCs(args[0])
-		case awsTypes[2]:
-			c.deleteInstances(args[0])
-		case awsTypes[3]:
-			c.deleteInternetGateways(args[0])
-		case awsTypes[4]:
-			c.deleteEips(args[0])
-		case awsTypes[5]:
-			c.deleteELBs(args[0])
-		case awsTypes[6]:
-			c.deleteVpcEndpoints(args[0])
-		case awsTypes[7]:
-			c.deleteNatGateways(args[0])
-		case awsTypes[8]:
-			c.deleteNetworkInterfaces(args[0])
-		case awsTypes[9]:
-			c.deleteRouteTables(args[0])
-		case awsTypes[10]:
-			c.deleteSecurityGroups(args[0])
-		case awsTypes[11]:
-			c.deleteNetworkAcls(args[0])
-		case awsTypes[12]:
-			c.deleteSubnets(args[0])
-		case awsTypes[13]:
-			c.deleteCloudformationStacks(args[0])
-		case awsTypes[14]:
-			c.deleteRoute53Record(awsTypes[14])
-		case awsTypes[15]:
-			c.deleteRoute53Zone(awsTypes[15])
-		case awsTypes[16]:
-			c.deleteVpcs(awsTypes[16])
-		default:
+		v, ok := awsTypes[args[0]]
+		if ok {
+			v(args[0])
+		} else {
 			fmt.Println(c.Help())
 			return 1
 		}
 	} else {
-		c.deleteASGs(awsTypes[0])
-		c.deleteLCs(awsTypes[1])
-		c.deleteInstances(awsTypes[2])
-		c.deleteInternetGateways(awsTypes[3])
-		c.deleteEips(awsTypes[4])
-		c.deleteELBs(awsTypes[5])
-		c.deleteVpcEndpoints(awsTypes[6])
-		c.deleteNatGateways(awsTypes[7])
-		c.deleteNetworkInterfaces(awsTypes[8])
-		c.deleteRouteTables(awsTypes[9])
-		c.deleteSecurityGroups(awsTypes[10])
-		c.deleteNetworkAcls(awsTypes[11])
-		c.deleteSubnets(awsTypes[12])
-		c.deleteCloudformationStacks(awsTypes[13])
-		c.deleteRoute53Record(awsTypes[14])
-		c.deleteRoute53Zone(awsTypes[15])
-		c.deleteVpcs(awsTypes[16])
+		for k, v := range awsTypes {
+			v(k)
+		}
 	}
 
 	return 0
@@ -258,7 +210,7 @@ func (c *Ec2DeleteCommand) deleteNetworkInterfaces(resourceType string) {
 
 	if err == nil {
 		ids := make([]*string, len(res.NetworkInterfaces))
-		for i, r := range res.NetworkInterfaces{
+		for i, r := range res.NetworkInterfaces {
 			ids[i] = r.NetworkInterfaceId
 		}
 		deleteResources(c.provider, ids, resourceType)
