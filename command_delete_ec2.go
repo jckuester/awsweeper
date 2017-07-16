@@ -161,16 +161,16 @@ func (c *Ec2DeleteCommand) deleteRouteTables(resourceType string) {
 
 	if err == nil {
 		rIds := make([]*string, len(res.RouteTables))
+		aIds := []*string{}
 		for i, r := range res.RouteTables {
-			aIds := make([]*string, len(r.Associations))
-			for j, a := range r.Associations {
+			for _, a := range r.Associations {
 				if ! *a.Main {
-					aIds[j] = a.RouteTableAssociationId
+					aIds = append(aIds, a.RouteTableAssociationId)
 				}
 			}
-			deleteResources(c.provider, aIds, "aws_route_table_association")
 			rIds[i] = r.RouteTableId
 		}
+		deleteResources(c.provider, aIds, "aws_route_table_association")
 		deleteResources(c.provider, rIds, resourceType)
 	}
 }
