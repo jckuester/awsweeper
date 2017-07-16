@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"fmt"
+	"sort"
 )
 
 type Ec2DeleteCommand struct {
@@ -18,11 +19,12 @@ type Ec2DeleteCommand struct {
 	r53conn         *route53.Route53
 	cfconn          *cloudformation.CloudFormation
 	provider        *terraform.ResourceProvider
+	awsTypes	map[string]func(string)
 }
 
 func (c *Ec2DeleteCommand) Run(args []string) int {
 
-	awsTypes := map[string]func(string){
+	c.awsTypes = map[string]func(string){
 		"aws_autoscaling_group": c.deleteASGs,
 		"aws_launch_configuration": c.deleteLCs,
 		"aws_instance": c.deleteInstances,
@@ -43,7 +45,7 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 	}
 
 	if len(args) > 0 {
-		v, ok := awsTypes[args[0]]
+		v, ok := c.awsTypes[args[0]]
 		if ok {
 			v(args[0])
 		} else {
@@ -51,7 +53,7 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 			return 1
 		}
 	} else {
-		for k, v := range awsTypes {
+		for k, v := range c.awsTypes {
 			v(k)
 		}
 	}
@@ -61,35 +63,28 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 
 func (c *Ec2DeleteCommand) Help() string {
 	helpText := `
-Usage: awsweeper env ec2 [aws_resource_type]
+Usage: awsweeper <environment> ec2 [aws_resource_type]
 
-  Delete all EC2 resources, or if provided, only a specific resource type
+If no 'aws_resource_type' is provided as a further sub-argument,
+all resources of the types in the list below will be deleted.
 
-  Currently supported resource types are:
-
- 	aws_autoscaling_group
-	aws_launch_configuration
-	aws_instance
-	aws_internet_gateway
-	aws_eip
-	aws_elb
-	aws_vpc_endpoint
-	aws_nat_gateway
-	aws_network_interface
-	aws_route_table
-	aws_security_group
-	aws_network_acl
-	aws_subnet
-	aws_cloudformation_stack
-	aws_route53_record
-	aws_route53_zone
-	aws_vpc
+Currently supported EC2 resource types are:
 `
+	var keys []string
+	for k  := range c.awsTypes {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		helpText += fmt.Sprintf("\t\t%s\n", k)
+	}
+
 	return strings.TrimSpace(helpText)
 }
 
 func (c *Ec2DeleteCommand) Synopsis() string {
-	return "Delete all Ec2 resources"
+	return "Delete all or one specific EC2 resource type"
 }
 
 func (c *Ec2DeleteCommand) deleteASGs(resourceType string) {
