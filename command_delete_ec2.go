@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"fmt"
-	"sort"
 )
 
 type Ec2DeleteCommand struct {
@@ -19,12 +18,32 @@ type Ec2DeleteCommand struct {
 	r53conn         *route53.Route53
 	cfconn          *cloudformation.CloudFormation
 	provider        *terraform.ResourceProvider
-	awsTypes	map[string]func(string)
+	resourceTypes 	[]string
 }
 
 func (c *Ec2DeleteCommand) Run(args []string) int {
 
-	c.awsTypes = map[string]func(string){
+	c.resourceTypes = []string{
+		"aws_autoscaling_group",
+		"aws_launch_configuration",
+		"aws_instance",
+		"aws_internet_gateway",
+		"aws_eip",
+		"aws_elb",
+		"aws_vpc_endpoint",
+		"aws_nat_gateway",
+		"aws_network_interface",
+		"aws_route_table",
+		"aws_security_group",
+		"aws_network_acl",
+		"aws_subnet",
+		"aws_cloudformation_stack",
+		"aws_route53_record",
+		"aws_route53_zone",
+		"aws_vpc",
+	}
+
+	deleteFunctions := map[string]func(string){
 		"aws_autoscaling_group": c.deleteASGs,
 		"aws_launch_configuration": c.deleteLCs,
 		"aws_instance": c.deleteInstances,
@@ -45,7 +64,7 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 	}
 
 	if len(args) > 0 {
-		v, ok := c.awsTypes[args[0]]
+		v, ok := deleteFunctions[args[0]]
 		if ok {
 			v(args[0])
 		} else {
@@ -53,8 +72,8 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 			return 1
 		}
 	} else {
-		for k, v := range c.awsTypes {
-			v(k)
+		for _, k := range c.resourceTypes {
+			deleteFunctions[k](k)
 		}
 	}
 
@@ -70,13 +89,8 @@ all resources of the types in the list below will be deleted.
 
 Currently supported EC2 resource types are:
 `
-	var keys []string
-	for k  := range c.awsTypes {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
 
-	for _, k := range keys {
+	for _, k := range c.resourceTypes {
 		helpText += fmt.Sprintf("\t\t%s\n", k)
 	}
 
