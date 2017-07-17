@@ -19,10 +19,11 @@ import (
 	"io/ioutil"
 	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/config"
+	"sync"
 )
 
 func main() {
-	app :=  "awsweeper"
+	app := "awsweeper"
 	profile := os.Args[1]
 	prefix := "ml"
 
@@ -42,7 +43,7 @@ func main() {
 	}))
 	region := *sess.Config.Region
 
-	p:= initAwsProvider(profile, region)
+	p := initAwsProvider(profile, region)
 
 	c.Commands = map[string]cli.CommandFactory{
 		"ec2": func() (cli.Command, error) {
@@ -140,7 +141,7 @@ func BasicHelpFunc(app string) cli.HelpFunc {
 				continue
 			}
 
-			key = fmt.Sprintf("%s%s", key, strings.Repeat(" ", maxKeyLen-len(key)))
+			key = fmt.Sprintf("%s%s", key, strings.Repeat(" ", maxKeyLen - len(key)))
 			buf.WriteString(fmt.Sprintf("    %s    %s\n", key, command.Synopsis()))
 		}
 
@@ -168,29 +169,55 @@ func deleteResources(p *terraform.ResourceProvider, ids []*string, resourceType 
 		a = attributes[0]
 	}
 
+	numWorkerThreads := 5
+	chIds := make(chan *string, numWorkerThreads)
+	chAttrs := make(chan *map[string]string, numWorkerThreads)
+
+	var wg sync.WaitGroup
+	wg.Add(len(ids))
+
+	for j := 1; j <= numWorkerThreads; j++ {
+		go func() {
+			for {
+				id, more := <-chIds
+				if more {
+					fmt.Println("Deleting: " + *id)
+
+					a := <-chAttrs
+					var s *terraform.InstanceState
+					if a == nil {
+						s = &terraform.InstanceState{
+							ID: *id,
+						}
+					} else {
+						s = &terraform.InstanceState{
+							ID: *id,
+							Attributes: *a,
+						}
+					}
+
+					_, err := (*p).Apply(ii, s, d)
+					if err != nil {
+						fmt.Printf("err: %s\n", err)
+						os.Exit(1)
+					}
+					wg.Done()
+				} else {
+					return
+				}
+			}
+		}()
+	}
+
 	for i, id := range ids {
 		if id != nil {
-			fmt.Println("Deleting: " + *id)
-
-			var s *terraform.InstanceState
-			if a[i] == nil {
-				s = &terraform.InstanceState{
-					ID: *id,
-				}
-			} else {
-				s = &terraform.InstanceState{
-					ID: *id,
-					Attributes: *a[i],
-				}
-			}
-
-			_, err := (*p).Apply(ii, s, d)
-			if err != nil {
-				fmt.Printf("err: %s\n", err)
-				os.Exit(1)
-			}
+			chIds <- id
+			chAttrs <- a[i]
 		}
 	}
+	close(chIds)
+
+	wg.Wait()
 	fmt.Println("---\n")
 }
 
