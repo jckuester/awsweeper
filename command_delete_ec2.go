@@ -27,19 +27,19 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 		"aws_autoscaling_group",
 		"aws_launch_configuration",
 		"aws_instance",
-		"aws_internet_gateway",
-		"aws_eip",
 		"aws_elb",
 		"aws_vpc_endpoint",
 		"aws_nat_gateway",
+		"aws_cloudformation_stack",
+		"aws_route53_record",
+		"aws_route53_zone",
+		"aws_eip",
+		"aws_internet_gateway",
 		"aws_network_interface",
 		"aws_route_table",
 		"aws_security_group",
 		"aws_network_acl",
 		"aws_subnet",
-		"aws_cloudformation_stack",
-		"aws_route53_record",
-		"aws_route53_zone",
 		"aws_vpc",
 	}
 
@@ -162,9 +162,11 @@ func (c *Ec2DeleteCommand) deleteNatGateways(resourceType string) {
 	res, err := c.ec2conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{})
 
 	if err == nil {
-		ids := make([]*string, len(res.NatGateways))
-		for i, r := range res.NatGateways {
-			ids[i] = r.NatGatewayId
+		ids := []*string{}
+		for _, r := range res.NatGateways {
+			if *r.State == "available" {
+				ids = append(ids, r.NatGatewayId)
+			}
 		}
 		deleteResources(c.provider, ids, resourceType)
 	}
