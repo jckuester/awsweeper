@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/efs"
 )
 
 type Ec2DeleteCommand struct {
@@ -17,8 +18,9 @@ type Ec2DeleteCommand struct {
 	elbconn         *elb.ELB
 	r53conn         *route53.Route53
 	cfconn          *cloudformation.CloudFormation
+	efsconn         *efs.EFS
 	provider        *terraform.ResourceProvider
-	resourceTypes 	[]string
+	resourceTypes   []string
 }
 
 func (c *Ec2DeleteCommand) Run(args []string) int {
@@ -31,15 +33,15 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 		"aws_vpc_endpoint",
 		"aws_nat_gateway",
 		"aws_cloudformation_stack",
-		"aws_route53_record",
 		"aws_route53_zone",
 		"aws_eip",
 		"aws_internet_gateway",
+		"aws_efs_file_system",
 		"aws_network_interface",
-		"aws_route_table",
-		"aws_security_group",
-		"aws_network_acl",
 		"aws_subnet",
+		"aws_route_table",
+		"aws_network_acl",
+		"aws_security_group",
 		"aws_vpc",
 	}
 
@@ -58,9 +60,9 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 		"aws_network_acl": c.deleteNetworkAcls,
 		"aws_subnet": c.deleteSubnets,
 		"aws_cloudformation_stack": c.deleteCloudformationStacks,
-		"aws_route53_record": c.deleteRoute53Record,
 		"aws_route53_zone": c.deleteRoute53Zone,
 		"aws_vpc": c.deleteVpcs,
+		"aws_efs_file_system": c.deleteEfsFileSystem,
 	}
 
 	if len(args) > 0 {
@@ -176,17 +178,19 @@ func (c *Ec2DeleteCommand) deleteRouteTables(resourceType string) {
 	res, err := c.ec2conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{})
 
 	if err == nil {
-		rIds := make([]*string, len(res.RouteTables))
-		aIds := []*string{}
-		for i, r := range res.RouteTables {
+		rIds := []*string{}
+		for _, r := range res.RouteTables {
+			main := false
 			for _, a := range r.Associations {
-				if ! *a.Main {
-					aIds = append(aIds, a.RouteTableAssociationId)
+				if *a.Main {
+					main = true
 				}
 			}
-			rIds[i] = r.RouteTableId
+			if ! main {
+				rIds = append(rIds, r.RouteTableId)
+			}
 		}
-		deleteResources(c.provider, aIds, "aws_route_table_association")
+		// aws_route_table_association handled implicitly
 		deleteResources(c.provider, rIds, resourceType)
 	}
 }
@@ -195,10 +199,10 @@ func (c *Ec2DeleteCommand) deleteSecurityGroups(resourceType string) {
 	res, err := c.ec2conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{})
 
 	if err == nil {
-		ids := make([]*string, len(res.SecurityGroups))
-		for i, r := range res.SecurityGroups {
+		ids := []*string{}
+		for _, r := range res.SecurityGroups {
 			if *r.GroupName != "default" {
-				ids[i] = r.GroupId
+				ids = append(ids, r.GroupId)
 			}
 		}
 		deleteResources(c.provider, ids, resourceType)
@@ -209,9 +213,12 @@ func (c *Ec2DeleteCommand) deleteNetworkAcls(resourceType string) {
 	res, err := c.ec2conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{})
 
 	if err == nil {
-		ids := make([]*string, len(res.NetworkAcls))
-		for i, r := range res.NetworkAcls {
-			ids[i] = r.NetworkAclId
+		ids := []*string{}
+		for _, r := range res.NetworkAcls {
+			if ! *r.IsDefault {
+				ids = append(ids, r.NetworkAclId)
+				// TODO handle associations
+			}
 		}
 		deleteResources(c.provider, ids, resourceType)
 	}
@@ -307,11 +314,34 @@ func (c *Ec2DeleteCommand) deleteRoute53Zone(resourceType string) {
 	res, err := c.r53conn.ListHostedZones(&route53.ListHostedZonesInput{})
 
 	if err == nil {
-		ids := make([]*string, len(res.HostedZones))
-		for i, r := range res.HostedZones {
-			ids[i] = r.Id
+		hzIds := make([]*string, len(res.HostedZones))
+		rsIds := []*string{}
+		rsAttributes := []*map[string]string{}
+		hzAttributes := []*map[string]string{}
+
+		for i, hz := range res.HostedZones {
+			res, err := c.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+				HostedZoneId: hz.Id,
+			})
+
+			if err == nil {
+				for _, rs := range res.ResourceRecordSets {
+					rsIds = append(rsIds, rs.Name)
+					rsAttributes = append(rsAttributes, &map[string]string{
+						"zone_id":        *hz.Id,
+						"name":                *rs.Name,
+						"type":                *rs.Type,
+					})
+				}
+			}
+			hzIds[i] = hz.Id
+			hzAttributes = append(rsAttributes, &map[string]string{
+				"force_destroy":        "true",
+				"name":                        *hz.Name,
+			})
 		}
-		deleteResources(c.provider, ids, resourceType)
+		deleteResources(c.provider, rsIds, "aws_route53_record", rsAttributes)
+		deleteResources(c.provider, hzIds, resourceType, hzAttributes)
 	}
 }
 
@@ -324,5 +354,30 @@ func (c *Ec2DeleteCommand) deleteCloudformationStacks(resourceType string) {
 			ids[i] = r.StackId
 		}
 		deleteResources(c.provider, ids, resourceType)
+	}
+}
+
+func (c *Ec2DeleteCommand) deleteEfsFileSystem(resourceType string) {
+	res, err := c.efsconn.DescribeFileSystems(&efs.DescribeFileSystemsInput{})
+
+	if err == nil {
+		fsIds := make([]*string, len(res.FileSystems))
+		mtIds := []*string{}
+
+		for i, r := range res.FileSystems {
+			res, err := c.efsconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
+				FileSystemId: r.FileSystemId,
+			})
+
+			if err == nil {
+				for _, r := range res.MountTargets {
+					mtIds = append(mtIds, r.MountTargetId)
+				}
+			}
+
+			fsIds[i] = r.FileSystemId
+		}
+		deleteResources(c.provider, mtIds, "aws_efs_mount_target")
+		deleteResources(c.provider, fsIds, resourceType)
 	}
 }

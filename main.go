@@ -16,10 +16,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/hashicorp/terraform/terraform"
-	"io/ioutil"
 	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/config"
 	"sync"
+	"io/ioutil"
+	"github.com/aws/aws-sdk-go/service/efs"
 )
 
 func main() {
@@ -53,6 +54,7 @@ func main() {
 				elbconn: elb.New(sess),
 				r53conn: route53.New(sess),
 				cfconn: cloudformation.New(sess),
+				efsconn:  efs.New(sess),
 				provider: p,
 			}, nil
 		},
@@ -169,7 +171,7 @@ func deleteResources(p *terraform.ResourceProvider, ids []*string, resourceType 
 		a = attributes[0]
 	}
 
-	numWorkerThreads := 5
+	numWorkerThreads := 10
 	chIds := make(chan *string, numWorkerThreads)
 	chAttrs := make(chan *map[string]string, numWorkerThreads)
 
