@@ -47,20 +47,15 @@ func main() {
 	p := initAwsProvider(profile, region)
 
 	c.Commands = map[string]cli.CommandFactory{
-		"ec2": func() (cli.Command, error) {
-			return &Ec2DeleteCommand{
+		"wipe": func() (cli.Command, error) {
+			return &WipeCommand{
 				autoscalingconn: autoscaling.New(sess),
 				ec2conn: ec2.New(sess),
 				elbconn: elb.New(sess),
 				r53conn: route53.New(sess),
 				cfconn: cloudformation.New(sess),
 				efsconn:  efs.New(sess),
-				provider: p,
-			}, nil
-		},
-		"iam": func() (cli.Command, error) {
-			return &IamDeleteCommand{
-				conn: iam.New(sess),
+				iamconn: iam.New(sess),
 				provider: p,
 				prefix: prefix,
 			}, nil

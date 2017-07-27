@@ -10,20 +10,23 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/iam"
 )
 
-type Ec2DeleteCommand struct {
+type WipeCommand struct {
 	ec2conn         *ec2.EC2
 	autoscalingconn *autoscaling.AutoScaling
 	elbconn         *elb.ELB
 	r53conn         *route53.Route53
 	cfconn          *cloudformation.CloudFormation
 	efsconn         *efs.EFS
+	iamconn		*iam.IAM
 	provider        *terraform.ResourceProvider
 	resourceTypes   []string
+	prefix string
 }
 
-func (c *Ec2DeleteCommand) Run(args []string) int {
+func (c *WipeCommand) Run(args []string) int {
 
 	c.resourceTypes = []string{
 		"aws_autoscaling_group",
@@ -43,9 +46,13 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 		"aws_network_acl",
 		"aws_security_group",
 		"aws_vpc",
+		"aws_iam_user",
+		"aws_iam_role",
+		"aws_iam_policy",
+		"aws_iam_instance_profile",
 	}
 
-	deleteFunctions := map[string]func(string){
+	deleteFunctions := map[string]func(string, string){
 		"aws_autoscaling_group": c.deleteASGs,
 		"aws_launch_configuration": c.deleteLCs,
 		"aws_instance": c.deleteInstances,
@@ -63,33 +70,43 @@ func (c *Ec2DeleteCommand) Run(args []string) int {
 		"aws_route53_zone": c.deleteRoute53Zone,
 		"aws_vpc": c.deleteVpcs,
 		"aws_efs_file_system": c.deleteEfsFileSystem,
+		"aws_iam_user": c.deleteIamUser,
+		"aws_iam_role": c.deleteIamRole,
+		"aws_iam_policy": c.deleteIamPolicy,
+		"aws_iam_instance_profile": c.deleteInstanceProfiles,
 	}
 
 	if len(args) > 0 {
-		v, ok := deleteFunctions[args[0]]
-		if ok {
-			v(args[0])
-		} else {
-			fmt.Println(c.Help())
-			return 1
+		if args[0] == "all" {
+			for _, k := range c.resourceTypes {
+				deleteFunctions[k](k, c.prefix)
+			}
+		}  else {
+			v, ok := deleteFunctions[args[0]]
+			if ok {
+				v(args[0], c.prefix)
+			} else {
+				fmt.Println(c.Help())
+				return 1
+			}
 		}
 	} else {
-		for _, k := range c.resourceTypes {
-			deleteFunctions[k](k)
-		}
+		fmt.Println(c.Help())
+		return 1
 	}
 
 	return 0
 }
 
-func (c *Ec2DeleteCommand) Help() string {
+func (c *WipeCommand) Help() string {
 	helpText := `
-Usage: awsweeper <environment> ec2 [aws_resource_type]
+Usage: awsweeper <environment> wipe [all | aws_resource_type]
 
-If no 'aws_resource_type' is provided as a further sub-argument,
-all resources of the types in the list below will be deleted.
+If the name of an "aws_resource_type" (e.g. aws_vpc) is provided as a sub-argument,
+all resources of that type will be wiped from your account. If "all" is provided,
+ all resources of all types in the list below will be deleted in that order.
 
-Currently supported EC2 resource types are:
+Currently supported resource types are:
 `
 
 	for _, k := range c.resourceTypes {
@@ -99,11 +116,11 @@ Currently supported EC2 resource types are:
 	return strings.TrimSpace(helpText)
 }
 
-func (c *Ec2DeleteCommand) Synopsis() string {
+func (c *WipeCommand) Synopsis() string {
 	return "Delete all or one specific EC2 resource type"
 }
 
-func (c *Ec2DeleteCommand) deleteASGs(resourceType string) {
+func (c *WipeCommand) deleteASGs(resourceType string, prefix string) {
 	res, err := c.autoscalingconn.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
 
 	if err == nil {
@@ -115,7 +132,7 @@ func (c *Ec2DeleteCommand) deleteASGs(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteLCs(resourceType string) {
+func (c *WipeCommand) deleteLCs(resourceType string, prefix string) {
 	res, err := c.autoscalingconn.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
 
 	if err == nil {
@@ -127,7 +144,7 @@ func (c *Ec2DeleteCommand) deleteLCs(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteInstances(resourceType string) {
+func (c *WipeCommand) deleteInstances(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{})
 
 	if err == nil {
@@ -144,7 +161,7 @@ func (c *Ec2DeleteCommand) deleteInstances(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteInternetGateways(resourceType string) {
+func (c *WipeCommand) deleteInternetGateways(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{})
 
 	if err == nil {
@@ -160,7 +177,7 @@ func (c *Ec2DeleteCommand) deleteInternetGateways(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteNatGateways(resourceType string) {
+func (c *WipeCommand) deleteNatGateways(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{})
 
 	if err == nil {
@@ -174,7 +191,7 @@ func (c *Ec2DeleteCommand) deleteNatGateways(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteRouteTables(resourceType string) {
+func (c *WipeCommand) deleteRouteTables(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{})
 
 	if err == nil {
@@ -195,7 +212,7 @@ func (c *Ec2DeleteCommand) deleteRouteTables(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteSecurityGroups(resourceType string) {
+func (c *WipeCommand) deleteSecurityGroups(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{})
 
 	if err == nil {
@@ -209,7 +226,7 @@ func (c *Ec2DeleteCommand) deleteSecurityGroups(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteNetworkAcls(resourceType string) {
+func (c *WipeCommand) deleteNetworkAcls(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{})
 
 	if err == nil {
@@ -224,7 +241,7 @@ func (c *Ec2DeleteCommand) deleteNetworkAcls(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteNetworkInterfaces(resourceType string) {
+func (c *WipeCommand) deleteNetworkInterfaces(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{})
 
 	if err == nil {
@@ -236,7 +253,7 @@ func (c *Ec2DeleteCommand) deleteNetworkInterfaces(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteELBs(resourceType string) {
+func (c *WipeCommand) deleteELBs(resourceType, prefix string) {
 	res, err := c.elbconn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
 
 	if err == nil {
@@ -248,7 +265,7 @@ func (c *Ec2DeleteCommand) deleteELBs(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteVpcEndpoints(resourceType string) {
+func (c *WipeCommand) deleteVpcEndpoints(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{})
 
 	if err == nil {
@@ -260,7 +277,7 @@ func (c *Ec2DeleteCommand) deleteVpcEndpoints(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteEips(resourceType string) {
+func (c *WipeCommand) deleteEips(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeAddresses(&ec2.DescribeAddressesInput{})
 
 	if err == nil {
@@ -272,7 +289,7 @@ func (c *Ec2DeleteCommand) deleteEips(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteSubnets(resourceType string) {
+func (c *WipeCommand) deleteSubnets(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeSubnets(&ec2.DescribeSubnetsInput{})
 
 	if err == nil {
@@ -284,7 +301,7 @@ func (c *Ec2DeleteCommand) deleteSubnets(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteVpcs(resourceType string) {
+func (c *WipeCommand) deleteVpcs(resourceType string, prefix string) {
 	res, err := c.ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{})
 
 	if err == nil {
@@ -296,7 +313,7 @@ func (c *Ec2DeleteCommand) deleteVpcs(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteRoute53Record(resourceType string) {
+func (c *WipeCommand) deleteRoute53Record(resourceType string, prefix string) {
 	res, err := c.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{})
 
 	if err == nil {
@@ -310,7 +327,7 @@ func (c *Ec2DeleteCommand) deleteRoute53Record(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteRoute53Zone(resourceType string) {
+func (c *WipeCommand) deleteRoute53Zone(resourceType string, prefix string) {
 	res, err := c.r53conn.ListHostedZones(&route53.ListHostedZonesInput{})
 
 	if err == nil {
@@ -345,7 +362,7 @@ func (c *Ec2DeleteCommand) deleteRoute53Zone(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteCloudformationStacks(resourceType string) {
+func (c *WipeCommand) deleteCloudformationStacks(resourceType string, prefix string) {
 	res, err := c.cfconn.DescribeStacks(&cloudformation.DescribeStacksInput{})
 
 	if err == nil {
@@ -357,7 +374,7 @@ func (c *Ec2DeleteCommand) deleteCloudformationStacks(resourceType string) {
 	}
 }
 
-func (c *Ec2DeleteCommand) deleteEfsFileSystem(resourceType string) {
+func (c *WipeCommand) deleteEfsFileSystem(resourceType string, prefix string) {
 	res, err := c.efsconn.DescribeFileSystems(&efs.DescribeFileSystemsInput{})
 
 	if err == nil {
@@ -381,3 +398,135 @@ func (c *Ec2DeleteCommand) deleteEfsFileSystem(resourceType string) {
 		deleteResources(c.provider, fsIds, resourceType)
 	}
 }
+
+func (c *WipeCommand) deleteIamUser(resourceType string, prefix string) {
+	users, err := c.iamconn.ListUsers(&iam.ListUsersInput{})
+
+	if err == nil {
+		uIds := []*string{}
+		uAttributes := []*map[string]string{}
+
+		for _, u := range users.Users {
+			if strings.HasPrefix(*u.UserName, prefix) {
+				ups, err := c.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
+					UserName: u.UserName,
+				})
+				if err == nil {
+					for _, up := range ups.PolicyNames {
+						fmt.Println(*up)
+					}
+				}
+
+				upols, err := c.iamconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+					UserName: u.UserName,
+				})
+				if err == nil {
+					upolIds := []*string{}
+					attributes := []*map[string]string{}
+
+					for _, upol := range upols.AttachedPolicies {
+						upolIds = append(upolIds, upol.PolicyArn)
+						attributes =  append(attributes, &map[string]string{
+							"user":        *u.UserName,
+							"policy_arn": *upol.PolicyArn,
+						})
+					}
+					deleteResources(c.provider, upolIds, "aws_iam_user_policy_attachment", attributes)
+
+				}
+
+				uIds = append(uIds, u.UserName)
+				uAttributes = append(uAttributes, &map[string]string{
+					"force_destroy":        "true",
+				})
+			}
+		}
+		deleteResources(c.provider, uIds, resourceType, uAttributes)
+	}
+}
+
+func (c *WipeCommand) deleteIamPolicy(resourceType string, prefix string) {
+	ps, err := c.iamconn.ListPolicies(&iam.ListPoliciesInput{})
+
+	if err == nil {
+		ids := []*string{}
+
+		for _, pol := range ps.Policies {
+			if strings.HasPrefix(*pol.PolicyName, prefix) {
+				// TODO delete aws_iam_policy_attachment
+				ids = append(ids, pol.Arn)
+			}
+		}
+		deleteResources(c.provider, ids, resourceType)
+	}
+}
+
+func (c *WipeCommand) deleteIamRole(resourceType string, prefix string) {
+	roles, err := c.iamconn.ListRoles(&iam.ListRolesInput{})
+
+	if err == nil {
+		rIds := []*string{}
+
+		for _, role := range roles.Roles {
+			fmt.Println(*role)
+			if strings.HasPrefix(*role.RoleName, prefix) {
+				rpols, err := c.iamconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
+					RoleName: role.RoleName,
+				})
+
+				if err == nil {
+					rpolIds := []*string{}
+					rpolAttributes := []*map[string]string{}
+
+					for _, rpol := range rpols.AttachedPolicies {
+						rpolIds = append(rpolIds, rpol.PolicyArn)
+						rpolAttributes = append(rpolAttributes, &map[string]string{
+							"role":        *role.RoleName,
+							"policy_arn": *rpol.PolicyArn,
+						})
+					}
+					deleteResources(c.provider, rpolIds, "aws_iam_role_policy_attachment", rpolAttributes)
+				}
+
+				rps, err := c.iamconn.ListRolePolicies(&iam.ListRolePoliciesInput{
+					RoleName: role.RoleName,
+				})
+
+				if err == nil {
+					pIds := []*string{}
+
+					for _, rp := range rps.PolicyNames {
+						bla := *role.RoleName + ":" + *rp
+						pIds = append(pIds, &bla)
+					}
+					deleteResources(c.provider, pIds, "aws_iam_role_policy")
+				}
+
+				rIds = append(rIds, role.RoleName)
+			}
+		}
+		deleteResources(c.provider, rIds, resourceType)
+	}
+}
+
+func (c *WipeCommand) deleteInstanceProfiles(resourceType string, prefix string) {
+	res, err := c.iamconn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
+
+	if err == nil {
+		rIds :=  []*string{}
+		//rAttributes :=  []*map[string]string{}
+
+		for _, r := range res.InstanceProfiles {
+			fmt.Println(r)
+			rIds = append(rIds, r.InstanceProfileName)
+
+			//for _, role := range r.Roles {
+			//	rAttributes = append(rAttributes, &map[string]string{
+			//		"role":        *role.RoleName,
+			//	})
+			//}
+		}
+		deleteResources(c.provider, rIds, resourceType)
+	}
+}
+
