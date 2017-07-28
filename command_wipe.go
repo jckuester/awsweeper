@@ -53,7 +53,7 @@ func (c *WipeCommand) Run(args []string) int {
 		"aws_iam_policy",
 		"aws_iam_instance_profile",
 		"aws_kms_alias",
-		"aws_kms_key",
+		//"aws_kms_key",
 	}
 
 	deleteFunctions := map[string]func(string, []string){
@@ -79,7 +79,7 @@ func (c *WipeCommand) Run(args []string) int {
 		"aws_iam_policy": c.deleteIamPolicy,
 		"aws_iam_instance_profile": c.deleteInstanceProfiles,
 		"aws_kms_alias": c.deleteKmsAliases,
-		"aws_kms_key": c.deleteKmsKeys,
+		//"aws_kms_key": c.deleteKmsKeys,
 	}
 
 	if len(args) > 0 {
@@ -412,6 +412,9 @@ func (c *WipeCommand) deleteIamUser(resourceType string, prefixes []string) {
 		uIds := []*string{}
 		uAttributes := []*map[string]string{}
 
+		upolIds := []*string{}
+		attributes := []*map[string]string{}
+
 		for _, u := range users.Users {
 			if HasPrefix(*u.UserName, prefixes) {
 				ups, err := c.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
@@ -427,9 +430,6 @@ func (c *WipeCommand) deleteIamUser(resourceType string, prefixes []string) {
 					UserName: u.UserName,
 				})
 				if err == nil {
-					upolIds := []*string{}
-					attributes := []*map[string]string{}
-
 					for _, upol := range upols.AttachedPolicies {
 						upolIds = append(upolIds, upol.PolicyArn)
 						attributes = append(attributes, &map[string]string{
@@ -437,8 +437,6 @@ func (c *WipeCommand) deleteIamUser(resourceType string, prefixes []string) {
 							"policy_arn": *upol.PolicyArn,
 						})
 					}
-					deleteResources(c.provider, upolIds, "aws_iam_user_policy_attachment", attributes)
-
 				}
 
 				uIds = append(uIds, u.UserName)
@@ -447,6 +445,7 @@ func (c *WipeCommand) deleteIamUser(resourceType string, prefixes []string) {
 				})
 			}
 		}
+		deleteResources(c.provider, upolIds, "aws_iam_user_policy_attachment", attributes)
 		deleteResources(c.provider, uIds, resourceType, uAttributes)
 	}
 }
@@ -472,13 +471,13 @@ func (c *WipeCommand) deleteIamPolicy(resourceType string, prefixes []string) {
 					groups := []string{}
 
 					for _, u := range es.PolicyUsers {
-						users = append(users, *u.UserId)
+						users = append(users, *u.UserName)
 					}
 					for _, g := range es.PolicyGroups {
-						groups = append(groups, *g.GroupId)
+						groups = append(groups, *g.GroupName)
 					}
 					for _, r := range es.PolicyRoles {
-						roles = append(roles, *r.RoleId)
+						roles = append(roles, *r.RoleName)
 					}
 					fmt.Println(roles)
 					fmt.Println(users)
@@ -584,17 +583,21 @@ func (c *WipeCommand) deleteKmsAliases(resourceType string, prefixes []string) {
 	res, err := c.kmsconn.ListAliases(&kms.ListAliasesInput{})
 
 	if err == nil {
-		ids := []*string{}
+		aIds := []*string{}
+		kIds := []*string{}
 
 		for _, r := range res.Aliases {
 			if HasPrefix(*r.AliasArn, prefixes) {
-				ids = append(ids, r.AliasArn)
+				aIds = append(aIds, r.AliasArn)
+				kIds = append(kIds, r.TargetKeyId)
 			}
 		}
-		deleteResources(c.provider, ids, resourceType)
+		deleteResources(c.provider, aIds, resourceType)
+		deleteResources(c.provider, kIds, "aws_kms_key")
 	}
 }
 
+/*
 func (c *WipeCommand) deleteKmsKeys(resourceType string, prefixes []string) {
 	res, err := c.kmsconn.ListKeys(&kms.ListKeysInput{})
 
@@ -611,3 +614,4 @@ func (c *WipeCommand) deleteKmsKeys(resourceType string, prefixes []string) {
 		deleteResources(c.provider, ids, resourceType, attributes)
 	}
 }
+*/

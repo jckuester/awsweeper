@@ -19,15 +19,15 @@ import (
 	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/config"
 	"sync"
-	"io/ioutil"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"io/ioutil"
 )
 
 func main() {
 	app := "awsweeper"
 	profile := os.Args[1]
-	prefix := []string{"ml", "stack"}
+	prefix := []string{"ml", "stack", "haproxy"}
 
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
