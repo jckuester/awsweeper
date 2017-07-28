@@ -21,12 +21,13 @@ import (
 	"sync"
 	"io/ioutil"
 	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/kms"
 )
 
 func main() {
 	app := "awsweeper"
 	profile := os.Args[1]
-	prefix := "ml"
+	prefix := []string{"ml", "stack"}
 
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
@@ -56,6 +57,7 @@ func main() {
 				cfconn: cloudformation.New(sess),
 				efsconn:  efs.New(sess),
 				iamconn: iam.New(sess),
+				kmsconn: kms.New(sess),
 				provider: p,
 				prefix: prefix,
 			}, nil
@@ -220,4 +222,14 @@ func deleteResources(p *terraform.ResourceProvider, ids []*string, resourceType 
 
 func printType(resourceType string, numberOfResources int) {
 	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", resourceType, numberOfResources)
+}
+
+func HasPrefix(s string, prefixes []string) bool {
+	result := false
+	for _, prefix := range prefixes{
+		if strings.HasPrefix(s, prefix) {
+			result = true
+		}
+	}
+	return result
 }
