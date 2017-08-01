@@ -198,7 +198,7 @@ func deleteResources(p *terraform.ResourceProvider, ids []*string, resourceType 
 					_, err := (*p).Apply(ii, s, d)
 					if err != nil {
 						fmt.Printf("err: %s\n", err)
-						os.Exit(1)
+						//os.Exit(1)
 					}
 					wg.Done()
 				} else {

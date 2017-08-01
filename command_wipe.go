@@ -53,7 +53,7 @@ func (c *WipeCommand) Run(args []string) int {
 		"aws_iam_policy",
 		"aws_iam_instance_profile",
 		"aws_kms_alias",
-		//"aws_kms_key",
+		"aws_kms_key",
 	}
 
 	deleteFunctions := map[string]func(string, []string){
@@ -79,7 +79,7 @@ func (c *WipeCommand) Run(args []string) int {
 		"aws_iam_policy": c.deleteIamPolicy,
 		"aws_iam_instance_profile": c.deleteInstanceProfiles,
 		"aws_kms_alias": c.deleteKmsAliases,
-		//"aws_kms_key": c.deleteKmsKeys,
+		"aws_kms_key": c.deleteKmsKeys,
 	}
 
 	if len(args) > 0 {
@@ -479,9 +479,7 @@ func (c *WipeCommand) deleteIamPolicy(resourceType string, prefixes []string) {
 					for _, r := range es.PolicyRoles {
 						roles = append(roles, *r.RoleName)
 					}
-					fmt.Println(roles)
-					fmt.Println(users)
-					fmt.Println(groups)
+
 					eIds = append(eIds, pol.Arn)
 					attributes = append(attributes, &map[string]string{
 						"policy_arn":        *pol.Arn,
@@ -569,7 +567,6 @@ func (c *WipeCommand) deleteInstanceProfiles(resourceType string, prefixes []str
 			for _, role := range r.Roles {
 				roles = append(roles, *role.RoleName)
 			}
-			fmt.Println(roles)
 
 			attributes = append(attributes, &map[string]string{
 				"role":        strings.Join(roles, "."),
@@ -584,20 +581,17 @@ func (c *WipeCommand) deleteKmsAliases(resourceType string, prefixes []string) {
 
 	if err == nil {
 		aIds := []*string{}
-		kIds := []*string{}
 
 		for _, r := range res.Aliases {
-			if HasPrefix(*r.AliasArn, prefixes) {
+			if HasPrefix(strings.TrimPrefix(*r.AliasName, "alias/"), prefixes) {
 				aIds = append(aIds, r.AliasArn)
-				kIds = append(kIds, r.TargetKeyId)
 			}
 		}
 		deleteResources(c.provider, aIds, resourceType)
-		deleteResources(c.provider, kIds, "aws_kms_key")
 	}
 }
 
-/*
+
 func (c *WipeCommand) deleteKmsKeys(resourceType string, prefixes []string) {
 	res, err := c.kmsconn.ListKeys(&kms.ListKeysInput{})
 
@@ -606,12 +600,20 @@ func (c *WipeCommand) deleteKmsKeys(resourceType string, prefixes []string) {
 		attributes := []*map[string]string{}
 
 		for _, r := range res.Keys {
-			attributes = append(attributes, &map[string]string{
-				"key_id":        *r.KeyId,
+			req, res := c.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
+				KeyId: r.KeyId,
 			})
-			ids = append(ids, r.KeyArn)
+			err := req.Send();
+			if err == nil {
+				if *res.KeyMetadata.KeyState != "PendingDeletion" {
+					attributes = append(attributes, &map[string]string{
+						"key_id":        *r.KeyId,
+					})
+					ids = append(ids, r.KeyArn)
+				}
+			}
 		}
 		deleteResources(c.provider, ids, resourceType, attributes)
 	}
 }
-*/
+
