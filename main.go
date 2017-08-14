@@ -27,7 +27,6 @@ import (
 func main() {
 	app := "awsweeper"
 	profile := os.Args[1]
-	prefix := []string{"ml", "stack", "haproxy"}
 
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
@@ -47,7 +46,21 @@ func main() {
 
 	p := initAwsProvider(profile, region)
 
-	c.Commands = map[string]cli.CommandFactory{
+	/*
+	f := flagSet("bla")
+
+
+	for i, cmd := range c.SubcommandArgs() {
+		if cmd == "--tag-value" {
+			if c.SubcommandArgs()[i+1] == nil {
+				os.Exit(1)
+			}
+			fmt.Println(c.SubcommandArgs()[i+1])
+		}
+	}
+	*/
+
+	c.Commands = map[ string]cli.CommandFactory{
 		"wipe": func() (cli.Command, error) {
 			return &WipeCommand{
 				autoscalingconn: autoscaling.New(sess),
@@ -59,7 +72,7 @@ func main() {
 				iamconn: iam.New(sess),
 				kmsconn: kms.New(sess),
 				provider: p,
-				prefix: prefix,
+				bla: map[string]B{},
 			}, nil
 		},
 	}
@@ -103,6 +116,33 @@ func initAwsProvider(profile string, region string) *terraform.ResourceProvider 
 
 	return &p
 }
+
+/*
+// flags adds the meta flags to the given FlagSet.
+func flagSet(n string) *flag.FlagSet {
+	f := flag.NewFlagSet(n, flag.ContinueOnError)
+	f.String("var", "",  "variables")
+	f.String("var", "",  "tag-value")
+
+	// Create an io.Writer that writes to our Ui properly for errors.
+	// This is kind of a hack, but it does the job. Basically: create
+	// a pipe, use a scanner to break it into lines, and output each line
+	// to the UI. Do this forever.
+	errR, errW := io.Pipe()
+	errScanner := bufio.NewScanner(errR)
+	go func() {
+		for errScanner.Scan() {
+			m.Ui.Error(errScanner.Text())
+		}
+	}()
+	f.SetOutput(errW)
+
+	// Set the default Usage to empty
+	f.Usage = func() {}
+
+	return f
+}
+*/
 
 func BasicHelpFunc(app string) cli.HelpFunc {
 	return func(commands map[string]cli.CommandFactory) string {
@@ -148,57 +188,79 @@ func BasicHelpFunc(app string) cli.HelpFunc {
 	}
 }
 
-func deleteResources(p *terraform.ResourceProvider, ids []*string, resourceType string, attributes ...[]*map[string]string) {
-	if len(ids) == 0 {
+type Resource struct {
+	id *string
+	attrs *map[string]string
+	tags *map[string]string
+}
+
+func (c *WipeCommand) deleteResources(rSet ResourceSet) {
+	if len(rSet.Ids) == 0 {
 		return
 	}
 
-	printType(resourceType, len(ids))
+	c.bla[rSet.Type] = B{Ids: rSet.Ids}
+
+	printType(rSet.Type, len(rSet.Ids))
 
 	ii := &terraform.InstanceInfo{
-		Type: resourceType,
+		Type: rSet.Type,
 	}
 
 	d := &terraform.InstanceDiff{
 		Destroy: true,
 	}
 
-	a := make([]*map[string]string, len(ids))
-	if len(attributes) > 0 {
-		a = attributes[0]
+	a := make([]*map[string]string, len(rSet.Ids))
+	if len(rSet.Attrs) > 0 {
+		a = rSet.Attrs
 	}
-
+	ts := make([]*map[string]string, len(rSet.Ids))
+	if len(rSet.Tags) > 0 {
+		ts = rSet.Tags
+	}
+	isDryRun := true
 	numWorkerThreads := 10
-	chIds := make(chan *string, numWorkerThreads)
-	chAttrs := make(chan *map[string]string, numWorkerThreads)
+	chResources := make(chan *Resource, numWorkerThreads)
 
 	var wg sync.WaitGroup
-	wg.Add(len(ids))
+	wg.Add(len(rSet.Ids))
 
 	for j := 1; j <= numWorkerThreads; j++ {
 		go func() {
 			for {
-				id, more := <-chIds
+				res, more := <- chResources
 				if more {
-					fmt.Println("Deleting: " + *id)
+					printStat := fmt.Sprintf("\tId:\t%s", *res.id)
+					if res.tags != nil {
+						printStat += "\n\tTags:\t"
+						for k, v := range *res.tags {
+							printStat += fmt.Sprintf("[%s: %v] ", k, v)
+						}
+						printStat += "\n"
+					}
+					fmt.Println(printStat)
 
-					a := <-chAttrs
+					a := res.attrs
 					var s *terraform.InstanceState
 					if a == nil {
 						s = &terraform.InstanceState{
-							ID: *id,
+							ID: *res.id,
 						}
 					} else {
 						s = &terraform.InstanceState{
-							ID: *id,
+							ID: *res.id,
 							Attributes: *a,
 						}
 					}
 
-					_, err := (*p).Apply(ii, s, d)
-					if err != nil {
-						fmt.Printf("err: %s\n", err)
-						//os.Exit(1)
+					if !isDryRun {
+						_, err := (*c.provider).Apply(ii, s, d)
+
+						if err != nil {
+							fmt.Printf("err: %s\n", err)
+							//os.Exit(1)
+						}
 					}
 					wg.Done()
 				} else {
@@ -208,13 +270,16 @@ func deleteResources(p *terraform.ResourceProvider, ids []*string, resourceType 
 		}()
 	}
 
-	for i, id := range ids {
+	for i, id := range rSet.Ids {
 		if id != nil {
-			chIds <- id
-			chAttrs <- a[i]
+			chResources <- &Resource{
+				id: id,
+				attrs: a[i],
+				tags: ts[i],
+			}
 		}
 	}
-	close(chIds)
+	close(chResources)
 
 	wg.Wait()
 	fmt.Println("---\n")
