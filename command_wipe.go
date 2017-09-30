@@ -24,14 +24,7 @@ type B struct {
 }
 
 type WipeCommand struct {
-	ec2conn         *ec2.EC2
-	autoscalingconn *autoscaling.AutoScaling
-	elbconn         *elb.ELB
-	r53conn         *route53.Route53
-	cfconn          *cloudformation.CloudFormation
-	efsconn         *efs.EFS
-	iamconn         *iam.IAM
-	kmsconn         *kms.KMS
+	client			*AWSClient
 	provider        *terraform.ResourceProvider
 	resourceTypes   []string
 	filter          []*ec2.Filter
@@ -159,7 +152,7 @@ func (c *WipeCommand) Synopsis() string {
 }
 
 func (c *WipeCommand) deleteASGs(resourceType string) {
-	res, err := c.autoscalingconn.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
+	res, err := c.client.autoscalingconn.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -181,7 +174,7 @@ func (c *WipeCommand) deleteASGs(resourceType string) {
 }
 
 func (c *WipeCommand) deleteLCs(resourceType string) {
-	res, err := c.autoscalingconn.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
+	res, err := c.client.autoscalingconn.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -196,8 +189,8 @@ func (c *WipeCommand) deleteLCs(resourceType string) {
 }
 
 func (c *WipeCommand) deleteInstances(resourceType string) {
-	res, err := c.ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{
-		//Filters: c.filter,
+	res, err := c.client.ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{
+		//Filters: c.client.filter,
 	})
 
 	if err == nil {
@@ -224,7 +217,7 @@ func (c *WipeCommand) deleteInstances(resourceType string) {
 }
 
 func (c *WipeCommand) deleteInternetGateways(resourceType string) {
-	res, err := c.ec2conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{
+	res, err := c.client.ec2conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{
 		//Filters: c.filter,
 	})
 
@@ -252,7 +245,7 @@ func (c *WipeCommand) deleteInternetGateways(resourceType string) {
 }
 
 func (c *WipeCommand) deleteNatGateways(resourceType string) {
-	res, err := c.ec2conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{
+	res, err := c.client.ec2conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{
 		//Filter: c.filter,
 	})
 
@@ -270,7 +263,7 @@ func (c *WipeCommand) deleteNatGateways(resourceType string) {
 }
 
 func (c *WipeCommand) deleteRouteTables(resourceType string) {
-	res, err := c.ec2conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{
+	res, err := c.client.ec2conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{
 		//Filters: c.filter,
 	})
 
@@ -303,7 +296,7 @@ func (c *WipeCommand) deleteRouteTables(resourceType string) {
 }
 
 func (c *WipeCommand) deleteSecurityGroups(resourceType string) {
-	res, err := c.ec2conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+	res, err := c.client.ec2conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
 		//Filters: c.filter,
 	})
 
@@ -329,7 +322,7 @@ func (c *WipeCommand) deleteSecurityGroups(resourceType string) {
 }
 
 func (c *WipeCommand) deleteNetworkAcls(resourceType string) {
-	res, err := c.ec2conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{
+	res, err := c.client.ec2conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{
 		//Filters: c.filter,
 	})
 
@@ -356,7 +349,7 @@ func (c *WipeCommand) deleteNetworkAcls(resourceType string) {
 }
 
 func (c *WipeCommand) deleteNetworkInterfaces(resourceType string) {
-	res, err := c.ec2conn.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{
+	res, err := c.client.ec2conn.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{
 		//Filters: c.filter,
 	})
 
@@ -379,7 +372,7 @@ func (c *WipeCommand) deleteNetworkInterfaces(resourceType string) {
 }
 
 func (c *WipeCommand) deleteELBs(resourceType string) {
-	res, err := c.elbconn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
+	res, err := c.client.elbconn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -393,7 +386,7 @@ func (c *WipeCommand) deleteELBs(resourceType string) {
 }
 
 func (c *WipeCommand) deleteVpcEndpoints(resourceType string) {
-	res, err := c.ec2conn.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{
+	res, err := c.client.ec2conn.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{
 		//Filters: c.filter,
 	})
 
@@ -409,7 +402,7 @@ func (c *WipeCommand) deleteVpcEndpoints(resourceType string) {
 }
 
 func (c *WipeCommand) deleteEips(resourceType string) {
-	res, err := c.ec2conn.DescribeAddresses(&ec2.DescribeAddressesInput{
+	res, err := c.client.ec2conn.DescribeAddresses(&ec2.DescribeAddressesInput{
 		//Filters: c.filter,
 	})
 
@@ -425,7 +418,7 @@ func (c *WipeCommand) deleteEips(resourceType string) {
 }
 
 func (c *WipeCommand) deleteSubnets(resourceType string) {
-	res, err := c.ec2conn.DescribeSubnets(&ec2.DescribeSubnetsInput{
+	res, err := c.client.ec2conn.DescribeSubnets(&ec2.DescribeSubnetsInput{
 		//Filters: c.filter,
 	})
 
@@ -448,7 +441,7 @@ func (c *WipeCommand) deleteSubnets(resourceType string) {
 }
 
 func (c *WipeCommand) deleteVpcs(resourceType string) {
-	res, err := c.ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{
+	res, err := c.client.ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{
 		//Filters: c.filter,
 	})
 
@@ -472,7 +465,7 @@ func (c *WipeCommand) deleteVpcs(resourceType string) {
 }
 
 func (c *WipeCommand) deleteRoute53Record(resourceType string) {
-	res, err := c.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{})
+	res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -488,7 +481,7 @@ func (c *WipeCommand) deleteRoute53Record(resourceType string) {
 }
 
 func (c *WipeCommand) deleteRoute53Zone(resourceType string) {
-	res, err := c.r53conn.ListHostedZones(&route53.ListHostedZonesInput{})
+	res, err := c.client.r53conn.ListHostedZones(&route53.ListHostedZonesInput{})
 
 	if err == nil {
 		hzIds := []*string{}
@@ -497,7 +490,7 @@ func (c *WipeCommand) deleteRoute53Zone(resourceType string) {
 		hzAttrs := []*map[string]string{}
 
 		for _, hz := range res.HostedZones {
-			res, err := c.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+			res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
 				HostedZoneId: hz.Id,
 			})
 
@@ -524,7 +517,7 @@ func (c *WipeCommand) deleteRoute53Zone(resourceType string) {
 }
 
 func (c *WipeCommand) deleteCloudformationStacks(resourceType string) {
-	res, err := c.cfconn.DescribeStacks(&cloudformation.DescribeStacksInput{})
+	res, err := c.client.cfconn.DescribeStacks(&cloudformation.DescribeStacksInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -547,7 +540,7 @@ func (c *WipeCommand) deleteCloudformationStacks(resourceType string) {
 }
 
 func (c *WipeCommand) deleteEfsFileSystem(resourceType string) {
-	res, err := c.efsconn.DescribeFileSystems(&efs.DescribeFileSystemsInput{})
+	res, err := c.client.efsconn.DescribeFileSystems(&efs.DescribeFileSystemsInput{})
 
 	if err == nil {
 		fsIds := []*string{}
@@ -555,7 +548,7 @@ func (c *WipeCommand) deleteEfsFileSystem(resourceType string) {
 
 		for _, r := range res.FileSystems {
 			if c.checkDelete(resourceType, r.Name) {
-				res, err := c.efsconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
+				res, err := c.client.efsconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
 					FileSystemId: r.FileSystemId,
 				})
 
@@ -574,7 +567,7 @@ func (c *WipeCommand) deleteEfsFileSystem(resourceType string) {
 }
 
 func (c *WipeCommand) deleteIamUser(resourceType string) {
-	users, err := c.iamconn.ListUsers(&iam.ListUsersInput{})
+	users, err := c.client.iamconn.ListUsers(&iam.ListUsersInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -584,7 +577,7 @@ func (c *WipeCommand) deleteIamUser(resourceType string) {
 
 		for _, u := range users.Users {
 			if c.checkDelete(resourceType, u.UserName) {
-				ups, err := c.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
+				ups, err := c.client.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
 					UserName: u.UserName,
 				})
 				if err == nil {
@@ -593,7 +586,7 @@ func (c *WipeCommand) deleteIamUser(resourceType string) {
 					}
 				}
 
-				upols, err := c.iamconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+				upols, err := c.client.iamconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
 					UserName: u.UserName,
 				})
 				if err == nil {
@@ -618,9 +611,9 @@ func (c *WipeCommand) deleteIamUser(resourceType string) {
 }
 
 func (c *WipeCommand) deleteIamPolicy(resourceType string) {
-	ps, err := c.iamconn.ListPolicies(&iam.ListPoliciesInput{})
+	ps, err := c.client.iamconn.ListPolicies(&iam.ListPoliciesInput{})
 
-	//ps, err := c.iamconn.ListGroups(&iam.ListPoliciesInput{})
+	//ps, err := c.client.iamconn.ListGroups(&iam.ListPoliciesInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -629,7 +622,7 @@ func (c *WipeCommand) deleteIamPolicy(resourceType string) {
 
 		for _, pol := range ps.Policies {
 			if c.checkDelete(resourceType, pol.Arn) {
-				es, err := c.iamconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
+				es, err := c.client.iamconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
 					PolicyArn: pol.Arn,
 				})
 				if err == nil {
@@ -665,7 +658,7 @@ func (c *WipeCommand) deleteIamPolicy(resourceType string) {
 }
 
 func (c *WipeCommand) deleteIamRole(resourceType string) {
-	roles, err := c.iamconn.ListRoles(&iam.ListRolesInput{})
+	roles, err := c.client.iamconn.ListRoles(&iam.ListRolesInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -675,7 +668,7 @@ func (c *WipeCommand) deleteIamRole(resourceType string) {
 
 		for _, role := range roles.Roles {
 			if c.checkDelete(resourceType, role.RoleName) {
-				rpols, err := c.iamconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
+				rpols, err := c.client.iamconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
 					RoleName: role.RoleName,
 				})
 				if err == nil {
@@ -688,7 +681,7 @@ func (c *WipeCommand) deleteIamRole(resourceType string) {
 					}
 				}
 
-				rps, err := c.iamconn.ListRolePolicies(&iam.ListRolePoliciesInput{
+				rps, err := c.client.iamconn.ListRolePolicies(&iam.ListRolePoliciesInput{
 					RoleName: role.RoleName,
 				})
 				if err == nil {
@@ -698,7 +691,7 @@ func (c *WipeCommand) deleteIamRole(resourceType string) {
 					}
 				}
 
-				ips, err := c.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
+				ips, err := c.client.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
 					RoleName: role.RoleName,
 				})
 				if err == nil {
@@ -716,7 +709,7 @@ func (c *WipeCommand) deleteIamRole(resourceType string) {
 }
 
 func (c *WipeCommand) deleteInstanceProfiles(resourceType string) {
-	res, err := c.iamconn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
+	res, err := c.client.iamconn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -741,7 +734,7 @@ func (c *WipeCommand) deleteInstanceProfiles(resourceType string) {
 }
 
 func (c *WipeCommand) deleteKmsAliases(resourceType string) {
-	res, err := c.kmsconn.ListAliases(&kms.ListAliasesInput{})
+	res, err := c.client.kmsconn.ListAliases(&kms.ListAliasesInput{})
 
 	if err == nil {
 		ids := []*string{}
@@ -756,14 +749,14 @@ func (c *WipeCommand) deleteKmsAliases(resourceType string) {
 }
 
 func (c *WipeCommand) deleteKmsKeys(resourceType string) {
-	res, err := c.kmsconn.ListKeys(&kms.ListKeysInput{})
+	res, err := c.client.kmsconn.ListKeys(&kms.ListKeysInput{})
 
 	if err == nil {
 		ids := []*string{}
 		attributes := []*map[string]string{}
 
 		for _, r := range res.Keys {
-			req, res := c.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
+			req, res := c.client.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
 				KeyId: r.KeyId,
 			})
 			err := req.Send();

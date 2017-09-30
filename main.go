@@ -22,55 +22,54 @@ import (
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"io/ioutil"
+	"flag"
 )
 
 func main() {
 	app := "awsweeper"
-	profile := os.Args[1]
+	version := "0.0.1"
 
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
 
+	profile := flag.String("profile", "", "Use a specific profile from your credential file.")
+	region := flag.String("region", "", "The region to use. Overrides config/env settings.")
+
+	flag.Parse()
+
 	c := &cli.CLI{
 		Name: app,
-		Version: "0.0.1",
+		Version: version,
 		HelpFunc: BasicHelpFunc(app),
 	}
-	c.Args = os.Args[2:]
+	c.Args = flag.Args()
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
-		Profile: profile,
+		Profile: *profile,
 	}))
-	region := *sess.Config.Region
 
-	p := initAwsProvider(profile, region)
-
-	/*
-	f := flagSet("bla")
-
-
-	for i, cmd := range c.SubcommandArgs() {
-		if cmd == "--tag-value" {
-			if c.SubcommandArgs()[i+1] == nil {
-				os.Exit(1)
-			}
-			fmt.Println(c.SubcommandArgs()[i+1])
-		}
+	if *region == "" {
+		region = sess.Config.Region
 	}
-	*/
+
+	p := initAwsProvider(*profile, *region)
+
+	client := &AWSClient{
+		autoscalingconn: autoscaling.New(sess),
+		ec2conn: ec2.New(sess),
+		elbconn: elb.New(sess),
+		r53conn: route53.New(sess),
+		cfconn: cloudformation.New(sess),
+		efsconn:  efs.New(sess),
+		iamconn: iam.New(sess),
+		kmsconn: kms.New(sess),
+	}
 
 	c.Commands = map[ string]cli.CommandFactory{
 		"wipe": func() (cli.Command, error) {
 			return &WipeCommand{
-				autoscalingconn: autoscaling.New(sess),
-				ec2conn: ec2.New(sess),
-				elbconn: elb.New(sess),
-				r53conn: route53.New(sess),
-				cfconn: cloudformation.New(sess),
-				efsconn:  efs.New(sess),
-				iamconn: iam.New(sess),
-				kmsconn: kms.New(sess),
+				client: client,
 				provider: p,
 				bla: map[string]B{},
 			}, nil
@@ -117,38 +116,22 @@ func initAwsProvider(profile string, region string) *terraform.ResourceProvider 
 	return &p
 }
 
-/*
-// flags adds the meta flags to the given FlagSet.
-func flagSet(n string) *flag.FlagSet {
-	f := flag.NewFlagSet(n, flag.ContinueOnError)
-	f.String("var", "",  "variables")
-	f.String("var", "",  "tag-value")
-
-	// Create an io.Writer that writes to our Ui properly for errors.
-	// This is kind of a hack, but it does the job. Basically: create
-	// a pipe, use a scanner to break it into lines, and output each line
-	// to the UI. Do this forever.
-	errR, errW := io.Pipe()
-	errScanner := bufio.NewScanner(errR)
-	go func() {
-		for errScanner.Scan() {
-			m.Ui.Error(errScanner.Text())
-		}
-	}()
-	f.SetOutput(errW)
-
-	// Set the default Usage to empty
-	f.Usage = func() {}
-
-	return f
+type AWSClient struct {
+	ec2conn         *ec2.EC2
+	autoscalingconn *autoscaling.AutoScaling
+	elbconn         *elb.ELB
+	r53conn         *route53.Route53
+	cfconn          *cloudformation.CloudFormation
+	efsconn         *efs.EFS
+	iamconn         *iam.IAM
+	kmsconn         *kms.KMS
 }
-*/
 
 func BasicHelpFunc(app string) cli.HelpFunc {
 	return func(commands map[string]cli.CommandFactory) string {
 		var buf bytes.Buffer
 		buf.WriteString(fmt.Sprintf(
-			"Usage: %s [--version] [--help] <profile> <command> [<args>]\n\n",
+			"Usage: %s [options] <command> [parameters]\n\n",
 			app))
 		buf.WriteString("Available commands are:\n")
 
