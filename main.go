@@ -7,8 +7,6 @@ import (
 	"os"
 	"log"
 	"github.com/mitchellh/cli"
-	"sort"
-	"bytes"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
@@ -32,17 +30,32 @@ func main() {
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
 
-	profile := flag.String("profile", "", "Use a specific profile from your credential file.")
-	region := flag.String("region", "", "The region to use. Overrides config/env settings.")
+	versionFlag := flag.Bool("version", false, "Show version")
+	helpFlag := flag.Bool("help", false, "Show help")
+	profile := flag.String("profile", "", "Use a specific profile from your credential file")
+	region := flag.String("region", "", "The region to use. Overrides config/env settings")
+	isTestRun := flag.Bool("test-run", false, "Don't delete anything, just show what would happen")
+	outFileName := flag.String("output", "", "List deleted resources in yaml file")
 
+	flag.Usage = func() { fmt.Println(Help()) }
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println(version)
+		os.Exit(0)
+	}
+
+	if *helpFlag {
+		fmt.Println(Help())
+		os.Exit(0)
+	}
 
 	c := &cli.CLI{
 		Name: app,
 		Version: version,
 		HelpFunc: BasicHelpFunc(app),
 	}
-	c.Args = flag.Args()
+	c.Args = append([]string{"wipe"}, flag.Args()...)
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
@@ -54,6 +67,12 @@ func main() {
 	}
 
 	p := initAwsProvider(*profile, *region)
+
+	ui := &cli.BasicUi{
+		Reader:      os.Stdin,
+		Writer:      os.Stdout,
+		ErrorWriter: os.Stderr,
+	}
 
 	client := &AWSClient{
 		autoscalingconn: autoscaling.New(sess),
@@ -69,9 +88,14 @@ func main() {
 	c.Commands = map[ string]cli.CommandFactory{
 		"wipe": func() (cli.Command, error) {
 			return &WipeCommand{
+				Ui: &cli.ColoredUi{
+					Ui:          ui,
+					OutputColor: cli.UiColorBlue,
+				},
 				client: client,
 				provider: p,
-				bla: map[string]B{},
+				IsTestRun: *isTestRun,
+				outFileName: *outFileName,
 			}, nil
 		},
 	}
@@ -82,6 +106,28 @@ func main() {
 	}
 
 	os.Exit(exitStatus)
+}
+
+func BasicHelpFunc(app string) cli.HelpFunc {
+	return func(commands map[string]cli.CommandFactory) string {
+		return Help()
+	}
+}
+
+func Help() string {
+	return `Usage: awsweeper [options] <config.yaml>
+
+  Delete AWS resources via a yaml configuration.
+
+Options:
+  --profile			Use a specific profile from your credential file
+
+  --region			The region to use. Overrides config/env settings
+
+  --test-run		Don't delete anything, just show what would happen
+
+  --output=file		Print infos about deleted resources to a yaml file
+`
 }
 
 func initAwsProvider(profile string, region string) *terraform.ResourceProvider {
@@ -127,50 +173,6 @@ type AWSClient struct {
 	kmsconn         *kms.KMS
 }
 
-func BasicHelpFunc(app string) cli.HelpFunc {
-	return func(commands map[string]cli.CommandFactory) string {
-		var buf bytes.Buffer
-		buf.WriteString(fmt.Sprintf(
-			"Usage: %s [options] <command> [parameters]\n\n",
-			app))
-		buf.WriteString("Available commands are:\n")
-
-		// Get the list of keys so we can sort them, and also get the maximum
-		// key length so they can be aligned properly.
-		keys := make([]string, 0, len(commands))
-		maxKeyLen := 0
-		for key := range commands {
-			if len(key) > maxKeyLen {
-				maxKeyLen = len(key)
-			}
-
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-
-		for _, key := range keys {
-			commandFunc, ok := commands[key]
-			if !ok {
-				// This should never happen since we JUST built the list of
-				// keys.
-				panic("command not found: " + key)
-			}
-
-			command, err := commandFunc()
-			if err != nil {
-				log.Printf("[ERR] cli: Command '%s' failed to load: %s",
-					key, err)
-				continue
-			}
-
-			key = fmt.Sprintf("%s%s", key, strings.Repeat(" ", maxKeyLen - len(key)))
-			buf.WriteString(fmt.Sprintf("    %s    %s\n", key, command.Synopsis()))
-		}
-
-		return buf.String()
-	}
-}
-
 type Resource struct {
 	id *string
 	attrs *map[string]string
@@ -178,11 +180,13 @@ type Resource struct {
 }
 
 func (c *WipeCommand) deleteResources(rSet ResourceSet) {
+	numWorkerThreads := 10
+
 	if len(rSet.Ids) == 0 {
 		return
 	}
 
-	c.bla[rSet.Type] = B{Ids: rSet.Ids}
+	c.deleteOut[rSet.Type] = B{Ids: rSet.Ids}
 
 	printType(rSet.Type, len(rSet.Ids))
 
@@ -194,16 +198,19 @@ func (c *WipeCommand) deleteResources(rSet ResourceSet) {
 		Destroy: true,
 	}
 
-	a := make([]*map[string]string, len(rSet.Ids))
+	a := []*map[string]string{}
 	if len(rSet.Attrs) > 0 {
 		a = rSet.Attrs
+	} else {
+		for i := 0; i < len(rSet.Ids); i++ {
+			a = append(a, &map[string]string{})
+		}
 	}
+
 	ts := make([]*map[string]string, len(rSet.Ids))
 	if len(rSet.Tags) > 0 {
 		ts = rSet.Tags
 	}
-	isDryRun := true
-	numWorkerThreads := 10
 	chResources := make(chan *Resource, numWorkerThreads)
 
 	var wg sync.WaitGroup
@@ -216,33 +223,36 @@ func (c *WipeCommand) deleteResources(rSet ResourceSet) {
 				if more {
 					printStat := fmt.Sprintf("\tId:\t%s", *res.id)
 					if res.tags != nil {
-						printStat += "\n\tTags:\t"
-						for k, v := range *res.tags {
-							printStat += fmt.Sprintf("[%s: %v] ", k, v)
+						if len(*res.tags) > 0 {
+							printStat += "\n\tTags:\t"
+							for k, v := range *res.tags {
+								printStat += fmt.Sprintf("[%s: %v] ", k, v)
+							}
+							printStat += "\n"
 						}
-						printStat += "\n"
 					}
 					fmt.Println(printStat)
 
 					a := res.attrs
-					var s *terraform.InstanceState
-					if a == nil {
-						s = &terraform.InstanceState{
-							ID: *res.id,
-						}
-					} else {
-						s = &terraform.InstanceState{
-							ID: *res.id,
-							Attributes: *a,
-						}
+					(*a)["force_destroy"] = "true"
+
+					s := &terraform.InstanceState{
+						ID: *res.id,
+						Attributes: *a,
 					}
 
-					if !isDryRun {
-						_, err := (*c.provider).Apply(ii, s, d)
+					st, err := (*c.provider).Refresh(ii, s)
+					if err != nil{
+						fmt.Println("err: ", err)
+						st = s
+						st.Attributes["force_destroy"] = "true"
+					}
+
+					if !c.IsTestRun {
+						_, err := (*c.provider).Apply(ii, st, d)
 
 						if err != nil {
-							fmt.Printf("err: %s\n", err)
-							//os.Exit(1)
+							fmt.Printf("\t%s\n", err)
 						}
 					}
 					wg.Done()

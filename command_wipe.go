@@ -14,8 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"regexp"
 	"gopkg.in/yaml.v2"
-	"log"
 	"io/ioutil"
+	"github.com/mitchellh/cli"
+	"os"
 )
 
 type B struct {
@@ -24,11 +25,15 @@ type B struct {
 }
 
 type WipeCommand struct {
+	Ui       		cli.Ui
+	IsTestRun		bool
 	client			*AWSClient
 	provider        *terraform.ResourceProvider
 	resourceTypes   []string
 	filter          []*ec2.Filter
-	bla             map[string]B
+	deleteCfg	    map[string]B
+	deleteOut		map[string]B
+	outFileName		string
 }
 
 type ResourceSet struct {
@@ -39,6 +44,9 @@ type ResourceSet struct {
 }
 
 func (c *WipeCommand) Run(args []string) int {
+	c.deleteCfg = map[string]B{}
+	c.deleteOut = map[string]B{}
+
 	c.resourceTypes = []string{
 		"aws_autoscaling_group",
 		"aws_launch_configuration",
@@ -91,60 +99,38 @@ func (c *WipeCommand) Run(args []string) int {
 		"aws_kms_key":              c.deleteKmsKeys,
 	}
 
-	data, err := ioutil.ReadFile("in.yaml")
-	check(err)
-	err = yaml.Unmarshal([]byte(data), &c.bla)
-	if err != nil {
-		fmt.Println(err)
-		log.Fatalf("error: %v", err)
-	}
-
-	if len(args) > 0 {
-		if args[0] == "all" {
-			for _, k := range c.resourceTypes {
-				deleteFunctions[k](k)
-			}
-		} else {
-			v, ok := deleteFunctions[args[0]]
-			if ok {
-				v(args[0])
-			} else {
-				fmt.Println(c.Help())
-				return 1
-			}
-		}
+	if len(args) == 1 {
+		data, err := ioutil.ReadFile(args[0])
+		check(err)
+		err = yaml.Unmarshal([]byte(data), &c.deleteCfg)
+		check(err)
 	} else {
-		fmt.Println(c.Help())
+		fmt.Println(Help())
 		return 1
 	}
 
-	d, err := yaml.Marshal(&c.bla)
-	if err != nil {
-		log.Fatalf("error: %v", err)
+	if c.IsTestRun {
+		c.Ui.Output("INFO: This is a test run, nothing will be deleted!")
 	}
-	d1 := []byte(string(d))
-	err = ioutil.WriteFile("out.yaml", d1, 0644)
-	check(err)
+
+	for _, k := range c.resourceTypes {
+		deleteFunctions[k](k)
+	}
+
+	if c.outFileName != "" {
+		outYaml, err := yaml.Marshal(&c.deleteOut)
+		check(err)
+
+		fileYaml := []byte(string(outYaml))
+		err = ioutil.WriteFile(c.outFileName, fileYaml, 0644)
+		check(err)
+	}
 
 	return 0
 }
 
 func (c *WipeCommand) Help() string {
-	helpText := `
-Usage: awsweeper <environment> wipe [all | aws_resource_type | resource.yaml]
-
-If the name of an "aws_resource_type" (e.g. aws_vpc) is provided as a sub-argument,
-all resources of that type will be wiped from your account. If "all" is provided,
- all resources of all types in the list below will be deleted in that order.
-
-Currently supported resource types are:
-`
-
-	for _, k := range c.resourceTypes {
-		helpText += fmt.Sprintf("\t\t%s\n", k)
-	}
-
-	return strings.TrimSpace(helpText)
+	return Help()
 }
 
 func (c *WipeCommand) Synopsis() string {
@@ -774,7 +760,7 @@ func (c *WipeCommand) deleteKmsKeys(resourceType string) {
 }
 
 func (c *WipeCommand) checkDelete(rType string, id *string, tags ...*map[string]string) bool {
-	if rVal, ok := c.bla[rType]; ok {
+	if rVal, ok := c.deleteCfg[rType]; ok {
 		if len(rVal.Ids) == 0 && len(rVal.Tags) == 0 {
 			return true
 		}
@@ -795,14 +781,14 @@ func (c *WipeCommand) checkDelete(rType string, id *string, tags ...*map[string]
 				}
 			}
 		}
-	} else {
-		return true
 	}
 	return false
 }
 
 func check(e error) {
 	if e != nil {
-		panic(e)
+		fmt.Println(e)
+		os.Exit(1)
+		//panic(e)
 	}
 }
