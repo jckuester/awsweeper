@@ -1,0 +1,26 @@
+aws_vpc:
+  tags:
+    Name: foo
+aws_subnet:
+  tags:
+    Name: foo
+aws_internet_gateway:
+  tags:
+    Name: foo
+aws_security_group:
+  tags:
+    Name: foo
+aws_elb:
+  ids:
+  - foo
+aws_instance:
+  tags:
+    Name: foo
+aws_launch_configuration:
+  ids:
+  - foo
+aws_autoscaling_group:
+  tags:
+    Name: foo
+  ids:
+  - foo
