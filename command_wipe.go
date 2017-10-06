@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"github.com/mitchellh/cli"
 	"os"
+	"sync"
 )
 
 type B struct {
@@ -26,7 +27,7 @@ type B struct {
 
 type WipeCommand struct {
 	Ui       		cli.Ui
-	IsTestRun		bool
+	isTestRun		bool
 	client			*AWSClient
 	provider        *terraform.ResourceProvider
 	resourceTypes   []string
@@ -36,11 +37,28 @@ type WipeCommand struct {
 	outFileName		string
 }
 
-type ResourceSet struct {
+type Resources struct {
 	Type  string
 	Ids   []*string
 	Attrs []*map[string]string
 	Tags  []*map[string]string
+}
+
+type Resource struct {
+	id *string
+	attrs *map[string]string
+	tags *map[string]string
+}
+
+type AWSClient struct {
+	ec2conn         *ec2.EC2
+	autoscalingconn *autoscaling.AutoScaling
+	elbconn         *elb.ELB
+	r53conn         *route53.Route53
+	cfconn          *cloudformation.CloudFormation
+	efsconn         *efs.EFS
+	iamconn         *iam.IAM
+	kmsconn         *kms.KMS
 }
 
 func (c *WipeCommand) Run(args []string) int {
@@ -109,7 +127,7 @@ func (c *WipeCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.IsTestRun {
+	if c.isTestRun {
 		c.Ui.Output("INFO: This is a test run, nothing will be deleted!")
 	}
 
@@ -155,7 +173,7 @@ func (c *WipeCommand) deleteASGs(resourceType string) {
 				tags = append(tags, &m)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -170,7 +188,7 @@ func (c *WipeCommand) deleteLCs(resourceType string) {
 				ids = append(ids, r.LaunchConfigurationName)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -198,7 +216,7 @@ func (c *WipeCommand) deleteInstances(resourceType string) {
 				}
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -226,7 +244,7 @@ func (c *WipeCommand) deleteInternetGateways(resourceType string) {
 				tags = append(tags, m)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Attrs: attrs, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs, Tags: tags})
 	}
 }
 
@@ -244,7 +262,7 @@ func (c *WipeCommand) deleteNatGateways(resourceType string) {
 				}
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -277,7 +295,7 @@ func (c *WipeCommand) deleteRouteTables(resourceType string) {
 			}
 		}
 		// aws_route_table_association handled implicitly
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -303,7 +321,7 @@ func (c *WipeCommand) deleteSecurityGroups(resourceType string) {
 				}
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -330,7 +348,7 @@ func (c *WipeCommand) deleteNetworkAcls(resourceType string) {
 				}
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -353,7 +371,7 @@ func (c *WipeCommand) deleteNetworkInterfaces(resourceType string) {
 				tags = append(tags, m)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -367,7 +385,7 @@ func (c *WipeCommand) deleteELBs(resourceType string) {
 				ids = append(ids, r.LoadBalancerName)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -383,7 +401,7 @@ func (c *WipeCommand) deleteVpcEndpoints(resourceType string) {
 				ids = append(ids, r.VpcEndpointId)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -399,7 +417,7 @@ func (c *WipeCommand) deleteEips(resourceType string) {
 				ids = append(ids, r.AllocationId)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -422,7 +440,7 @@ func (c *WipeCommand) deleteSubnets(resourceType string) {
 				tags = append(tags, m)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -446,7 +464,7 @@ func (c *WipeCommand) deleteVpcs(resourceType string) {
 				tags = append(tags, m)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -462,7 +480,7 @@ func (c *WipeCommand) deleteRoute53Record(resourceType string) {
 				}
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -496,8 +514,8 @@ func (c *WipeCommand) deleteRoute53Zone(resourceType string) {
 				"name":          *hz.Name,
 			})
 		}
-		c.deleteResources(ResourceSet{Type: "aws_route53_record", Ids: rsIds, Attrs: rsAttrs})
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: hzIds, Attrs: hzAttrs})
+		c.delete(Resources{Type: "aws_route53_record", Ids: rsIds, Attrs: rsAttrs})
+		c.delete(Resources{Type: resourceType, Ids: hzIds, Attrs: hzAttrs})
 
 	}
 }
@@ -521,7 +539,7 @@ func (c *WipeCommand) deleteCloudformationStacks(resourceType string) {
 				tags = append(tags, m)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Tags: tags})
+		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
 }
 
@@ -547,8 +565,8 @@ func (c *WipeCommand) deleteEfsFileSystem(resourceType string) {
 				fsIds = append(fsIds, r.FileSystemId)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: "aws_efs_mount_target", Ids: mtIds})
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: fsIds})
+		c.delete(Resources{Type: "aws_efs_mount_target", Ids: mtIds})
+		c.delete(Resources{Type: resourceType, Ids: fsIds})
 	}
 }
 
@@ -591,8 +609,8 @@ func (c *WipeCommand) deleteIamUser(resourceType string) {
 				})
 			}
 		}
-		c.deleteResources(ResourceSet{Type: "aws_iam_user_policy_attachment", Ids: pIds, Attrs: pAttrs})
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids, Attrs: attrs})
+		c.delete(Resources{Type: "aws_iam_user_policy_attachment", Ids: pIds, Attrs: pAttrs})
+		c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs})
 	}
 }
 
@@ -638,8 +656,8 @@ func (c *WipeCommand) deleteIamPolicy(resourceType string) {
 				ids = append(ids, pol.Arn)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: "aws_iam_policy_attachment", Ids: eIds, Attrs: attributes})
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: "aws_iam_policy_attachment", Ids: eIds, Attrs: attributes})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -688,9 +706,9 @@ func (c *WipeCommand) deleteIamRole(resourceType string) {
 				ids = append(ids, role.RoleName)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes})
-		c.deleteResources(ResourceSet{Type: "aws_iam_role_policy", Ids: pIds})
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes})
+		c.delete(Resources{Type: "aws_iam_role_policy", Ids: pIds})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -715,7 +733,7 @@ func (c *WipeCommand) deleteInstanceProfiles(resourceType string) {
 				})
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -730,7 +748,7 @@ func (c *WipeCommand) deleteKmsAliases(resourceType string) {
 				ids = append(ids, r.AliasArn)
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -755,7 +773,7 @@ func (c *WipeCommand) deleteKmsKeys(resourceType string) {
 				}
 			}
 		}
-		c.deleteResources(ResourceSet{Type: resourceType, Ids: ids})
+		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
 }
 
@@ -784,6 +802,106 @@ func (c *WipeCommand) checkDelete(rType string, id *string, tags ...*map[string]
 	}
 	return false
 }
+
+func (c *WipeCommand) delete(res Resources) {
+	numWorkerThreads := 10
+
+	if len(res.Ids) == 0 {
+		return
+	}
+
+	c.deleteOut[res.Type] = B{Ids: res.Ids}
+
+	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res.Type, len(res.Ids))
+
+	ii := &terraform.InstanceInfo{
+		Type: res.Type,
+	}
+
+	d := &terraform.InstanceDiff{
+		Destroy: true,
+	}
+
+	a := []*map[string]string{}
+	if len(res.Attrs) > 0 {
+		a = res.Attrs
+	} else {
+		for i := 0; i < len(res.Ids); i++ {
+			a = append(a, &map[string]string{})
+		}
+	}
+
+	ts := make([]*map[string]string, len(res.Ids))
+	if len(res.Tags) > 0 {
+		ts = res.Tags
+	}
+	chResources := make(chan *Resource, numWorkerThreads)
+
+	var wg sync.WaitGroup
+	wg.Add(len(res.Ids))
+
+	for j := 1; j <= numWorkerThreads; j++ {
+		go func() {
+			for {
+				res, more := <- chResources
+				if more {
+					printStat := fmt.Sprintf("\tId:\t%s", *res.id)
+					if res.tags != nil {
+						if len(*res.tags) > 0 {
+							printStat += "\n\tTags:\t"
+							for k, v := range *res.tags {
+								printStat += fmt.Sprintf("[%s: %v] ", k, v)
+							}
+							printStat += "\n"
+						}
+					}
+					fmt.Println(printStat)
+
+					a := res.attrs
+					(*a)["force_destroy"] = "true"
+
+					s := &terraform.InstanceState{
+						ID: *res.id,
+						Attributes: *a,
+					}
+
+					st, err := (*c.provider).Refresh(ii, s)
+					if err != nil{
+						fmt.Println("err: ", err)
+						st = s
+						st.Attributes["force_destroy"] = "true"
+					}
+
+					if !c.isTestRun {
+						_, err := (*c.provider).Apply(ii, st, d)
+
+						if err != nil {
+							fmt.Printf("\t%s\n", err)
+						}
+					}
+					wg.Done()
+				} else {
+					return
+				}
+			}
+		}()
+	}
+
+	for i, id := range res.Ids {
+		if id != nil {
+			chResources <- &Resource{
+				id: id,
+				attrs: a[i],
+				tags: ts[i],
+			}
+		}
+	}
+	close(chResources)
+
+	wg.Wait()
+	fmt.Println("---\n")
+}
+
 
 func check(e error) {
 	if e != nil {

@@ -2,6 +2,12 @@
 
 Wipe out resources in your AWS account.
 
+## Usage
+
+    awsweeper <config.yaml>
+    
+Have a look at [test.yaml](test.integration/test.yaml) for an example of the configuration file.
+    
 ## Supported resources
 
 Here is list of [all the various resources you can create within AWS](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html).
