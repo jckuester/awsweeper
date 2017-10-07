@@ -113,9 +113,9 @@ func Help() string {
   Delete AWS resources via a yaml configuration.
 
 Options:
-  --profile			Use a specific profile from your credential file
+  --profile		Use a specific profile from your credential file
 
-  --region			The region to use. Overrides config/env settings
+  --region		The region to use. Overrides config/env settings
 
   --test-run		Don't delete anything, just show what would happen
 

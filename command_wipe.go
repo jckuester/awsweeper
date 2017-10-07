@@ -20,7 +20,7 @@ import (
 	"sync"
 )
 
-type B struct {
+type yamlCfg struct {
 	Ids  []*string `yaml:",omitempty"`
 	Tags map[string]string `yaml:",omitempty"`
 }
@@ -32,8 +32,8 @@ type WipeCommand struct {
 	provider        *terraform.ResourceProvider
 	resourceTypes   []string
 	filter          []*ec2.Filter
-	deleteCfg	    map[string]B
-	deleteOut		map[string]B
+	deleteCfg	    map[string]yamlCfg
+	deleteOut		map[string]yamlCfg
 	outFileName		string
 }
 
@@ -62,8 +62,8 @@ type AWSClient struct {
 }
 
 func (c *WipeCommand) Run(args []string) int {
-	c.deleteCfg = map[string]B{}
-	c.deleteOut = map[string]B{}
+	c.deleteCfg = map[string]yamlCfg{}
+	c.deleteOut = map[string]yamlCfg{}
 
 	c.resourceTypes = []string{
 		"aws_autoscaling_group",
@@ -157,624 +157,578 @@ func (c *WipeCommand) Synopsis() string {
 
 func (c *WipeCommand) deleteASGs(resourceType string) {
 	res, err := c.client.autoscalingconn.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
+	check(err)
+	
+	ids := []*string{}
+	tags := []*map[string]string{}
 
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
+	for _, r := range res.AutoScalingGroups {
+		if c.checkDelete(resourceType, r.AutoScalingGroupName) {
+			ids = append(ids, r.AutoScalingGroupName)
 
-		for _, r := range res.AutoScalingGroups {
-			if c.checkDelete(resourceType, r.AutoScalingGroupName) {
-				ids = append(ids, r.AutoScalingGroupName)
-
-				m := map[string]string{}
-				for _, t := range r.Tags {
-					m[*t.Key] = *t.Value
-				}
-				tags = append(tags, &m)
+			m := map[string]string{}
+			for _, t := range r.Tags {
+				m[*t.Key] = *t.Value
 			}
+			tags = append(tags, &m)
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
+
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
 func (c *WipeCommand) deleteLCs(resourceType string) {
 	res, err := c.client.autoscalingconn.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
+	ids := []*string{}
 
-		for _, r := range res.LaunchConfigurations {
-			if c.checkDelete(resourceType, r.LaunchConfigurationName) {
-				ids = append(ids, r.LaunchConfigurationName)
-			}
+	for _, r := range res.LaunchConfigurations {
+		if c.checkDelete(resourceType, r.LaunchConfigurationName) {
+			ids = append(ids, r.LaunchConfigurationName)
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteInstances(resourceType string) {
-	res, err := c.client.ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{
-		//Filters: c.client.filter,
-	})
+	res, err := c.client.ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
+	ids := []*string{}
+	tags := []*map[string]string{}
 
-		for _, r := range res.Reservations {
-			for _, in := range r.Instances {
-				if *in.State.Name != "terminated" {
-					m := &map[string]string{}
-					for _, t := range in.Tags {
-						(*m)[*t.Key] = *t.Value
-					}
+	for _, r := range res.Reservations {
+		for _, in := range r.Instances {
+			if *in.State.Name != "terminated" {
+				m := &map[string]string{}
+				for _, t := range in.Tags {
+					(*m)[*t.Key] = *t.Value
+				}
 
-					if c.checkDelete(resourceType, in.InstanceId, m) {
-						ids = append(ids, in.InstanceId)
-						tags = append(tags, m)
-					}
+				if c.checkDelete(resourceType, in.InstanceId, m) {
+					ids = append(ids, in.InstanceId)
+					tags = append(tags, m)
 				}
 			}
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
 func (c *WipeCommand) deleteInternetGateways(resourceType string) {
-	res, err := c.client.ec2conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{
-		//Filters: c.filter,
-	})
+	res, err := c.client.ec2conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		attrs := []*map[string]string{}
-		tags := []*map[string]string{}
+	ids := []*string{}
+	attrs := []*map[string]string{}
+	tags := []*map[string]string{}
 
-		for _, r := range res.InternetGateways {
-			m := &map[string]string{}
-			for _, t := range r.Tags {
-				(*m)[*t.Key] = *t.Value
-			}
-
-			if c.checkDelete(resourceType, r.InternetGatewayId, m) {
-				ids = append(ids, r.InternetGatewayId)
-				attrs = append(attrs, &map[string]string{
-					"vpc_id": *r.Attachments[0].VpcId,
-				})
-				tags = append(tags, m)
-			}
+	for _, r := range res.InternetGateways {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs, Tags: tags})
+
+		if c.checkDelete(resourceType, r.InternetGatewayId, m) {
+			ids = append(ids, r.InternetGatewayId)
+			attrs = append(attrs, &map[string]string{
+				"vpc_id": *r.Attachments[0].VpcId,
+			})
+			tags = append(tags, m)
+		}
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs, Tags: tags})
 }
 
 func (c *WipeCommand) deleteNatGateways(resourceType string) {
-	res, err := c.client.ec2conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{
-		//Filter: c.filter,
-	})
+	res, err := c.client.ec2conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		for _, r := range res.NatGateways {
-			if c.checkDelete(resourceType, r.NatGatewayId) {
-				if *r.State == "available" {
-					ids = append(ids, r.NatGatewayId)
-				}
+	ids := []*string{}
+	for _, r := range res.NatGateways {
+		if c.checkDelete(resourceType, r.NatGatewayId) {
+			if *r.State == "available" {
+				ids = append(ids, r.NatGatewayId)
 			}
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteRouteTables(resourceType string) {
-	res, err := c.client.ec2conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{
-		//Filters: c.filter,
-	})
+	res, err := c.client.ec2conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
+	ids := []*string{}
+	tags := []*map[string]string{}
 
-		for _, r := range res.RouteTables {
-			m := &map[string]string{}
-			for _, t := range r.Tags {
-				(*m)[*t.Key] = *t.Value
-			}
-
-			if c.checkDelete(resourceType, r.RouteTableId, m) {
-				main := false
-				for _, a := range r.Associations {
-					if *a.Main {
-						main = true
-					}
-				}
-				if ! main {
-					ids = append(ids, r.RouteTableId)
-					tags = append(tags, m)
-				}
-			}
+	for _, r := range res.RouteTables {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
 		}
-		// aws_route_table_association handled implicitly
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
-	}
-}
 
-func (c *WipeCommand) deleteSecurityGroups(resourceType string) {
-	res, err := c.client.ec2conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-		//Filters: c.filter,
-	})
-
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
-
-		for _, r := range res.SecurityGroups {
-			m := &map[string]string{}
-			for _, t := range r.Tags {
-				(*m)[*t.Key] = *t.Value
-			}
-
-			if c.checkDelete(resourceType, r.GroupId, m) {
-				if *r.GroupName != "default" {
-					ids = append(ids, r.GroupId)
-					tags = append(tags, m)
+		if c.checkDelete(resourceType, r.RouteTableId, m) {
+			main := false
+			for _, a := range r.Associations {
+				if *a.Main {
+					main = true
 				}
 			}
-		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
-	}
-}
-
-func (c *WipeCommand) deleteNetworkAcls(resourceType string) {
-	res, err := c.client.ec2conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{
-		//Filters: c.filter,
-	})
-
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
-
-		for _, r := range res.NetworkAcls {
-			m := &map[string]string{}
-			for _, t := range r.Tags {
-				(*m)[*t.Key] = *t.Value
-			}
-
-			if ! *r.IsDefault {
-				if c.checkDelete(resourceType, r.NetworkAclId, m) {
-					ids = append(ids, r.NetworkAclId)
-					// TODO handle associations
-					tags = append(tags, m)
-				}
-			}
-		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
-	}
-}
-
-func (c *WipeCommand) deleteNetworkInterfaces(resourceType string) {
-	res, err := c.client.ec2conn.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{
-		//Filters: c.filter,
-	})
-
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
-
-		for _, r := range res.NetworkInterfaces {
-			m := &map[string]string{}
-			for _, t := range r.TagSet {
-				(*m)[*t.Key] = *t.Value
-			}
-			if c.checkDelete(resourceType, r.NetworkInterfaceId, m) {
-				ids = append(ids, r.NetworkInterfaceId)
+			if ! main {
+				ids = append(ids, r.RouteTableId)
 				tags = append(tags, m)
 			}
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 	}
+	// aws_route_table_association handled implicitly
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
+}
+
+func (c *WipeCommand) deleteSecurityGroups(resourceType string) {
+	res, err := c.client.ec2conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{})
+	check(err)
+
+	ids := []*string{}
+	tags := []*map[string]string{}
+
+	for _, r := range res.SecurityGroups {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
+		}
+
+		if c.checkDelete(resourceType, r.GroupId, m) {
+			if *r.GroupName != "default" {
+				ids = append(ids, r.GroupId)
+				tags = append(tags, m)
+			}
+		}
+	}
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
+}
+
+func (c *WipeCommand) deleteNetworkAcls(resourceType string) {
+	res, err := c.client.ec2conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{})
+	check(err)
+
+	ids := []*string{}
+	tags := []*map[string]string{}
+
+	for _, r := range res.NetworkAcls {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
+		}
+
+		if ! *r.IsDefault {
+			if c.checkDelete(resourceType, r.NetworkAclId, m) {
+				ids = append(ids, r.NetworkAclId)
+				// TODO handle associations
+				tags = append(tags, m)
+			}
+		}
+	}
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
+}
+
+func (c *WipeCommand) deleteNetworkInterfaces(resourceType string) {
+	res, err := c.client.ec2conn.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{})
+	check(err)
+
+	ids := []*string{}
+	tags := []*map[string]string{}
+
+	for _, r := range res.NetworkInterfaces {
+		m := &map[string]string{}
+		for _, t := range r.TagSet {
+			(*m)[*t.Key] = *t.Value
+		}
+		if c.checkDelete(resourceType, r.NetworkInterfaceId, m) {
+			ids = append(ids, r.NetworkInterfaceId)
+			tags = append(tags, m)
+		}
+	}
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
 func (c *WipeCommand) deleteELBs(resourceType string) {
 	res, err := c.client.elbconn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		for _, r := range res.LoadBalancerDescriptions {
-			if c.checkDelete(resourceType, r.LoadBalancerName) {
-				ids = append(ids, r.LoadBalancerName)
-			}
+	ids := []*string{}
+	for _, r := range res.LoadBalancerDescriptions {
+		if c.checkDelete(resourceType, r.LoadBalancerName) {
+			ids = append(ids, r.LoadBalancerName)
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteVpcEndpoints(resourceType string) {
-	res, err := c.client.ec2conn.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{
-		//Filters: c.filter,
-	})
+	res, err := c.client.ec2conn.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		for _, r := range res.VpcEndpoints {
-			if c.checkDelete(resourceType, r.VpcEndpointId) {
-				ids = append(ids, r.VpcEndpointId)
-			}
+	ids := []*string{}
+	for _, r := range res.VpcEndpoints {
+		if c.checkDelete(resourceType, r.VpcEndpointId) {
+			ids = append(ids, r.VpcEndpointId)
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteEips(resourceType string) {
-	res, err := c.client.ec2conn.DescribeAddresses(&ec2.DescribeAddressesInput{
-		//Filters: c.filter,
-	})
+	res, err := c.client.ec2conn.DescribeAddresses(&ec2.DescribeAddressesInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		for _, r := range res.Addresses {
-			if c.checkDelete(resourceType, r.AllocationId) {
-				ids = append(ids, r.AllocationId)
-			}
+	ids := []*string{}
+	for _, r := range res.Addresses {
+		if c.checkDelete(resourceType, r.AllocationId) {
+			ids = append(ids, r.AllocationId)
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteSubnets(resourceType string) {
-	res, err := c.client.ec2conn.DescribeSubnets(&ec2.DescribeSubnetsInput{
-		//Filters: c.filter,
-	})
+	res, err := c.client.ec2conn.DescribeSubnets(&ec2.DescribeSubnetsInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
+	ids := []*string{}
+	tags := []*map[string]string{}
 
-		for _, r := range res.Subnets {
-			m := &map[string]string{}
-			for _, t := range r.Tags {
-				(*m)[*t.Key] = *t.Value
-			}
-			if c.checkDelete(resourceType, r.SubnetId, m) {
-				ids = append(ids, r.SubnetId)
-				tags = append(tags, m)
-			}
+	for _, r := range res.Subnets {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
+		if c.checkDelete(resourceType, r.SubnetId, m) {
+			ids = append(ids, r.SubnetId)
+			tags = append(tags, m)
+		}
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
 func (c *WipeCommand) deleteVpcs(resourceType string) {
-	res, err := c.client.ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{
-		//Filters: c.filter,
-	})
+	res, err := c.client.ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
+	ids := []*string{}
+	tags := []*map[string]string{}
 
-		for _, r := range res.Vpcs {
-			m := &map[string]string{}
-			for _, t := range r.Tags {
-				(*m)[*t.Key] = *t.Value
-			}
-
-			if c.checkDelete(resourceType, r.VpcId, m) {
-				ids = append(ids, r.VpcId)
-				tags = append(tags, m)
-			}
+	for _, r := range res.Vpcs {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
+
+		if c.checkDelete(resourceType, r.VpcId, m) {
+			ids = append(ids, r.VpcId)
+			tags = append(tags, m)
+		}
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
 func (c *WipeCommand) deleteRoute53Record(resourceType string) {
 	res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		for _, r := range res.ResourceRecordSets {
-			for _, rr := range r.ResourceRecords {
-				if c.checkDelete(resourceType, rr.Value) {
-					ids = append(ids, rr.Value)
-				}
+	ids := []*string{}
+	for _, r := range res.ResourceRecordSets {
+		for _, rr := range r.ResourceRecords {
+			if c.checkDelete(resourceType, rr.Value) {
+				ids = append(ids, rr.Value)
 			}
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteRoute53Zone(resourceType string) {
 	res, err := c.client.r53conn.ListHostedZones(&route53.ListHostedZonesInput{})
+	check(err)
 
-	if err == nil {
-		hzIds := []*string{}
-		rsIds := []*string{}
-		rsAttrs := []*map[string]string{}
-		hzAttrs := []*map[string]string{}
+	hzIds := []*string{}
+	rsIds := []*string{}
+	rsAttrs := []*map[string]string{}
+	hzAttrs := []*map[string]string{}
 
-		for _, hz := range res.HostedZones {
-			res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
-				HostedZoneId: hz.Id,
-			})
+	for _, hz := range res.HostedZones {
+		res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+			HostedZoneId: hz.Id,
+		})
+		check(err)
 
-			if err == nil {
-				for _, rs := range res.ResourceRecordSets {
-					rsIds = append(rsIds, rs.Name)
-					rsAttrs = append(rsAttrs, &map[string]string{
-						"zone_id": *hz.Id,
-						"name":    *rs.Name,
-						"type":    *rs.Type,
-					})
-				}
-			}
-			hzIds = append(hzIds, hz.Id)
-			hzAttrs = append(hzAttrs, &map[string]string{
-				"force_destroy": "true",
-				"name":          *hz.Name,
+		for _, rs := range res.ResourceRecordSets {
+			rsIds = append(rsIds, rs.Name)
+			rsAttrs = append(rsAttrs, &map[string]string{
+				"zone_id": *hz.Id,
+				"name":    *rs.Name,
+				"type":    *rs.Type,
 			})
 		}
-		c.delete(Resources{Type: "aws_route53_record", Ids: rsIds, Attrs: rsAttrs})
-		c.delete(Resources{Type: resourceType, Ids: hzIds, Attrs: hzAttrs})
-
+		hzIds = append(hzIds, hz.Id)
+		hzAttrs = append(hzAttrs, &map[string]string{
+			"force_destroy": "true",
+			"name":          *hz.Name,
+		})
 	}
+	c.delete(Resources{Type: "aws_route53_record", Ids: rsIds, Attrs: rsAttrs})
+	c.delete(Resources{Type: resourceType, Ids: hzIds, Attrs: hzAttrs})
 }
 
 func (c *WipeCommand) deleteCloudformationStacks(resourceType string) {
 	res, err := c.client.cfconn.DescribeStacks(&cloudformation.DescribeStacksInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		tags := []*map[string]string{}
+	ids := []*string{}
+	tags := []*map[string]string{}
 
-		for _, r := range res.Stacks {
-			m := &map[string]string{}
-			for _, t := range r.Tags {
-				(*m)[*t.Key] = *t.Value
-			}
-
-			if c.checkDelete(resourceType, r.StackId, m) {
-				// TODO filter name?
-				ids = append(ids, r.StackId)
-				tags = append(tags, m)
-			}
+	for _, r := range res.Stacks {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
+
+		if c.checkDelete(resourceType, r.StackId, m) {
+			// TODO filter name?
+			ids = append(ids, r.StackId)
+			tags = append(tags, m)
+		}
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
 func (c *WipeCommand) deleteEfsFileSystem(resourceType string) {
 	res, err := c.client.efsconn.DescribeFileSystems(&efs.DescribeFileSystemsInput{})
+	check(err)
 
-	if err == nil {
-		fsIds := []*string{}
-		mtIds := []*string{}
+	fsIds := []*string{}
+	mtIds := []*string{}
 
-		for _, r := range res.FileSystems {
-			if c.checkDelete(resourceType, r.Name) {
-				res, err := c.client.efsconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
-					FileSystemId: r.FileSystemId,
-				})
+	for _, r := range res.FileSystems {
+		if c.checkDelete(resourceType, r.Name) {
+			res, err := c.client.efsconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
+				FileSystemId: r.FileSystemId,
+			})
 
-				if err == nil {
-					for _, r := range res.MountTargets {
-						mtIds = append(mtIds, r.MountTargetId)
-					}
+			if err == nil {
+				for _, r := range res.MountTargets {
+					mtIds = append(mtIds, r.MountTargetId)
 				}
-
-				fsIds = append(fsIds, r.FileSystemId)
 			}
+
+			fsIds = append(fsIds, r.FileSystemId)
 		}
-		c.delete(Resources{Type: "aws_efs_mount_target", Ids: mtIds})
-		c.delete(Resources{Type: resourceType, Ids: fsIds})
 	}
+	c.delete(Resources{Type: "aws_efs_mount_target", Ids: mtIds})
+	c.delete(Resources{Type: resourceType, Ids: fsIds})
 }
 
 func (c *WipeCommand) deleteIamUser(resourceType string) {
 	users, err := c.client.iamconn.ListUsers(&iam.ListUsersInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		pIds := []*string{}
-		attrs := []*map[string]string{}
-		pAttrs := []*map[string]string{}
+	ids := []*string{}
+	pIds := []*string{}
+	attrs := []*map[string]string{}
+	pAttrs := []*map[string]string{}
 
-		for _, u := range users.Users {
-			if c.checkDelete(resourceType, u.UserName) {
-				ups, err := c.client.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
-					UserName: u.UserName,
-				})
-				if err == nil {
-					for _, up := range ups.PolicyNames {
-						fmt.Println(*up)
-					}
+	for _, u := range users.Users {
+		if c.checkDelete(resourceType, u.UserName) {
+			ups, err := c.client.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
+				UserName: u.UserName,
+			})
+			if err == nil {
+				for _, up := range ups.PolicyNames {
+					fmt.Println(*up)
 				}
-
-				upols, err := c.client.iamconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
-					UserName: u.UserName,
-				})
-				if err == nil {
-					for _, upol := range upols.AttachedPolicies {
-						pIds = append(pIds, upol.PolicyArn)
-						pAttrs = append(pAttrs, &map[string]string{
-							"user":       *u.UserName,
-							"policy_arn": *upol.PolicyArn,
-						})
-					}
-				}
-
-				ids = append(ids, u.UserName)
-				attrs = append(attrs, &map[string]string{
-					"force_destroy": "true",
-				})
 			}
+
+			upols, err := c.client.iamconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+				UserName: u.UserName,
+			})
+			if err == nil {
+				for _, upol := range upols.AttachedPolicies {
+					pIds = append(pIds, upol.PolicyArn)
+					pAttrs = append(pAttrs, &map[string]string{
+						"user":       *u.UserName,
+						"policy_arn": *upol.PolicyArn,
+					})
+				}
+			}
+
+			ids = append(ids, u.UserName)
+			attrs = append(attrs, &map[string]string{
+				"force_destroy": "true",
+			})
 		}
-		c.delete(Resources{Type: "aws_iam_user_policy_attachment", Ids: pIds, Attrs: pAttrs})
-		c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs})
 	}
+	c.delete(Resources{Type: "aws_iam_user_policy_attachment", Ids: pIds, Attrs: pAttrs})
+	c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs})
 }
 
 func (c *WipeCommand) deleteIamPolicy(resourceType string) {
 	ps, err := c.client.iamconn.ListPolicies(&iam.ListPoliciesInput{})
+	check(err)
 
 	//ps, err := c.client.iamconn.ListGroups(&iam.ListPoliciesInput{})
 
-	if err == nil {
-		ids := []*string{}
-		eIds := []*string{}
-		attributes := []*map[string]string{}
+	ids := []*string{}
+	eIds := []*string{}
+	attributes := []*map[string]string{}
 
-		for _, pol := range ps.Policies {
-			if c.checkDelete(resourceType, pol.Arn) {
-				es, err := c.client.iamconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
-					PolicyArn: pol.Arn,
-				})
-				if err == nil {
-					roles := []string{}
-					users := []string{}
-					groups := []string{}
+	for _, pol := range ps.Policies {
+		if c.checkDelete(resourceType, pol.Arn) {
+			es, err := c.client.iamconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
+				PolicyArn: pol.Arn,
+			})
+			check(err)
 
-					for _, u := range es.PolicyUsers {
-						users = append(users, *u.UserName)
-					}
-					for _, g := range es.PolicyGroups {
-						groups = append(groups, *g.GroupName)
-					}
-					for _, r := range es.PolicyRoles {
-						roles = append(roles, *r.RoleName)
-					}
+			roles := []string{}
+			users := []string{}
+			groups := []string{}
 
-					eIds = append(eIds, pol.Arn)
-					attributes = append(attributes, &map[string]string{
-						"policy_arn": *pol.Arn,
-						"name":       *pol.PolicyName,
-						"users":      strings.Join(users, "."),
-						"roles":      strings.Join(roles, "."),
-						"groups":     strings.Join(groups, "."),
-					})
-				}
-				ids = append(ids, pol.Arn)
+			for _, u := range es.PolicyUsers {
+				users = append(users, *u.UserName)
 			}
+			for _, g := range es.PolicyGroups {
+				groups = append(groups, *g.GroupName)
+			}
+			for _, r := range es.PolicyRoles {
+				roles = append(roles, *r.RoleName)
+			}
+
+			eIds = append(eIds, pol.Arn)
+			attributes = append(attributes, &map[string]string{
+				"policy_arn": *pol.Arn,
+				"name":       *pol.PolicyName,
+				"users":      strings.Join(users, "."),
+				"roles":      strings.Join(roles, "."),
+				"groups":     strings.Join(groups, "."),
+			})
+			ids = append(ids, pol.Arn)
 		}
-		c.delete(Resources{Type: "aws_iam_policy_attachment", Ids: eIds, Attrs: attributes})
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: "aws_iam_policy_attachment", Ids: eIds, Attrs: attributes})
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteIamRole(resourceType string) {
 	roles, err := c.client.iamconn.ListRoles(&iam.ListRolesInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		rpolIds := []*string{}
-		rpolAttributes := []*map[string]string{}
-		pIds := []*string{}
+	ids := []*string{}
+	rpolIds := []*string{}
+	rpolAttributes := []*map[string]string{}
+	pIds := []*string{}
 
-		for _, role := range roles.Roles {
-			if c.checkDelete(resourceType, role.RoleName) {
-				rpols, err := c.client.iamconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
-					RoleName: role.RoleName,
+	for _, role := range roles.Roles {
+		if c.checkDelete(resourceType, role.RoleName) {
+			rpols, err := c.client.iamconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
+				RoleName: role.RoleName,
+			})
+			check(err)
+
+			for _, rpol := range rpols.AttachedPolicies {
+				rpolIds = append(rpolIds, rpol.PolicyArn)
+				rpolAttributes = append(rpolAttributes, &map[string]string{
+					"role":       *role.RoleName,
+					"policy_arn": *rpol.PolicyArn,
 				})
-				if err == nil {
-					for _, rpol := range rpols.AttachedPolicies {
-						rpolIds = append(rpolIds, rpol.PolicyArn)
-						rpolAttributes = append(rpolAttributes, &map[string]string{
-							"role":       *role.RoleName,
-							"policy_arn": *rpol.PolicyArn,
-						})
-					}
-				}
-
-				rps, err := c.client.iamconn.ListRolePolicies(&iam.ListRolePoliciesInput{
-					RoleName: role.RoleName,
-				})
-				if err == nil {
-					for _, rp := range rps.PolicyNames {
-						bla := *role.RoleName + ":" + *rp
-						pIds = append(pIds, &bla)
-					}
-				}
-
-				ips, err := c.client.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
-					RoleName: role.RoleName,
-				})
-				if err == nil {
-					for _, ip := range ips.InstanceProfiles {
-						fmt.Println(ip.InstanceProfileName)
-					}
-				}
-				ids = append(ids, role.RoleName)
 			}
+
+			rps, err := c.client.iamconn.ListRolePolicies(&iam.ListRolePoliciesInput{
+				RoleName: role.RoleName,
+			})
+			check(err)
+
+			for _, rp := range rps.PolicyNames {
+				bla := *role.RoleName + ":" + *rp
+				pIds = append(pIds, &bla)
+			}
+
+			ips, err := c.client.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
+				RoleName: role.RoleName,
+			})
+			check(err)
+
+			for _, ip := range ips.InstanceProfiles {
+				fmt.Println(ip.InstanceProfileName)
+			}
+
+			ids = append(ids, role.RoleName)
 		}
-		c.delete(Resources{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes})
-		c.delete(Resources{Type: "aws_iam_role_policy", Ids: pIds})
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes})
+	c.delete(Resources{Type: "aws_iam_role_policy", Ids: pIds})
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteInstanceProfiles(resourceType string) {
 	res, err := c.client.iamconn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		attributes := []*map[string]string{}
+	ids := []*string{}
+	attributes := []*map[string]string{}
 
-		for _, r := range res.InstanceProfiles {
-			if c.checkDelete(resourceType, r.InstanceProfileName) {
-				ids = append(ids, r.InstanceProfileName)
+	for _, r := range res.InstanceProfiles {
+		if c.checkDelete(resourceType, r.InstanceProfileName) {
+			ids = append(ids, r.InstanceProfileName)
 
-				roles := []string{}
-				for _, role := range r.Roles {
-					roles = append(roles, *role.RoleName)
-				}
-
-				attributes = append(attributes, &map[string]string{
-					"roles": strings.Join(roles, "."),
-				})
+			roles := []string{}
+			for _, role := range r.Roles {
+				roles = append(roles, *role.RoleName)
 			}
+
+			attributes = append(attributes, &map[string]string{
+				"roles": strings.Join(roles, "."),
+			})
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteKmsAliases(resourceType string) {
 	res, err := c.client.kmsconn.ListAliases(&kms.ListAliasesInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
+	ids := []*string{}
 
-		for _, r := range res.Aliases {
-			if c.checkDelete(resourceType, r.AliasArn) {
-				ids = append(ids, r.AliasArn)
-			}
+	for _, r := range res.Aliases {
+		if c.checkDelete(resourceType, r.AliasArn) {
+			ids = append(ids, r.AliasArn)
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) deleteKmsKeys(resourceType string) {
 	res, err := c.client.kmsconn.ListKeys(&kms.ListKeysInput{})
+	check(err)
 
-	if err == nil {
-		ids := []*string{}
-		attributes := []*map[string]string{}
+	ids := []*string{}
+	attributes := []*map[string]string{}
 
-		for _, r := range res.Keys {
-			req, res := c.client.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
-				KeyId: r.KeyId,
-			})
-			err := req.Send();
-			if err == nil {
-				if *res.KeyMetadata.KeyState != "PendingDeletion" {
-					attributes = append(attributes, &map[string]string{
-						"key_id": *r.KeyId,
-					})
-					ids = append(ids, r.KeyArn)
-				}
+	for _, r := range res.Keys {
+		req, res := c.client.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
+			KeyId: r.KeyId,
+		})
+		err := req.Send();
+		if err == nil {
+			if *res.KeyMetadata.KeyState != "PendingDeletion" {
+				attributes = append(attributes, &map[string]string{
+					"key_id": *r.KeyId,
+				})
+				ids = append(ids, r.KeyArn)
 			}
 		}
-		c.delete(Resources{Type: resourceType, Ids: ids})
 	}
+	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
 func (c *WipeCommand) checkDelete(rType string, id *string, tags ...*map[string]string) bool {
@@ -810,7 +764,7 @@ func (c *WipeCommand) delete(res Resources) {
 		return
 	}
 
-	c.deleteOut[res.Type] = B{Ids: res.Ids}
+	c.deleteOut[res.Type] = yamlCfg{Ids: res.Ids}
 
 	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res.Type, len(res.Ids))
 
@@ -901,7 +855,6 @@ func (c *WipeCommand) delete(res Resources) {
 	wg.Wait()
 	fmt.Println("---\n")
 }
-
 
 func check(e error) {
 	if e != nil {
