@@ -18,6 +18,7 @@ import (
 	"github.com/mitchellh/cli"
 	"os"
 	"sync"
+	"reflect"
 )
 
 type yamlCfg struct {
@@ -26,15 +27,16 @@ type yamlCfg struct {
 }
 
 type WipeCommand struct {
-	Ui       		cli.Ui
-	isTestRun		bool
-	client			*AWSClient
-	provider        *terraform.ResourceProvider
-	resourceTypes   []string
-	filter          []*ec2.Filter
-	deleteCfg	    map[string]yamlCfg
-	deleteOut		map[string]yamlCfg
-	outFileName		string
+	Ui            cli.Ui
+	isTestRun     bool
+	client        *AWSClient
+	provider      *terraform.ResourceProvider
+	resourceInfos []ResourceInfo
+	filter        []*ec2.Filter
+	deleteCfg     map[string]yamlCfg
+	deleteOut     map[string]yamlCfg
+	outFileName   string
+	bla           []interface{}
 }
 
 type Resources struct {
@@ -45,9 +47,18 @@ type Resources struct {
 }
 
 type Resource struct {
-	id *string
+	id    *string
 	attrs *map[string]string
-	tags *map[string]string
+	tags  *map[string]string
+}
+
+type ResourceInfo struct {
+	TerraformType      string
+	DescribeOutputName string
+	DeleteId           string
+	DescribeFn         interface{}
+	DescribeFnInput    interface{}
+	DeleteFn           func(string, interface{})
 }
 
 type AWSClient struct {
@@ -65,57 +76,7 @@ func (c *WipeCommand) Run(args []string) int {
 	c.deleteCfg = map[string]yamlCfg{}
 	c.deleteOut = map[string]yamlCfg{}
 
-	c.resourceTypes = []string{
-		"aws_autoscaling_group",
-		"aws_launch_configuration",
-		"aws_instance",
-		"aws_elb",
-		"aws_vpc_endpoint",
-		"aws_nat_gateway",
-		"aws_cloudformation_stack",
-		"aws_route53_zone",
-		"aws_eip",
-		"aws_internet_gateway",
-		"aws_efs_file_system",
-		"aws_network_interface",
-		"aws_subnet",
-		"aws_route_table",
-		"aws_network_acl",
-		"aws_security_group",
-		"aws_vpc",
-		"aws_iam_user",
-		"aws_iam_role",
-		"aws_iam_policy",
-		"aws_iam_instance_profile",
-		"aws_kms_alias",
-		"aws_kms_key",
-	}
-
-	deleteFunctions := map[string]func(string){
-		"aws_autoscaling_group":    c.deleteASGs,
-		"aws_launch_configuration": c.deleteLCs,
-		"aws_instance":             c.deleteInstances,
-		"aws_internet_gateway":     c.deleteInternetGateways,
-		"aws_eip":                  c.deleteEips,
-		"aws_elb":                  c.deleteELBs,
-		"aws_vpc_endpoint":         c.deleteVpcEndpoints,
-		"aws_nat_gateway":          c.deleteNatGateways,
-		"aws_network_interface":    c.deleteNetworkInterfaces,
-		"aws_route_table":          c.deleteRouteTables,
-		"aws_security_group":       c.deleteSecurityGroups,
-		"aws_network_acl":          c.deleteNetworkAcls,
-		"aws_subnet":               c.deleteSubnets,
-		"aws_cloudformation_stack": c.deleteCloudformationStacks,
-		"aws_route53_zone":         c.deleteRoute53Zone,
-		"aws_vpc":                  c.deleteVpcs,
-		"aws_efs_file_system":      c.deleteEfsFileSystem,
-		"aws_iam_user":             c.deleteIamUser,
-		"aws_iam_role":             c.deleteIamRole,
-		"aws_iam_policy":           c.deleteIamPolicy,
-		"aws_iam_instance_profile": c.deleteInstanceProfiles,
-		"aws_kms_alias":            c.deleteKmsAliases,
-		"aws_kms_key":              c.deleteKmsKeys,
-	}
+	c.resourceInfos = getResourceInfos(c)
 
 	if len(args) == 1 {
 		data, err := ioutil.ReadFile(args[0])
@@ -131,8 +92,8 @@ func (c *WipeCommand) Run(args []string) int {
 		c.Ui.Output("INFO: This is a test run, nothing will be deleted!")
 	}
 
-	for _, k := range c.resourceTypes {
-		deleteFunctions[k](k)
+	for _, rInfo := range c.resourceInfos {
+		rInfo.DeleteFn(rInfo.TerraformType, listResources(rInfo.DescribeFn, rInfo.DescribeFnInput))
 	}
 
 	if c.outFileName != "" {
@@ -152,17 +113,24 @@ func (c *WipeCommand) Help() string {
 }
 
 func (c *WipeCommand) Synopsis() string {
-	return "Delete all or one specific resource type"
+	return "Delete AWS resources via a yaml configuration"
 }
 
-func (c *WipeCommand) deleteASGs(resourceType string) {
-	res, err := c.client.autoscalingconn.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
-	check(err)
-	
+func listResources(fn interface{}, args ...interface{}) interface{} {
+	v := reflect.ValueOf(fn)
+	rargs := make([]reflect.Value, len(args))
+	for i, a := range args {
+		rargs[i] = reflect.ValueOf(a)
+	}
+	result := v.Call(rargs)
+	return result[0].Interface()
+}
+
+func (c *WipeCommand) deleteASGs(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.AutoScalingGroups {
+	for _, r := range res.(*autoscaling.DescribeAutoScalingGroupsOutput).AutoScalingGroups {
 		if c.checkDelete(resourceType, r.AutoScalingGroupName) {
 			ids = append(ids, r.AutoScalingGroupName)
 
@@ -173,17 +141,13 @@ func (c *WipeCommand) deleteASGs(resourceType string) {
 			tags = append(tags, &m)
 		}
 	}
-
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteLCs(resourceType string) {
-	res, err := c.client.autoscalingconn.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
-	check(err)
-
+func (c *WipeCommand) deleteLCs(resourceType string, res interface{}) {
 	ids := []*string{}
 
-	for _, r := range res.LaunchConfigurations {
+	for _, r := range res.(*autoscaling.DescribeLaunchConfigurationsOutput).LaunchConfigurations {
 		if c.checkDelete(resourceType, r.LaunchConfigurationName) {
 			ids = append(ids, r.LaunchConfigurationName)
 		}
@@ -191,14 +155,11 @@ func (c *WipeCommand) deleteLCs(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteInstances(resourceType string) {
-	res, err := c.client.ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{})
-	check(err)
-
+func (c *WipeCommand) deleteInstances(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.Reservations {
+	for _, r := range res.(*ec2.DescribeInstancesOutput).Reservations {
 		for _, in := range r.Instances {
 			if *in.State.Name != "terminated" {
 				m := &map[string]string{}
@@ -216,15 +177,12 @@ func (c *WipeCommand) deleteInstances(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteInternetGateways(resourceType string) {
-	res, err := c.client.ec2conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{})
-	check(err)
-
+func (c *WipeCommand) deleteInternetGateways(resourceType string, res interface{}) {
 	ids := []*string{}
 	attrs := []*map[string]string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.InternetGateways {
+	for _, r := range res.(*ec2.DescribeInternetGatewaysOutput).InternetGateways {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
@@ -241,12 +199,10 @@ func (c *WipeCommand) deleteInternetGateways(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs, Tags: tags})
 }
 
-func (c *WipeCommand) deleteNatGateways(resourceType string) {
-	res, err := c.client.ec2conn.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{})
-	check(err)
-
+func (c *WipeCommand) deleteNatGateways(resourceType string, res interface{}) {
 	ids := []*string{}
-	for _, r := range res.NatGateways {
+
+	for _, r := range res.(*ec2.DescribeNatGatewaysOutput).NatGateways {
 		if c.checkDelete(resourceType, r.NatGatewayId) {
 			if *r.State == "available" {
 				ids = append(ids, r.NatGatewayId)
@@ -256,14 +212,11 @@ func (c *WipeCommand) deleteNatGateways(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteRouteTables(resourceType string) {
-	res, err := c.client.ec2conn.DescribeRouteTables(&ec2.DescribeRouteTablesInput{})
-	check(err)
-
+func (c *WipeCommand) deleteRouteTables(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.RouteTables {
+	for _, r := range res.(*ec2.DescribeRouteTablesOutput).RouteTables {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
@@ -286,14 +239,11 @@ func (c *WipeCommand) deleteRouteTables(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteSecurityGroups(resourceType string) {
-	res, err := c.client.ec2conn.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{})
-	check(err)
-
+func (c *WipeCommand) deleteSecurityGroups(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.SecurityGroups {
+	for _, r := range res.(*ec2.DescribeSecurityGroupsOutput).SecurityGroups {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
@@ -309,14 +259,11 @@ func (c *WipeCommand) deleteSecurityGroups(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteNetworkAcls(resourceType string) {
-	res, err := c.client.ec2conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{})
-	check(err)
-
+func (c *WipeCommand) deleteNetworkAcls(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.NetworkAcls {
+	for _, r := range res.(*ec2.DescribeNetworkAclsOutput).NetworkAcls {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
@@ -333,14 +280,11 @@ func (c *WipeCommand) deleteNetworkAcls(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteNetworkInterfaces(resourceType string) {
-	res, err := c.client.ec2conn.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{})
-	check(err)
-
+func (c *WipeCommand) deleteNetworkInterfaces(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.NetworkInterfaces {
+	for _, r := range res.(*ec2.DescribeNetworkInterfacesOutput).NetworkInterfaces {
 		m := &map[string]string{}
 		for _, t := range r.TagSet {
 			(*m)[*t.Key] = *t.Value
@@ -353,12 +297,10 @@ func (c *WipeCommand) deleteNetworkInterfaces(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteELBs(resourceType string) {
-	res, err := c.client.elbconn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
-	check(err)
-
+func (c *WipeCommand) deleteELBs(resourceType string, res interface{}) {
 	ids := []*string{}
-	for _, r := range res.LoadBalancerDescriptions {
+
+	for _, r := range res.(*elb.DescribeLoadBalancersOutput).LoadBalancerDescriptions {
 		if c.checkDelete(resourceType, r.LoadBalancerName) {
 			ids = append(ids, r.LoadBalancerName)
 		}
@@ -366,12 +308,10 @@ func (c *WipeCommand) deleteELBs(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteVpcEndpoints(resourceType string) {
-	res, err := c.client.ec2conn.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{})
-	check(err)
-
+func (c *WipeCommand) deleteVpcEndpoints(resourceType string, res interface{}) {
 	ids := []*string{}
-	for _, r := range res.VpcEndpoints {
+
+	for _, r := range res.(*ec2.DescribeVpcEndpointsOutput).VpcEndpoints {
 		if c.checkDelete(resourceType, r.VpcEndpointId) {
 			ids = append(ids, r.VpcEndpointId)
 		}
@@ -379,12 +319,10 @@ func (c *WipeCommand) deleteVpcEndpoints(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteEips(resourceType string) {
-	res, err := c.client.ec2conn.DescribeAddresses(&ec2.DescribeAddressesInput{})
-	check(err)
-
+func (c *WipeCommand) deleteEips(resourceType string, res interface{}) {
 	ids := []*string{}
-	for _, r := range res.Addresses {
+
+	for _, r := range res.(*ec2.DescribeAddressesOutput).Addresses {
 		if c.checkDelete(resourceType, r.AllocationId) {
 			ids = append(ids, r.AllocationId)
 		}
@@ -392,14 +330,11 @@ func (c *WipeCommand) deleteEips(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteSubnets(resourceType string) {
-	res, err := c.client.ec2conn.DescribeSubnets(&ec2.DescribeSubnetsInput{})
-	check(err)
-
+func (c *WipeCommand) deleteSubnets(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.Subnets {
+	for _, r := range res.(*ec2.DescribeSubnetsOutput).Subnets {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
@@ -412,14 +347,11 @@ func (c *WipeCommand) deleteSubnets(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteVpcs(resourceType string) {
-	res, err := c.client.ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{})
-	check(err)
-
+func (c *WipeCommand) deleteVpcs(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.Vpcs {
+	for _, r := range res.(*ec2.DescribeVpcsOutput).Vpcs {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
@@ -433,12 +365,10 @@ func (c *WipeCommand) deleteVpcs(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteRoute53Record(resourceType string) {
-	res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{})
-	check(err)
-
+func (c *WipeCommand) deleteRoute53Record(resourceType string, res interface{}) {
 	ids := []*string{}
-	for _, r := range res.ResourceRecordSets {
+
+	for _, r := range res.(*route53.ListResourceRecordSetsOutput).ResourceRecordSets {
 		for _, rr := range r.ResourceRecords {
 			if c.checkDelete(resourceType, rr.Value) {
 				ids = append(ids, rr.Value)
@@ -448,16 +378,13 @@ func (c *WipeCommand) deleteRoute53Record(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteRoute53Zone(resourceType string) {
-	res, err := c.client.r53conn.ListHostedZones(&route53.ListHostedZonesInput{})
-	check(err)
-
+func (c *WipeCommand) deleteRoute53Zone(resourceType string, res interface{}) {
 	hzIds := []*string{}
 	rsIds := []*string{}
 	rsAttrs := []*map[string]string{}
 	hzAttrs := []*map[string]string{}
 
-	for _, hz := range res.HostedZones {
+	for _, hz := range res.(*route53.ListHostedZonesOutput).HostedZones {
 		res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
 			HostedZoneId: hz.Id,
 		})
@@ -481,14 +408,11 @@ func (c *WipeCommand) deleteRoute53Zone(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: hzIds, Attrs: hzAttrs})
 }
 
-func (c *WipeCommand) deleteCloudformationStacks(resourceType string) {
-	res, err := c.client.cfconn.DescribeStacks(&cloudformation.DescribeStacksInput{})
-	check(err)
-
+func (c *WipeCommand) deleteCloudformationStacks(resourceType string, res interface{}) {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.Stacks {
+	for _, r := range res.(*cloudformation.DescribeStacksOutput).Stacks {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
@@ -503,14 +427,11 @@ func (c *WipeCommand) deleteCloudformationStacks(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Tags: tags})
 }
 
-func (c *WipeCommand) deleteEfsFileSystem(resourceType string) {
-	res, err := c.client.efsconn.DescribeFileSystems(&efs.DescribeFileSystemsInput{})
-	check(err)
-
+func (c *WipeCommand) deleteEfsFileSystem(resourceType string, res interface{}) {
 	fsIds := []*string{}
 	mtIds := []*string{}
 
-	for _, r := range res.FileSystems {
+	for _, r := range res.(*efs.DescribeFileSystemsOutput).FileSystems {
 		if c.checkDelete(resourceType, r.Name) {
 			res, err := c.client.efsconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
 				FileSystemId: r.FileSystemId,
@@ -529,16 +450,13 @@ func (c *WipeCommand) deleteEfsFileSystem(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: fsIds})
 }
 
-func (c *WipeCommand) deleteIamUser(resourceType string) {
-	users, err := c.client.iamconn.ListUsers(&iam.ListUsersInput{})
-	check(err)
-
+func (c *WipeCommand) deleteIamUser(resourceType string, res interface{}) {
 	ids := []*string{}
 	pIds := []*string{}
 	attrs := []*map[string]string{}
 	pAttrs := []*map[string]string{}
 
-	for _, u := range users.Users {
+	for _, u := range res.(*iam.ListUsersOutput).Users {
 		if c.checkDelete(resourceType, u.UserName) {
 			ups, err := c.client.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
 				UserName: u.UserName,
@@ -572,17 +490,12 @@ func (c *WipeCommand) deleteIamUser(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs})
 }
 
-func (c *WipeCommand) deleteIamPolicy(resourceType string) {
-	ps, err := c.client.iamconn.ListPolicies(&iam.ListPoliciesInput{})
-	check(err)
-
-	//ps, err := c.client.iamconn.ListGroups(&iam.ListPoliciesInput{})
-
+func (c *WipeCommand) deleteIamPolicy(resourceType string, res interface{}) {
 	ids := []*string{}
 	eIds := []*string{}
 	attributes := []*map[string]string{}
 
-	for _, pol := range ps.Policies {
+	for _, pol := range res.(*iam.ListPoliciesOutput).Policies {
 		if c.checkDelete(resourceType, pol.Arn) {
 			es, err := c.client.iamconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
 				PolicyArn: pol.Arn,
@@ -618,16 +531,13 @@ func (c *WipeCommand) deleteIamPolicy(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteIamRole(resourceType string) {
-	roles, err := c.client.iamconn.ListRoles(&iam.ListRolesInput{})
-	check(err)
-
+func (c *WipeCommand) deleteIamRole(resourceType string, res interface{}) {
 	ids := []*string{}
 	rpolIds := []*string{}
 	rpolAttributes := []*map[string]string{}
 	pIds := []*string{}
 
-	for _, role := range roles.Roles {
+	for _, role := range res.(*iam.ListRolesOutput).Roles {
 		if c.checkDelete(resourceType, role.RoleName) {
 			rpols, err := c.client.iamconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
 				RoleName: role.RoleName,
@@ -669,14 +579,11 @@ func (c *WipeCommand) deleteIamRole(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteInstanceProfiles(resourceType string) {
-	res, err := c.client.iamconn.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
-	check(err)
-
+func (c *WipeCommand) deleteInstanceProfiles(resourceType string, res interface{}) {
 	ids := []*string{}
 	attributes := []*map[string]string{}
 
-	for _, r := range res.InstanceProfiles {
+	for _, r := range res.(*iam.ListInstanceProfilesOutput).InstanceProfiles {
 		if c.checkDelete(resourceType, r.InstanceProfileName) {
 			ids = append(ids, r.InstanceProfileName)
 
@@ -693,13 +600,10 @@ func (c *WipeCommand) deleteInstanceProfiles(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteKmsAliases(resourceType string) {
-	res, err := c.client.kmsconn.ListAliases(&kms.ListAliasesInput{})
-	check(err)
-
+func (c *WipeCommand) deleteKmsAliases(resourceType string, res interface{}) {
 	ids := []*string{}
 
-	for _, r := range res.Aliases {
+	for _, r := range res.(*kms.ListAliasesOutput).Aliases {
 		if c.checkDelete(resourceType, r.AliasArn) {
 			ids = append(ids, r.AliasArn)
 		}
@@ -707,14 +611,11 @@ func (c *WipeCommand) deleteKmsAliases(resourceType string) {
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
 
-func (c *WipeCommand) deleteKmsKeys(resourceType string) {
-	res, err := c.client.kmsconn.ListKeys(&kms.ListKeysInput{})
-	check(err)
-
+func (c *WipeCommand) deleteKmsKeys(resourceType string, res interface{}) {
 	ids := []*string{}
 	attributes := []*map[string]string{}
 
-	for _, r := range res.Keys {
+	for _, r := range res.(*kms.ListKeysOutput).Keys {
 		req, res := c.client.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
 			KeyId: r.KeyId,
 		})
@@ -797,7 +698,7 @@ func (c *WipeCommand) delete(res Resources) {
 	for j := 1; j <= numWorkerThreads; j++ {
 		go func() {
 			for {
-				res, more := <- chResources
+				res, more := <-chResources
 				if more {
 					printStat := fmt.Sprintf("\tId:\t%s", *res.id)
 					if res.tags != nil {
@@ -815,12 +716,12 @@ func (c *WipeCommand) delete(res Resources) {
 					(*a)["force_destroy"] = "true"
 
 					s := &terraform.InstanceState{
-						ID: *res.id,
+						ID:         *res.id,
 						Attributes: *a,
 					}
 
 					st, err := (*c.provider).Refresh(ii, s)
-					if err != nil{
+					if err != nil {
 						fmt.Println("err: ", err)
 						st = s
 						st.Attributes["force_destroy"] = "true"
@@ -844,9 +745,9 @@ func (c *WipeCommand) delete(res Resources) {
 	for i, id := range res.Ids {
 		if id != nil {
 			chResources <- &Resource{
-				id: id,
+				id:    id,
 				attrs: a[i],
-				tags: ts[i],
+				tags:  ts[i],
 			}
 		}
 	}
