@@ -43,6 +43,24 @@ resource "aws_internet_gateway" "foo" {
   }
 }
 
+resource "aws_route_table" "foo" {
+  vpc_id = "${aws_vpc.foo.id}"
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_internet_gateway.foo.id}"
+  }
+
+  tags {
+    Name = "foo"
+  }
+}
+
+resource "aws_vpc_endpoint" "foo" {
+  vpc_id       = "${aws_vpc.foo.id}"
+  service_name = "com.amazonaws.us-west-2.s3"
+}
+
 resource "aws_security_group" "foo" {
   name = "foo"
   description = "Allow traffic on port 80"
@@ -60,6 +78,15 @@ resource "aws_security_group" "foo" {
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  tags {
+    Name = "foo"
+  }
+}
+
+resource "aws_network_acl" "foo" {
+  vpc_id = "${aws_vpc.foo.id}"
+  subnet_ids = [ "${aws_subnet.foo.id}" ]
+
   tags {
     Name = "foo"
   }
@@ -87,6 +114,20 @@ resource "aws_instance" "foo" {
   ami = "${data.aws_ami.foo.id}"
   instance_type = "t2.micro"
   security_groups = ["${aws_security_group.foo.id}"]
+  subnet_id = "${aws_subnet.foo.id}"
+
+  tags {
+    Name = "foo"
+  }
+}
+
+resource "aws_eip" "foo" {
+  vpc = true
+  instance = "${aws_instance.foo.id}"
+}
+
+resource "aws_nat_gateway" "foo" {
+  allocation_id = "${aws_eip.foo.id}"
   subnet_id = "${aws_subnet.foo.id}"
 
   tags {

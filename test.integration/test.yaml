@@ -7,6 +7,17 @@ aws_subnet:
 aws_internet_gateway:
   tags:
     Name: foo
+aws_route_table:
+  tags:
+    Name: foo
+aws_eip:
+aws_nat_gateway:
+  tags:
+    Name: foo
+aws_vpc_endpoint:
+aws_network_acl:
+  tags:
+    Name: foo
 aws_security_group:
   tags:
     Name: foo
