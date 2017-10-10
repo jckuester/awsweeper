@@ -6,6 +6,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/kms"
 )
 
 func getResourceInfos(c *WipeCommand) []ResourceInfo {
@@ -27,9 +30,9 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			c.deleteLCs,
 		},
 		{
-			TerraformType: "aws_instance",
-			DeleteFn:      c.deleteInstances,
-			DescribeFn: c.client.ec2conn.DescribeInstances,
+			TerraformType:   "aws_instance",
+			DeleteFn:        c.deleteInstances,
+			DescribeFn:      c.client.ec2conn.DescribeInstances,
 			DescribeFnInput: &ec2.DescribeInstancesInput{},
 		},
 		{
@@ -64,10 +67,27 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			&cloudformation.DescribeStacksInput{},
 			c.deleteCloudformationStacks,
 		},
+		{
+			"aws_route53_zone",
+			"HostedZones",
+			"Id",
+			c.client.r53conn.ListHostedZones,
+			&route53.ListHostedZonesInput{},
+			c.deleteRoute53Zone,
+		},
 		//{
-		//	TerraformType: "aws_route53_zone",
-		//	DeleteFn:      c.deleteRoute53Zone,
+		//	c.r53conn.ListResourceRecordSets,
+		//	&route53.ListResourceRecordSetsInput{}
+		//	c.deleteRoute53Record
 		//},
+		{
+			"aws_network_interface",
+			"NetworkInterfaces",
+			"NetworkInterfaceId",
+			c.client.ec2conn.DescribeNetworkInterfaces,
+			&ec2.DescribeNetworkInterfacesInput{},
+			c.deleteNetworkInterfaces,
+		},
 		{
 			"aws_eip",
 			"Addresses",
@@ -84,14 +104,13 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			&ec2.DescribeInternetGatewaysInput{},
 			c.deleteInternetGateways,
 		},
-		//{"aws_efs_file_system", "FileSystems", "FileSystemId"},
 		{
-			"aws_network_interface",
-			"NetworkInterfaces",
-			"NetworkInterfaceId",
-			c.client.ec2conn.DescribeNetworkInterfaces,
-			&ec2.DescribeNetworkInterfacesInput{},
-			c.deleteNetworkInterfaces,
+			"aws_efs_file_system",
+			"FileSystems",
+			"FileSystemId",
+			c.client.efsconn.DescribeFileSystems,
+			&efs.DescribeFileSystemsInput{},
+			c.deleteEfsFileSystem,
 		},
 		{
 			"aws_subnet",
@@ -133,11 +152,30 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			&ec2.DescribeVpcsInput{},
 			c.deleteVpcs,
 		},
-
-		//{"aws_iam_user", "Users", "UserName"},
-		//{"aws_iam_role", "Roles", "RoleName"},
-		//{"aws_iam_policy", "Policies", "Arn"},
-
+		{
+			"aws_iam_policy",
+			"Policies",
+			"Arn",
+			c.client.iamconn.ListPolicies,
+			&iam.ListPoliciesInput{},
+			c.deleteIamPolicy,
+		},
+		{
+			"aws_iam_user",
+			"Users",
+			"UserName",
+			c.client.iamconn.ListUsers,
+			&iam.ListUsersInput{},
+			c.deleteIamUser,
+		},
+		{
+			"aws_iam_role",
+			"Roles",
+			"RoleName",
+			c.client.iamconn.ListRoles,
+			&iam.ListRolesInput{},
+			c.deleteIamRole,
+		},
 		{
 			"aws_iam_instance_profile",
 			"InstanceProfiles",
@@ -146,17 +184,44 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			&iam.ListInstanceProfilesInput{},
 			c.deleteInstanceProfiles,
 		},
-
-		//{"aws_kms_alias", "Aliases", "AliasName"}, //  c.deleteKmsAliases
-
-		//{"aws_kms_key", "Keys", "KeyId"}, // c.deleteKmsKeys
-
-		//{"aws_ebs_snapshot", "Snapshots", "SnapshotId",
-		//	c.client.ec2conn.DescribeSnapshots, &ec2.DescribeSnapshotsInput{}},
-		//
-		//{"aws_ebs_volume", "Volumes", "VolumeId",
-		//	c.client.ec2conn.DescribeVolumes, &ec2.DescribeVolumesInput{}},
-
-		//{"aws_ami", "Images", "ImageId"}, //  c.deleteAmis
+		{
+			"aws_kms_alias",
+			"Aliases",
+			"AliasName",
+			c.client.kmsconn.ListAliases,
+			&kms.ListAliasesInput{},
+			c.deleteKmsAliases,
+		},
+		{
+			"aws_kms_key",
+			"Keys",
+			"KeyId",
+			c.client.kmsconn.ListKeys,
+			&kms.ListKeysInput{},
+			c.deleteKmsKeys,
+		},
+		//{
+		//	"aws_ebs_snapshot",
+		//	"Snapshots",
+		//	"SnapshotId",
+		//	c.client.ec2conn.DescribeSnapshots,
+		//	&ec2.DescribeSnapshotsInput{},
+		//},
+		//{
+		//	"aws_ebs_volume",
+		//	"Volumes",
+		//	"VolumeId",
+		//	c.client.ec2conn.DescribeVolumes,
+		//	&ec2.DescribeVolumesInput{},
+		//	c.deleteEbsVolume,
+		//},
+		//{
+		//	"aws_ami",
+		//	"Images",
+		//	"ImageId",
+		//	c.client.ec2conn.DescribeImages,
+		//	&ec2.DescribeImagesInput{},
+		//	c.deleteAmis,
+		//}
 	}
 }

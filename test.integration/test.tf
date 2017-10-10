@@ -17,6 +17,93 @@ terraform {
   required_version = ">= 0.10.0"
 }
 
+
+resource "aws_iam_user" "foo" {
+  name = "foo"
+  path = "/system/"
+}
+
+resource "aws_iam_access_key" "foo" {
+  user = "${aws_iam_user.foo.name}"
+}
+
+# inline policy attached directly to the user
+resource "aws_iam_user_policy" "foo" {
+  name = "foo"
+  user = "${aws_iam_user.foo.name}"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "ec2:Describe*"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_user_policy_attachment" "test-attach" {
+  user       = "${aws_iam_user.foo.name}"
+  policy_arn = "${aws_iam_policy.policy.arn}"
+}
+
+resource "aws_iam_role" "foo" {
+  name = "foo_role"
+  path = "/"
+
+  assume_role_policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Principal": {
+               "Service": "ec2.amazonaws.com"
+            },
+            "Effect": "Allow",
+            "Sid": ""
+        }
+    ]
+}
+EOF
+}
+
+//resource "aws_iam_group" "group" {
+//  name = "foo-group"
+//}
+
+resource "aws_iam_policy" "policy" {
+  name        = "foo_policy"
+  path        = "/"
+  description = "My test policy"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "ec2:Describe*"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_instance_profile" "foo" {
+  name  = "foo_profile"
+  role = "${aws_iam_role.foo.name}"
+}
+
 resource "aws_vpc" "foo" {
   cidr_block = "10.0.0.0/16"
 
@@ -59,6 +146,21 @@ resource "aws_route_table" "foo" {
 resource "aws_vpc_endpoint" "foo" {
   vpc_id       = "${aws_vpc.foo.id}"
   service_name = "com.amazonaws.us-west-2.s3"
+}
+
+resource "aws_network_interface" "foo" {
+  subnet_id       = "${aws_subnet.foo.id}"
+  security_groups = ["${aws_security_group.foo.id}"]
+
+  attachment {
+    instance     = "${aws_instance.foo.id}"
+    device_index = 1
+  }
+
+  # it seems that tags are not supported
+  tags {
+    Name = "foo"
+  }
 }
 
 resource "aws_security_group" "foo" {
@@ -123,7 +225,7 @@ resource "aws_instance" "foo" {
 
 resource "aws_eip" "foo" {
   vpc = true
-  instance = "${aws_instance.foo.id}"
+//  instance = "${aws_instance.foo.id}"
 }
 
 resource "aws_nat_gateway" "foo" {
