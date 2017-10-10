@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go/aws"
 	"regexp"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -453,21 +454,26 @@ func (c *WipeCommand) deleteEfsFileSystem(resourceType string, res interface{}) 
 func (c *WipeCommand) deleteIamUser(resourceType string, res interface{}) {
 	ids := []*string{}
 	pIds := []*string{}
+	upIds := []*string{}
 	attrs := []*map[string]string{}
 	pAttrs := []*map[string]string{}
 
 	for _, u := range res.(*iam.ListUsersOutput).Users {
 		if c.checkDelete(resourceType, u.UserName) {
+
+			// list inline policies, delete with "aws_iam_user_policy" delete routine
 			ups, err := c.client.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
 				UserName: u.UserName,
 			})
 			if err == nil {
 				for _, up := range ups.PolicyNames {
-					fmt.Println(*up)
+					upIds = append(upIds,  aws.String(*u.UserName + ":" + *up))
 				}
 			}
 
+			// Lists all managed policies that are attached  to user (inline and others)
 			upols, err := c.client.iamconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+				// required
 				UserName: u.UserName,
 			})
 			if err == nil {
@@ -486,6 +492,8 @@ func (c *WipeCommand) deleteIamUser(resourceType string, res interface{}) {
 			})
 		}
 	}
+	// aws_iam_user_policy to delete inline policies
+	c.delete(Resources{Type: "aws_iam_user_policy", Ids: upIds})
 	c.delete(Resources{Type: "aws_iam_user_policy_attachment", Ids: pIds, Attrs: pAttrs})
 	c.delete(Resources{Type: resourceType, Ids: ids, Attrs: attrs})
 }
@@ -527,6 +535,8 @@ func (c *WipeCommand) deleteIamPolicy(resourceType string, res interface{}) {
 			ids = append(ids, pol.Arn)
 		}
 	}
+	// policy attachement is not resources
+	// what happens is that policy is detached from groups, users and roles
 	c.delete(Resources{Type: "aws_iam_policy_attachment", Ids: eIds, Attrs: attributes})
 	c.delete(Resources{Type: resourceType, Ids: ids})
 }
@@ -568,12 +578,13 @@ func (c *WipeCommand) deleteIamRole(resourceType string, res interface{}) {
 			check(err)
 
 			for _, ip := range ips.InstanceProfiles {
-				fmt.Println(ip.InstanceProfileName)
+				fmt.Println(*ip.InstanceProfileName)
 			}
 
 			ids = append(ids, role.RoleName)
 		}
 	}
+	// enough to use aws_iam_policy_attachment, which can attach a policy from users, groups and roles
 	c.delete(Resources{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes})
 	c.delete(Resources{Type: "aws_iam_role_policy", Ids: pIds})
 	c.delete(Resources{Type: resourceType, Ids: ids})
