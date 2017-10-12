@@ -1,52 +1,101 @@
 # AWSweeper
 
-Wipe out resources in your AWS account.
+AWSweeper wipes out all (or parts) of the resources in your AWS account. What to delete is controlled
+with a yaml file (see [test.yml](test.integration/test.yml), for example). Resources can be filtered by their tags orIDs
+using [regular expressions](https://golang.org/pkg/regexp/syntax/).
+
+Currently, AWSweeper [can delete many](#Supported-resources), but not all resources. We are working on it!
 
 ## Usage
 
-    awsweeper <config.yaml>
+    awsweeper [options] <config.yml>
+
+To see the options available run `awsweeper --help`.
     
-Have a look at [test.yaml](test.integration/test.yaml) for an example of the configuration file.
-    
+## Filter resources
+
+Resources to be deleted are filtered with a yaml configuration.
+Have a look at the following example:
+
+    aws_security_group:
+    aws_instance:
+      tags:
+        foo: bar
+        bla: blub
+    aws_iam_role:
+      ids:
+      - ^foo.*            
+
+There are three ways of filtering resources for deletion:
+
+1) Delete *all* resources of a particular type
+
+   [Terraform types](https://www.terraform.io/docs/providers/aws/index.html) are used to identify resources of a certain type
+   (e.g., `aws_security_group` filters for resources that are security groups, `aws_iam_role` for roles,
+   or `aws_instance` for all EC2 instances).
+
+   In the example above, by simply adding `security_group:` (no further filters for IDs or tags),
+   all security groups in your account would be deleted. Use the [all.yml](./all.yml), to delete all (currently supported) 
+   resources in your account.
+
+2) Filter by tags
+
+   If most of your resources have tags, this is probably the way to filter them 
+   for deletion. But be aware: not all resources support tags and can be filtered this way.
+   
+   In the example above, all instances are terminated that have either a tag with key `foo` and value `bar` or key `bla` and value `blub`, or both.
+   
+3) Filter by IDs
+   
+   To find out what the IDs of your resources are (sometimes their name, sometimes an ARN, or random number),
+   run awsweeper in test-run mode: `awsweeper --test-run <config.yml>`. This way, nothing is deleted but
+   all the IDs and tags or your resources will be printed. Then, use them to create the config.   
+
+## Test run
+
+ Use `awsweeper --test-run <config.yml>` to only show what
+would be deleted. This way, you can iterate on the configuration until it works the way you want it to. 
+
 ## Supported resources
 
-Here is list of [all the various resources you can create within AWS](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html).
-AWSweeper can delete many but not all of them:
+Here is list of [all the various types of resources you can create within AWS](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) 
+(note that we use [Terraform types](https://www.terraform.io/docs/providers/aws/index.html) as identifiers for resources tpyes in 
+the yaml configuration). AWSweeper can currently delete many but not all of the existing resource types:
 
 - aws_autoscaling_group
-- aws_launch_configuration
-- aws_instance
-- aws_elb
-- aws_vpc_endpoint
-- aws_nat_gateway
 - aws_cloudformation_stack
-- aws_route53_zone
-- aws_eip
-- aws_internet_gateway
 - aws_efs_file_system
-- aws_network_interface
-- aws_subnet
-- aws_route_table
-- aws_network_acl
-- aws_security_group
-- aws_vpc
-- aws_iam_user
-- aws_iam_role
-- aws_iam_policy
+- aws_eip
+- aws_elb
 - aws_iam_instance_profile
+- aws_iam_policy
+- aws_iam_role
+- aws_iam_user
+- aws_instance
+- aws_internet_gateway
 - aws_kms_alias
 - aws_kms_key
+- aws_launch_configuration
+- aws_nat_gateway
+- aws_network_acl
+- aws_network_interface
+- aws_route53_zone
+- aws_route_table
+- aws_security_group
+- aws_subnet
+- aws_vpc
+- aws_vpc_endpoint
 
 ## Tests
 
-For integration testing, resources of each type are created with terraform. Then we run awsweeper with a test
-configuration to delete all resources:
+Integration testing is semi-automated for now. Resources of each type are created with terraform. Then awsweeper is used with a test
+configuration to delete all resources again:
 
      # create resources
-     terraform apply
+     cd test.integration; terraform apply
      
      # delete resources
-     go run *.go test.integration/test.yaml
+     go run ../*.go test.integration/test.yml
      
      # check if all resources have been wiped properly
      terraform destroy
@@ -54,4 +103,6 @@ configuration to delete all resources:
 ## Disclaimer
 
 You are using this tool at your own risk! I will not take any responsibility if you delete any critical resources in your
-production environments.
+production environments. Use it for your test accounts only.
+
+The tool makes use of the delete functions in the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
