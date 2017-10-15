@@ -1,10 +1,10 @@
 # AWSweeper
 
 AWSweeper wipes out all (or parts) of the resources in your AWS account. What to delete is controlled
-with a yaml file (see [test.yml](test.integration/test.yml), for example). Resources can be filtered by their tags orIDs
+with a yaml file (see [test.yml](test.integration/test.yml), for example). Resources can be filtered by their tags or IDs
 using [regular expressions](https://golang.org/pkg/regexp/syntax/).
 
-Currently, AWSweeper [can delete many](#Supported-resources), but not all resources. We are working on it!
+Currently, AWSweeper [can delete many](#supported-resources), but not all resources. We are working on it!
 
 ## Usage
 
@@ -58,9 +58,8 @@ would be deleted. This way, you can iterate on the configuration until it works 
 
 ## Supported resources
 
-Here is list of [all the various types of resources you can create within AWS](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) 
-(note that we use [Terraform types](https://www.terraform.io/docs/providers/aws/index.html) as identifiers for resources tpyes in 
-the yaml configuration). AWSweeper can currently delete many but not all of the existing resource types:
+Here is list of [all the various types of resources you can create within AWS](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html).
+AWSweeper can currently delete many but not all of the existing resource types:
 
 - aws_autoscaling_group
 - aws_cloudformation_stack
@@ -86,6 +85,10 @@ the yaml configuration). AWSweeper can currently delete many but not all of the 
 - aws_vpc
 - aws_vpc_endpoint
 
+Note that the above list contains [terraform types](https://www.terraform.io/docs/providers/aws/index.html. They 
+can be used as identifiers for resources tpyes in the yaml configuration. The reason is that AWSweeper 
+is build upon delete functions provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
+
 ## Tests
 
 Integration testing is semi-automated for now. Resources of each type are created with terraform. Then awsweeper is used with a test
@@ -104,5 +107,3 @@ configuration to delete all resources again:
 
 You are using this tool at your own risk! I will not take any responsibility if you delete any critical resources in your
 production environments. Use it for your test accounts only.
-
-The tool makes use of the delete functions in the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).

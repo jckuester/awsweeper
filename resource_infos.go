@@ -19,7 +19,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"AutoScalingGroupName",
 			c.client.autoscalingconn.DescribeAutoScalingGroups,
 			&autoscaling.DescribeAutoScalingGroupsInput{},
-			c.deleteASGs,
+			c.deleteGeneric,
 		},
 		{
 			"aws_launch_configuration",
@@ -27,13 +27,15 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"LaunchConfigurationName",
 			c.client.autoscalingconn.DescribeLaunchConfigurations,
 			&autoscaling.DescribeLaunchConfigurationsInput{},
-			c.deleteLCs,
+			c.deleteGeneric,
 		},
 		{
-			TerraformType:   "aws_instance",
-			DeleteFn:        c.deleteInstances,
-			DescribeFn:      c.client.ec2conn.DescribeInstances,
-			DescribeFnInput: &ec2.DescribeInstancesInput{},
+			"aws_instance",
+			"Reservations",
+			"Instances",
+			c.client.ec2conn.DescribeInstances,
+			&ec2.DescribeInstancesInput{},
+			c.deleteInstances,
 		},
 		{
 			"aws_elb",
@@ -41,7 +43,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"LoadBalancerName",
 			c.client.elbconn.DescribeLoadBalancers,
 			&elb.DescribeLoadBalancersInput{},
-			c.deleteELBs,
+			c.deleteGeneric,
 		},
 		{
 			"aws_vpc_endpoint",
@@ -49,7 +51,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"VpcEndpointId",
 			c.client.ec2conn.DescribeVpcEndpoints,
 			&ec2.DescribeVpcEndpointsInput{},
-			c.deleteVpcEndpoints,
+			c.deleteGeneric,
 		},
 		{
 			"aws_nat_gateway",
@@ -65,7 +67,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"StackId",
 			c.client.cfconn.DescribeStacks,
 			&cloudformation.DescribeStacksInput{},
-			c.deleteCloudformationStacks,
+			c.deleteGeneric,
 		},
 		{
 			"aws_route53_zone",
@@ -86,7 +88,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"NetworkInterfaceId",
 			c.client.ec2conn.DescribeNetworkInterfaces,
 			&ec2.DescribeNetworkInterfacesInput{},
-			c.deleteNetworkInterfaces,
+			c.deleteGeneric,
 		},
 		{
 			"aws_eip",
@@ -94,7 +96,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"AllocationId",
 			c.client.ec2conn.DescribeAddresses,
 			&ec2.DescribeAddressesInput{},
-			c.deleteEips,
+			c.deleteGeneric,
 		},
 		{
 			"aws_internet_gateway",
@@ -118,7 +120,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"SubnetId",
 			c.client.ec2conn.DescribeSubnets,
 			&ec2.DescribeSubnetsInput{},
-			c.deleteSubnets,
+			c.deleteGeneric,
 		},
 		{
 			"aws_route_table",
@@ -126,7 +128,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"RouteTableId",
 			c.client.ec2conn.DescribeRouteTables,
 			&ec2.DescribeRouteTablesInput{},
-			c.deleteRouteTables,
+			c.deleteGeneric,
 		},
 		{
 			"aws_security_group",
@@ -134,7 +136,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"GroupId",
 			c.client.ec2conn.DescribeSecurityGroups,
 			&ec2.DescribeSecurityGroupsInput{},
-			c.deleteSecurityGroups,
+			c.deleteGeneric,
 		},
 		{
 			"aws_network_acl",
@@ -142,7 +144,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"NetworkAclId",
 			c.client.ec2conn.DescribeNetworkAcls,
 			&ec2.DescribeNetworkAclsInput{},
-			c.deleteNetworkAcls,
+			c.deleteGeneric,
 		},
 		{
 			"aws_vpc",
@@ -150,7 +152,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"VpcId",
 			c.client.ec2conn.DescribeVpcs,
 			&ec2.DescribeVpcsInput{},
-			c.deleteVpcs,
+			c.deleteGeneric,
 		},
 		{
 			"aws_iam_policy",
@@ -190,7 +192,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"AliasName",
 			c.client.kmsconn.ListAliases,
 			&kms.ListAliasesInput{},
-			c.deleteKmsAliases,
+			c.deleteGeneric,
 		},
 		{
 			"aws_kms_key",
