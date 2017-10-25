@@ -19,6 +19,8 @@ import (
 	"os"
 	"sync"
 	"reflect"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 type yamlCfg struct {
@@ -72,6 +74,8 @@ type AWSClient struct {
 	efsconn         *efs.EFS
 	iamconn         *iam.IAM
 	kmsconn         *kms.KMS
+	s3conn			*s3.S3
+	stsconn         *sts.STS
 }
 
 func (c *WipeCommand) Run(args []string) int {

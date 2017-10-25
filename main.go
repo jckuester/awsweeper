@@ -19,6 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"io/ioutil"
 	"flag"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 func main() {
@@ -30,7 +32,7 @@ func main() {
 
 	versionFlag := flag.Bool("version", false, "Show version")
 	helpFlag := flag.Bool("help", false, "Show help")
-	testRunFlag := flag.Bool("test-run", false, "Don't delete anything, just show what would happen")
+	dryRunFlag := flag.Bool("dry-run", false, "Don't delete anything, just show what would happen")
 
 	profile := flag.String("profile", "", "Use a specific profile from your credential file")
 	region := flag.String("region", "", "The region to use. Overrides config/env settings")
@@ -82,9 +84,11 @@ func main() {
 		efsconn:  efs.New(sess),
 		iamconn: iam.New(sess),
 		kmsconn: kms.New(sess),
+		s3conn: s3.New(sess),
+		stsconn: sts.New(sess),
 	}
 
-	c.Commands = map[ string]cli.CommandFactory{
+	c.Commands = map[string]cli.CommandFactory{
 		"wipe": func() (cli.Command, error) {
 			return &WipeCommand{
 				Ui: &cli.ColoredUi{
@@ -93,7 +97,7 @@ func main() {
 				},
 				client: client,
 				provider: p,
-				isTestRun: *testRunFlag,
+				isTestRun: *dryRunFlag,
 				outFileName: *outFileName,
 			}, nil
 		},

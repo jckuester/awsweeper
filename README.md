@@ -48,12 +48,12 @@ There are three ways of filtering resources for deletion:
 3) Filter by IDs
    
    To find out what the IDs of your resources are (sometimes their name, sometimes an ARN, or random number),
-   run awsweeper in test-run mode: `awsweeper --test-run <config.yml>`. This way, nothing is deleted but
+   run awsweeper in dry-run mode: `awsweeper --dry-run <config.yml>`. This way, nothing is deleted but
    all the IDs and tags or your resources will be printed. Then, use them to create the config.   
 
 ## Test run
 
- Use `awsweeper --test-run <config.yml>` to only show what
+ Use `awsweeper --dry-run <config.yml>` to only show what
 would be deleted. This way, you can iterate on the configuration until it works the way you want it to. 
 
 ## Supported resources
@@ -61,11 +61,15 @@ would be deleted. This way, you can iterate on the configuration until it works 
 Here is list of [all the various types of resources you can create within AWS](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html).
 AWSweeper can currently delete many but not all of the existing resource types:
 
+- aws_ami
 - aws_autoscaling_group
 - aws_cloudformation_stack
+- aws_ebs_snapshot
+- aws_ebs_volume
 - aws_efs_file_system
 - aws_eip
 - aws_elb
+- aws_iam_group
 - aws_iam_instance_profile
 - aws_iam_policy
 - aws_iam_role
@@ -80,12 +84,13 @@ AWSweeper can currently delete many but not all of the existing resource types:
 - aws_network_interface
 - aws_route53_zone
 - aws_route_table
+- aws_s3_bucket
 - aws_security_group
 - aws_subnet
 - aws_vpc
 - aws_vpc_endpoint
 
-Note that the above list contains [terraform types](https://www.terraform.io/docs/providers/aws/index.html. They 
+Note that the above list contains [terraform types](https://www.terraform.io/docs/providers/aws/index.html). They 
 can be used as identifiers for resources tpyes in the yaml configuration. The reason is that AWSweeper 
 is build upon delete functions provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
 

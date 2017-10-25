@@ -74,9 +74,9 @@ resource "aws_iam_role" "foo" {
 EOF
 }
 
-//resource "aws_iam_group" "group" {
-//  name = "foo-group"
-//}
+resource "aws_iam_group" "group" {
+  name = "foo_group"
+}
 
 resource "aws_iam_policy" "policy" {
   name        = "foo_policy"

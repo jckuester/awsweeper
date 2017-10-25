@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 func (c *WipeCommand) deleteGeneric(res Resources) {
@@ -16,7 +17,7 @@ func (c *WipeCommand) deleteGeneric(res Resources) {
 	tags := []*map[string]string{}
 
 	for i, r := range res.ids {
-		if c.inCfg(res.ttype, r,  res.tags[i]) {
+		if c.inCfg(res.ttype, r, res.tags[i]) {
 			ids = append(ids, r)
 			tags = append(tags, res.tags[i])
 		}
@@ -326,4 +327,50 @@ func (c *WipeCommand) deleteKmsKeys(res Resources) {
 		}
 	}
 	c.wipe(Resources{ttype: res.ttype, ids: ids})
+}
+
+func (c *WipeCommand) deleteAmis(res Resources) {
+	ids := []*string{}
+	tags := []*map[string]string{}
+
+	accountId := *c.getAccountId()
+
+	for _, r := range res.raw.(*ec2.DescribeImagesOutput).Images {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
+		}
+
+		if accountId == *r.OwnerId && c.inCfg(res.ttype, r.ImageId, m) {
+			ids = append(ids, r.ImageId)
+			tags = append(tags, m)
+		}
+	}
+	c.wipe(Resources{ttype: res.ttype, ids: ids, tags: tags})
+}
+
+func (c *WipeCommand) deleteSnapshots(res Resources) {
+	ids := []*string{}
+	tags := []*map[string]string{}
+
+	accountId := *c.getAccountId()
+
+	for _, r := range res.raw.(*ec2.DescribeSnapshotsOutput).Snapshots {
+		m := &map[string]string{}
+		for _, t := range r.Tags {
+			(*m)[*t.Key] = *t.Value
+		}
+
+		if accountId == *r.OwnerId && c.inCfg(res.ttype, r.SnapshotId, m) {
+			ids = append(ids, r.SnapshotId)
+			tags = append(tags, m)
+		}
+	}
+	c.wipe(Resources{ttype: res.ttype, ids: ids, tags: tags})
+}
+
+func (c *WipeCommand) getAccountId() *string {
+	res, err := c.client.stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	check(err)
+	return res.Account
 }

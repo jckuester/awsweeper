@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 func getResourceInfos(c *WipeCommand) []ResourceInfo {
@@ -163,6 +164,14 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			c.deleteIamPolicy,
 		},
 		{
+			"aws_iam_group",
+			"Groups",
+			"GroupName",
+			c.client.iamconn.ListGroups,
+			&iam.ListGroupsInput{},
+			c.deleteGeneric,
+		},
+		{
 			"aws_iam_user",
 			"Users",
 			"UserName",
@@ -202,28 +211,37 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			&kms.ListKeysInput{},
 			c.deleteKmsKeys,
 		},
-		//{
-		//	"aws_ebs_snapshot",
-		//	"Snapshots",
-		//	"SnapshotId",
-		//	c.client.ec2conn.DescribeSnapshots,
-		//	&ec2.DescribeSnapshotsInput{},
-		//},
-		//{
-		//	"aws_ebs_volume",
-		//	"Volumes",
-		//	"VolumeId",
-		//	c.client.ec2conn.DescribeVolumes,
-		//	&ec2.DescribeVolumesInput{},
-		//	c.deleteEbsVolume,
-		//},
-		//{
-		//	"aws_ami",
-		//	"Images",
-		//	"ImageId",
-		//	c.client.ec2conn.DescribeImages,
-		//	&ec2.DescribeImagesInput{},
-		//	c.deleteAmis,
-		//}
+		{
+			"aws_s3_bucket",
+			"Buckets",
+			"Name",
+			c.client.s3conn.ListBuckets,
+			&s3.ListBucketsInput{},
+			c.deleteGeneric,
+		},
+		{
+			"aws_ebs_snapshot",
+			"Snapshots",
+			"SnapshotId",
+			c.client.ec2conn.DescribeSnapshots,
+			&ec2.DescribeSnapshotsInput{},
+			c.deleteSnapshots,
+		},
+		{
+			"aws_ebs_volume",
+			"Volumes",
+			"VolumeId",
+			c.client.ec2conn.DescribeVolumes,
+			&ec2.DescribeVolumesInput{},
+			c.deleteGeneric,
+		},
+		{
+			"aws_ami",
+			"Images",
+			"ImageId",
+			c.client.ec2conn.DescribeImages,
+			&ec2.DescribeImagesInput{},
+			c.deleteAmis,
+		},
 	}
 }
