@@ -7,6 +7,9 @@ aws_eip:
 aws_elb:
   ids:
   - foo
+aws_iam_group:
+  ids:
+  - foo
 aws_iam_instance_profile:
   ids:
   - foo

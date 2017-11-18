@@ -1,21 +1,23 @@
 # AWSweeper
 
-AWSweeper wipes out all (or parts) of the resources in your AWS account. What to delete is controlled
-with a yaml file (see [test.yml](test.integration/test.yml), for example). Resources can be filtered by their tags or IDs
+AWSweeper wipes out all (or parts) of the resources in your AWS account. The resources to be deleted can be filtered by their tags or IDs
 using [regular expressions](https://golang.org/pkg/regexp/syntax/).
 
-Currently, AWSweeper [can delete many](#supported-resources), but not all resources. We are working on it!
+AWSweeper [can delete many](#supported-resources), but not all resources yet.
+
+We are working on it. Happy erasing!
 
 ## Usage
 
     awsweeper [options] <config.yml>
 
-To see the options available run `awsweeper --help`.
+To see options available run `awsweeper --help`.
     
-## Filter resources
+## Filter resources for deletion
 
-Resources to be deleted are filtered with a yaml configuration.
-Have a look at the following example:
+Resources to be deleted are filtered by a yaml configuration (see [test.yml](test.integration/test.yml)).
+
+To learn how, have a look at the following example:
 
     aws_security_group:
     aws_instance:
@@ -26,40 +28,45 @@ Have a look at the following example:
       ids:
       - ^foo.*            
 
-There are three ways of filtering resources for deletion:
+There are three ways to filter resources:
 
-1) Delete *all* resources of a particular type
+1) All resources of a particular type
 
-   [Terraform types](https://www.terraform.io/docs/providers/aws/index.html) are used to identify resources of a certain type
-   (e.g., `aws_security_group` filters for resources that are security groups, `aws_iam_role` for roles,
-   or `aws_instance` for all EC2 instances).
+   [Terraform types](https://www.terraform.io/docs/providers/aws/index.html) are used to identify resources of a particular type
+   (e.g., `aws_security_group` selects all resources that are security groups, `aws_iam_role` all roles,
+   or `aws_instance` all EC2 instances).
 
    In the example above, by simply adding `security_group:` (no further filters for IDs or tags),
    all security groups in your account would be deleted. Use the [all.yml](./all.yml), to delete all (currently supported) 
-   resources in your account.
+   resources.
 
-2) Filter by tags
+2) By tags
 
-   If most of your resources have tags, this is probably the way to filter them 
+   You can narrow down on particular types of resources by the tags they have.
+
+   If most of your resources have tags, this is probably the best to filter them 
    for deletion. But be aware: not all resources support tags and can be filtered this way.
    
-   In the example above, all instances are terminated that have either a tag with key `foo` and value `bar` or key `bla` and value `blub`, or both.
+   In the example above, all EC2 instances are terminated that have either a tag with key `foo` and value `bar` or key `bla` and value `blub`, or both.
    
-3) Filter by IDs
+3) By IDs
    
-   To find out what the IDs of your resources are (sometimes their name, sometimes an ARN, or random number),
-   run awsweeper in dry-run mode: `awsweeper --dry-run <config.yml>`. This way, nothing is deleted but
-   all the IDs and tags or your resources will be printed. Then, use them to create the config.   
+   You can narrow down on particular types of resources by filtering on their IDs.
 
+   To see what the IDs of your resources are (could be their name, ARN, a random number),
+   run awsweeper in dry-run mode: `awsweeper --dry-run all.yml`. This way, nothing is deleted but
+   all the IDs and tags of your resources are printed. Then, use this information to create the yaml file.
+   
+   In the example above, all roles which name starts with `foo` are deleted (the ID of roles is their name).
+   
 ## Test run
 
  Use `awsweeper --dry-run <config.yml>` to only show what
-would be deleted. This way, you can iterate on the configuration until it works the way you want it to. 
+would be deleted. This way, you can fine-tune your yaml configuration until it works the way you want it to. 
 
 ## Supported resources
 
-Here is list of [all the various types of resources you can create within AWS](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html).
-AWSweeper can currently delete many but not all of the existing resource types:
+AWSweeper can currently delete many but not [all of the existing types of AWS resources](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html):
 
 - aws_ami
 - aws_autoscaling_group
@@ -90,9 +97,8 @@ AWSweeper can currently delete many but not all of the existing resource types:
 - aws_vpc
 - aws_vpc_endpoint
 
-Note that the above list contains [terraform types](https://www.terraform.io/docs/providers/aws/index.html). They 
-can be used as identifiers for resources tpyes in the yaml configuration. The reason is that AWSweeper 
-is build upon delete functions provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
+Note that the above list contains [terraform types](https://www.terraform.io/docs/providers/aws/index.html) which must be used instead of [AWS resource types](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) to identify resources in the yaml configuration.
+The reason is that AWSweeper is build upon the delete functions provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
 
 ## Tests
 
@@ -100,10 +106,12 @@ Integration testing is semi-automated for now. Resources of each type are create
 configuration to delete all resources again:
 
      # create resources
-     cd test.integration; terraform apply
+     cd test.integration/
+     terraform init
+     terraform apply
      
      # delete resources
-     go run ../*.go test.integration/test.yml
+     go run ../*.go test.yml
      
      # check if all resources have been wiped properly
      terraform destroy
