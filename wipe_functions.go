@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/route53"
@@ -85,6 +84,7 @@ func (c *WipeCommand) deleteNatGateways(res Resources) {
 func (c *WipeCommand) deleteRoute53Record(res Resources) {
 	ids := []*string{}
 
+	// HostedZoneId is a required field for input
 	for _, r := range res.raw.(*route53.ListResourceRecordSetsOutput).ResourceRecordSets {
 		for _, rr := range r.ResourceRecords {
 			if c.inCfg(res.ttype, rr.Value) {
@@ -102,26 +102,27 @@ func (c *WipeCommand) deleteRoute53Zone(res Resources) {
 	hzAttrs := []*map[string]string{}
 
 	for _, hz := range res.raw.(*route53.ListHostedZonesOutput).HostedZones {
-		res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
-			HostedZoneId: hz.Id,
-		})
-		check(err)
+		if c.inCfg(res.ttype, hz.Id) {
+			res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+				HostedZoneId: hz.Id,
+			})
+			check(err)
 
-		for _, rs := range res.ResourceRecordSets {
-			rsIds = append(rsIds, rs.Name)
-			rsAttrs = append(rsAttrs, &map[string]string{
-				"zone_id": *hz.Id,
-				"name":    *rs.Name,
-				"type":    *rs.Type,
+			for _, rs := range res.ResourceRecordSets {
+				rsIds = append(rsIds, rs.Name)
+				rsAttrs = append(rsAttrs, &map[string]string{
+					"zone_id": *hz.Id,
+					"name":    *rs.Name,
+					"type":    *rs.Type,
+				})
+			}
+			hzIds = append(hzIds, hz.Id)
+			hzAttrs = append(hzAttrs, &map[string]string{
+				"force_destroy": "true",
+				"name":          *hz.Name,
 			})
 		}
-		hzIds = append(hzIds, hz.Id)
-		hzAttrs = append(hzAttrs, &map[string]string{
-			"force_destroy": "true",
-			"name":          *hz.Name,
-		})
 	}
-	c.wipe(Resources{ttype: "aws_route53_record", ids: rsIds, attrs: rsAttrs})
 	c.wipe(Resources{ttype: res.ttype, ids: hzIds, attrs: hzAttrs})
 }
 
@@ -232,8 +233,8 @@ func (c *WipeCommand) deleteIamPolicy(res Resources) {
 			ids = append(ids, pol.Arn)
 		}
 	}
-	// policy attachement is not resources
-	// what happens is that policy is detached from groups, users and roles
+	// policy attachments are not resources
+	// what happens here, is that policy is detached from groups, users and roles
 	c.wipe(Resources{ttype: "aws_iam_policy_attachment", ids: eIds, attrs: attributes})
 	c.wipe(Resources{ttype: res.ttype, ids: ids})
 }
@@ -269,19 +270,20 @@ func (c *WipeCommand) deleteIamRole(res Resources) {
 				pIds = append(pIds, &bla)
 			}
 
-			ips, err := c.client.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
-				RoleName: role.RoleName,
-			})
-			check(err)
-
-			for _, ip := range ips.InstanceProfiles {
-				fmt.Println(*ip.InstanceProfileName)
-			}
+			//ips, err := c.client.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
+			//	RoleName: role.RoleName,
+			//})
+			//check(err)
+			//
+			//for _, ip := range ips.InstanceProfiles {
+			//	fmt.Println(*ip.InstanceProfileName)
+			//}
 
 			ids = append(ids, role.RoleName)
 		}
 	}
-	// enough to use aws_iam_policy_attachment, which can attach a policy from users, groups and roles
+
+	// aws_iam_policy_attachment could be used to detach a policy from users, groups and roles
 	c.wipe(Resources{ttype: "aws_iam_role_policy_attachment", ids: rpolIds, attrs: rpolAttributes})
 	c.wipe(Resources{ttype: "aws_iam_role_policy", ids: pIds})
 	c.wipe(Resources{ttype: res.ttype, ids: ids})
@@ -313,16 +315,18 @@ func (c *WipeCommand) deleteKmsKeys(res Resources) {
 	attributes := []*map[string]string{}
 
 	for _, r := range res.raw.(*kms.ListKeysOutput).Keys {
-		req, res := c.client.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
-			KeyId: r.KeyId,
-		})
-		err := req.Send();
-		if err == nil {
-			if *res.KeyMetadata.KeyState != "PendingDeletion" {
-				attributes = append(attributes, &map[string]string{
-					"key_id": *r.KeyId,
-				})
-				ids = append(ids, r.KeyArn)
+		if c.inCfg(res.ttype, r.KeyArn) {
+			req, res := c.client.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
+				KeyId: r.KeyId,
+			})
+			err := req.Send();
+			if err == nil {
+				if *res.KeyMetadata.KeyState != "PendingDeletion" {
+					attributes = append(attributes, &map[string]string{
+						"key_id": *r.KeyId,
+					})
+					ids = append(ids, r.KeyArn)
+				}
 			}
 		}
 	}

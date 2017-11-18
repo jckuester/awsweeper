@@ -54,6 +54,7 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			&ec2.DescribeVpcEndpointsInput{},
 			c.deleteGeneric,
 		},
+		// support tags
 		{
 			"aws_nat_gateway",
 			"NatGateways",
@@ -78,11 +79,26 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			&route53.ListHostedZonesInput{},
 			c.deleteRoute53Zone,
 		},
+		{
+			"aws_efs_file_system",
+			"FileSystems",
+			"FileSystemId",
+			c.client.efsconn.DescribeFileSystems,
+			&efs.DescribeFileSystemsInput{},
+			c.deleteEfsFileSystem,
+		},
 		//{
-		//	c.r53conn.ListResourceRecordSets,
-		//	&route53.ListResourceRecordSetsInput{}
-		//	c.deleteRoute53Record
+		//	"aws_route53_record",
+		//	"ResourceRecordSets",
+		//	"bla",
+		//	c.client.r53conn.ListResourceRecordSets,
+		//	&route53.ListResourceRecordSetsInput{},
+		//	c.deleteRoute53Record,
 		//},
+		// Elastic network interface (ENI) resource
+		// sort by owner of the network interface?
+		// support tags
+		// attached to subnet
 		{
 			"aws_network_interface",
 			"NetworkInterfaces",
@@ -106,14 +122,6 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			c.client.ec2conn.DescribeInternetGateways,
 			&ec2.DescribeInternetGatewaysInput{},
 			c.deleteInternetGateways,
-		},
-		{
-			"aws_efs_file_system",
-			"FileSystems",
-			"FileSystemId",
-			c.client.efsconn.DescribeFileSystems,
-			&efs.DescribeFileSystemsInput{},
-			c.deleteEfsFileSystem,
 		},
 		{
 			"aws_subnet",
