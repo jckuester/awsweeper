@@ -98,9 +98,20 @@ func (c *WipeCommand) Run(args []string) int {
 		c.Ui.Output("INFO: This is a test run, nothing will be deleted!")
 	}
 
-	for _, rInfo := range c.resourceInfos {
-			rInfo.DeleteFn(listResources(rInfo))
+	for _, ttype := range getTerraformTypes(c.deleteCfg) {
+		isTerraformType := false
+		for _, rInfo := range c.resourceInfos {
+			if ttype == rInfo.TerraformType {
+				isTerraformType = true
+				rInfo.DeleteFn(listResources(rInfo))
+			}
+		}
+		if !isTerraformType {
+			fmt.Printf("Err: Unsupported resource type '%s' found in '%s'\n", ttype, args[0])
+			return 1
+		}
 	}
+
 
 	if c.outFileName != "" {
 		outYaml, err := yaml.Marshal(&c.deleteOut)
@@ -162,6 +173,14 @@ func getTags(res reflect.Value) *map[string]string {
 	return &tags
 }
 
+func getTerraformTypes(aMap map[string]yamlCfg) []string {
+	ttypes := make([]string, 0, len(aMap))
+	for k := range aMap {
+		ttypes = append(ttypes, k)
+	}
+
+	return ttypes
+}
 func (c *WipeCommand) inCfg(rType string, id *string, tags ...*map[string]string) bool {
 	if cfgVal, ok := c.deleteCfg[rType]; ok {
 		if len(cfgVal.Ids) == 0 && len(cfgVal.Tags) == 0 {
@@ -235,8 +254,8 @@ func (c *WipeCommand) wipe(res Resources) {
 							for k, v := range *res.tags {
 								printStat += fmt.Sprintf("[%s: %v] ", k, v)
 							}
-							printStat += "\n"
 						}
+						printStat += "\n"
 					}
 					fmt.Println(printStat)
 
