@@ -1,7 +1,7 @@
 # AWSweeper
 
-AWSweeper wipes out all (or parts) of the resources in your AWS account. The resources to be deleted can be filtered by their tags or IDs
-using [regular expressions](https://golang.org/pkg/regexp/syntax/).
+AWSweeper wipes out all (or parts) of the resources in your AWS account. Resources to be deleted can be filtered by their tags or IDs
+using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared in a yaml file (see [test.yml](test.integration/test.yml)).
 
 AWSweeper [can delete many](#supported-resources), but not all resources yet.
 
@@ -15,9 +15,7 @@ To see options available run `awsweeper --help`.
     
 ## Filter resources for deletion
 
-Resources to be deleted are filtered by a yaml configuration (see [test.yml](test.integration/test.yml)).
-
-To learn how, have a look at the following example:
+Resources to be deleted are filtered by a yaml configuration. To learn how, have a look at the following example:
 
     aws_security_group:
     aws_instance:
@@ -98,11 +96,11 @@ AWSweeper can currently delete many but not [all of the existing types of AWS re
 - aws_vpc_endpoint
 
 Note that the above list contains [terraform types](https://www.terraform.io/docs/providers/aws/index.html) which must be used instead of [AWS resource types](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) to identify resources in the yaml configuration.
-The reason is that AWSweeper is build upon the delete functions provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
+The reason is that AWSweeper is build upon the already existing delete routines provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
 
 ## Tests
 
-Integration testing is semi-automated for now. Resources of each type are created with terraform. Then awsweeper is used with a test
+Integration testing is not really automated in this first release. Resources of each type are created with terraform. Then awsweeper is used with a test
 configuration to delete all resources again:
 
      # create resources
@@ -112,6 +110,8 @@ configuration to delete all resources again:
      
      # delete resources
      go run ../*.go test.yml
+     
+     # check if the correct resources have been selected for deletion
      
      # check if all resources have been wiped properly
      terraform destroy
