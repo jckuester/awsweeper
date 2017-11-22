@@ -30,7 +30,8 @@ type yamlCfg struct {
 
 type WipeCommand struct {
 	Ui            cli.Ui
-	isTestRun     bool
+	dryRun	      bool
+	forceDelete	  bool
 	client        *AWSClient
 	provider      *terraform.ResourceProvider
 	resourceInfos []ResourceInfo
@@ -38,7 +39,6 @@ type WipeCommand struct {
 	deleteCfg     map[string]yamlCfg
 	deleteOut     map[string]yamlCfg
 	outFileName   string
-	bla           []interface{}
 }
 
 type Resources struct {
@@ -94,8 +94,21 @@ func (c *WipeCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.isTestRun {
+	if c.dryRun {
 		c.Ui.Output("INFO: This is a test run, nothing will be deleted!")
+	} else if !c.forceDelete {
+		v, err := c.Ui.Ask(
+			"Do you really want to delete resources filtered by '" + args[0] + "'?\n" +
+				"Only 'yes' will be accepted to approve.\n\n" +
+				"Enter a value: ")
+
+		if err != nil {
+			fmt.Println("Error asking for approval: {{err}}", err)
+			return 1
+		}
+		if v != "yes" {
+			return 0
+		}
 	}
 
 	for _, ttype := range getTerraformTypes(c.deleteCfg) {
@@ -274,8 +287,8 @@ func (c *WipeCommand) wipe(res Resources) {
 						st.Attributes["force_destroy"] = "true"
 					}
 
-					if !c.isTestRun {
-						_, err := (*c.provider).Apply(ii, st, d)
+					if !c.dryRun {
+						_, err = (*c.provider).Apply(ii, st, d)
 
 						if err != nil {
 							fmt.Printf("\t%s\n", err)

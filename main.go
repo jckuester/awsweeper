@@ -33,6 +33,7 @@ func main() {
 	versionFlag := flag.Bool("version", false, "Show version")
 	helpFlag := flag.Bool("help", false, "Show help")
 	dryRunFlag := flag.Bool("dry-run", false, "Don't delete anything, just show what would happen")
+	forceDeleteFlag := flag.Bool("force", false, "Start deleting without asking for confirmation")
 
 	profile := flag.String("profile", "", "Use a specific profile from your credential file")
 	region := flag.String("region", "", "The region to use. Overrides config/env settings")
@@ -97,7 +98,8 @@ func main() {
 				},
 				client: client,
 				provider: p,
-				isTestRun: *dryRunFlag,
+				dryRun: *dryRunFlag,
+				forceDelete: *forceDeleteFlag,
 				outFileName: *outFileName,
 			}, nil
 		},
@@ -121,7 +123,9 @@ Options:
 
   --region		The region to use. Overrides config/env settings
 
-  --test-run		Don't delete anything, just show what would happen
+  --dry-run		Don't delete anything, just show what would happen
+
+  --force		Start deleting without asking for confirmation
 
   --output=file		Print infos about deleted resources to a yaml file
 `
