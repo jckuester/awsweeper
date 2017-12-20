@@ -1,13 +1,14 @@
-package main
+package command_wipe
 
 import (
 	"strings"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/efs"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/sts"
 )
 
@@ -165,7 +166,7 @@ func (c *WipeCommand) deleteIamUser(res Resources) {
 			})
 			if err == nil {
 				for _, up := range ups.PolicyNames {
-					upIds = append(upIds, aws.String(*u.UserName + ":" + *up))
+					upIds = append(upIds, aws.String(*u.UserName+":"+*up))
 				}
 			}
 
@@ -319,7 +320,7 @@ func (c *WipeCommand) deleteKmsKeys(res Resources) {
 			req, res := c.client.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
 				KeyId: r.KeyId,
 			})
-			err := req.Send();
+			err := req.Send()
 			if err == nil {
 				if *res.KeyMetadata.KeyState != "PendingDeletion" {
 					attributes = append(attributes, &map[string]string{

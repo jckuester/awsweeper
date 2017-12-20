@@ -104,21 +104,11 @@ The reason is that AWSweeper is build upon the already existing delete routines 
 
 ## Tests
 
-Integration testing is not really automated in this first release. Resources of each type are created with terraform. Then awsweeper is used with a test
-configuration to delete all resources again:
+***Update:*** Integration tests are automated now. Run
 
-     # create resources
-     cd test.integration/
-     terraform init
-     terraform apply
-     
-     # delete resources
-     go run ../*.go test.yml
-     
-     # check if the correct resources have been selected for deletion
-     
-     # check if all resources have been wiped properly
-     terraform destroy
+	make testacc
+
+but be warned; integration tests create real resources and can cost you money.
 
 ## Disclaimer
 
