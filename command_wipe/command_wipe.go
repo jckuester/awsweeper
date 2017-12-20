@@ -1,37 +1,41 @@
-package main
+package command_wipe
 
 import (
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/hashicorp/terraform/terraform"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/route53"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"reflect"
+	"regexp"
+	"sync"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/aws"
-	"regexp"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
-	"github.com/mitchellh/cli"
-	"os"
-	"sync"
-	"reflect"
+	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/terraform/terraform"
+	"github.com/mitchellh/cli"
+	"github.com/spf13/afero"
+	"gopkg.in/yaml.v2"
 )
 
+var OsFs = afero.NewOsFs()
+
 type yamlCfg struct {
-	Ids  []*string `yaml:",omitempty"`
+	Ids  []*string         `yaml:",omitempty"`
 	Tags map[string]string `yaml:",omitempty"`
 }
 
 type WipeCommand struct {
 	Ui            cli.Ui
-	dryRun	      bool
-	forceDelete	  bool
+	dryRun        bool
+	forceDelete   bool
 	client        *AWSClient
 	provider      *terraform.ResourceProvider
 	resourceInfos []ResourceInfo
@@ -74,7 +78,7 @@ type AWSClient struct {
 	efsconn         *efs.EFS
 	iamconn         *iam.IAM
 	kmsconn         *kms.KMS
-	s3conn			*s3.S3
+	s3conn          *s3.S3
 	stsconn         *sts.STS
 }
 
@@ -85,7 +89,8 @@ func (c *WipeCommand) Run(args []string) int {
 	c.resourceInfos = getResourceInfos(c)
 
 	if len(args) == 1 {
-		data, err := ioutil.ReadFile(args[0])
+		data, err := afero.ReadFile(OsFs, args[0])
+		//data, err := ioutil.ReadFile(args[0])
 		check(err)
 		err = yaml.Unmarshal([]byte(data), &c.deleteCfg)
 		check(err)
@@ -124,7 +129,6 @@ func (c *WipeCommand) Run(args []string) int {
 			return 1
 		}
 	}
-
 
 	if c.outFileName != "" {
 		outYaml, err := yaml.Marshal(&c.deleteOut)
