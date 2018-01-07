@@ -1,4 +1,4 @@
-package test_acceptance
+package test
 
 import (
 	"fmt"

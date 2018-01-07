@@ -1,7 +1,9 @@
-package test_acceptance
+package test
 
 import (
+	"log"
 	"os"
+	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
@@ -15,12 +17,18 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/command_wipe"
+	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
 )
 
 var client = initClient()
+
+var testAccProviders map[string]terraform.ResourceProvider
+var testAccProvider *schema.Provider
+
 var argsDryRun = []string{"cmd", "--dry-run", "config.yml"}
 var argsForceDelete = []string{"cmd", "--force", "config.yml"}
 
@@ -53,6 +61,32 @@ func initClient() *AWSClient {
 		kmsconn:         kms.New(sess),
 		s3conn:          s3.New(sess),
 		stsconn:         sts.New(sess),
+	}
+}
+
+func init() {
+	testAccProvider = aws.Provider().(*schema.Provider)
+	testAccProviders = map[string]terraform.ResourceProvider{
+		"aws": testAccProvider,
+	}
+}
+
+func testAccPreCheck(t *testing.T) {
+	if v := os.Getenv("AWS_PROFILE"); v == "" {
+		if v := os.Getenv("AWS_ACCESS_KEY_ID"); v == "" {
+			t.Fatal("AWS_ACCESS_KEY_ID must be set for acceptance tests")
+		}
+		if v := os.Getenv("AWS_SECRET_ACCESS_KEY"); v == "" {
+			t.Fatal("AWS_SECRET_ACCESS_KEY must be set for acceptance tests")
+		}
+	}
+	if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
+		log.Println("[INFO] Test: Using us-west-2 as test region")
+		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
+	}
+	err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
