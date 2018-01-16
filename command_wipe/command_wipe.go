@@ -90,7 +90,6 @@ func (c *WipeCommand) Run(args []string) int {
 
 	if len(args) == 1 {
 		data, err := afero.ReadFile(OsFs, args[0])
-		//data, err := ioutil.ReadFile(args[0])
 		check(err)
 		err = yaml.Unmarshal([]byte(data), &c.deleteCfg)
 		check(err)

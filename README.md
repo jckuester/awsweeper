@@ -85,6 +85,7 @@ AWSweeper can currently delete many but not [all of the existing types of AWS re
 - aws_iam_user
 - aws_instance
 - aws_internet_gateway
+- aws_key_pair (***new***)
 - aws_kms_alias
 - aws_kms_key
 - aws_launch_configuration
