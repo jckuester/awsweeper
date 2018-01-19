@@ -1,7 +1,7 @@
 # AWSweeper
 
 AWSweeper wipes out all (or parts) of the resources in your AWS account. Resources to be deleted can be filtered by their tags or IDs
-using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared in a yaml file (see [test.yml](test.integration/test.yml)).
+using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared in a yaml file (see [test.yml](test.acceptance/test.yml)).
 
 AWSweeper [can delete many](#supported-resources), but not all resources yet.
 
@@ -102,23 +102,19 @@ AWSweeper can currently delete many but not [all of the existing types of AWS re
 Note that the above list contains [terraform types](https://www.terraform.io/docs/providers/aws/index.html) which must be used instead of [AWS resource types](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) to identify resources in the yaml configuration.
 The reason is that AWSweeper is build upon the already existing delete routines provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
 
-## Tests
+## Acceptance tests
 
-Integration testing is not really automated in this first release. Resources of each type are created with terraform. Then awsweeper is used with a test
-configuration to delete all resources again:
+***WARNING:*** Running acceptance tests create real resources that might cost you money.
 
-     # create resources
-     cd test.integration/
-     terraform init
-     terraform apply
-     
-     # delete resources
-     go run ../*.go test.yml
-     
-     # check if the correct resources have been selected for deletion
-     
-     # check if all resources have been wiped properly
-     terraform destroy
+Run all acceptance tests with
+
+    make testacc
+
+or use
+
+    make testacc TESTARGS='-run=TestAccVpc*'
+
+to test the working of AWSweeper for a just single resource, such as `aws_vpc`.
 
 ## Disclaimer
 
