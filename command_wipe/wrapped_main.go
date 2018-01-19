@@ -26,7 +26,7 @@ import (
 
 func WrappedMain() int {
 	app := "awsweeper"
-	version := "0.1.0"
+	version := "0.1.1"
 
 	set := flag.NewFlagSet("awsweeper", 0)
 	versionFlag := set.Bool("version", false, "Show version")
