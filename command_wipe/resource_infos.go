@@ -39,6 +39,14 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			c.deleteInstances,
 		},
 		{
+			"aws_key_pair",
+			"KeyPairs",
+			"KeyName",
+			c.client.ec2conn.DescribeKeyPairs,
+			&ec2.DescribeKeyPairsInput{},
+			c.deleteGeneric,
+		},
+		{
 			"aws_elb",
 			"LoadBalancerDescriptions",
 			"LoadBalancerName",
