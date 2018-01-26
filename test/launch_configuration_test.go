@@ -9,7 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/cloudetc/awsweeper/command_wipe"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
@@ -115,11 +116,11 @@ func testLaunchConfigurationExists(lc *autoscaling.LaunchConfiguration) resource
 
 func testMainLaunchConfigurationIds(args []string, lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		command_wipe.OsFs = afero.NewMemMapFs()
-		afero.WriteFile(command_wipe.OsFs, "config.yml", []byte(testAccLaunchConfigurationAWSweeperIdsConfig(lc)), 0644)
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccLaunchConfigurationAWSweeperIdsConfig(lc)), 0644)
 		os.Args = args
 
-		command_wipe.WrappedMain()
+		command.WrappedMain()
 		return nil
 	}
 }

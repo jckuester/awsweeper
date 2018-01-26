@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/cloudetc/awsweeper/command_wipe"
+	"github.com/cloudetc/awsweeper/command"
 )
 
 func main() {
-	os.Exit(command_wipe.WrappedMain())
+	os.Exit(command.WrappedMain())
 }

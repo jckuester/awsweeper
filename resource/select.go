@@ -1,6 +1,7 @@
-package command_wipe
+package resource
 
 import (
+	"log"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,24 +13,25 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 )
 
-func (c *WipeCommand) deleteGeneric(res Resources) {
+func filterGeneric(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for i, r := range res.ids {
-		if c.inCfg(res.ttype, r, res.tags[i]) {
+	for i, r := range res.Ids {
+		if f.Matches(res.Type, *r, *res.Tags[i]) {
 			ids = append(ids, r)
-			tags = append(tags, res.tags[i])
+			tags = append(tags, res.Tags[i])
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids, tags: tags})
+
+	return []Resources{{Type: res.Type, Ids: ids, Tags: tags}}
 }
 
-func (c *WipeCommand) deleteInstances(res Resources) {
+func filterInstances(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.raw.(*ec2.DescribeInstancesOutput).Reservations {
+	for _, r := range res.Raw.(*ec2.DescribeInstancesOutput).Reservations {
 		for _, in := range r.Instances {
 			if *in.State.Name != "terminated" {
 				m := &map[string]string{}
@@ -37,28 +39,29 @@ func (c *WipeCommand) deleteInstances(res Resources) {
 					(*m)[*t.Key] = *t.Value
 				}
 
-				if c.inCfg(res.ttype, in.InstanceId, m) {
+				if f.Matches(res.Type, *in.InstanceId, *m) {
 					ids = append(ids, in.InstanceId)
 					tags = append(tags, m)
 				}
 			}
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids, tags: tags})
+
+	return []Resources{{Type: res.Type, Ids: ids, Tags: tags}}
 }
 
-func (c *WipeCommand) deleteInternetGateways(res Resources) {
+func filterInternetGateways(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	attrs := []*map[string]string{}
 	tags := []*map[string]string{}
 
-	for _, r := range res.raw.(*ec2.DescribeInternetGatewaysOutput).InternetGateways {
+	for _, r := range res.Raw.(*ec2.DescribeInternetGatewaysOutput).InternetGateways {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
 		}
 
-		if c.inCfg(res.ttype, r.InternetGatewayId, m) {
+		if f.Matches(res.Type, *r.InternetGatewayId, *m) {
 			ids = append(ids, r.InternetGatewayId)
 			attrs = append(attrs, &map[string]string{
 				"vpc_id": *r.Attachments[0].VpcId,
@@ -66,48 +69,51 @@ func (c *WipeCommand) deleteInternetGateways(res Resources) {
 			tags = append(tags, m)
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids, attrs: attrs, tags: tags})
+
+	return []Resources{{Type: res.Type, Ids: ids, Attrs: attrs, Tags: tags}}
 }
 
-func (c *WipeCommand) deleteNatGateways(res Resources) {
+func filterNatGateways(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 
-	for _, r := range res.raw.(*ec2.DescribeNatGatewaysOutput).NatGateways {
-		if c.inCfg(res.ttype, r.NatGatewayId) {
+	for _, r := range res.Raw.(*ec2.DescribeNatGatewaysOutput).NatGateways {
+		if f.Matches(res.Type, *r.NatGatewayId) {
 			if *r.State == "available" {
 				ids = append(ids, r.NatGatewayId)
 			}
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids})
+	return []Resources{{Type: res.Type, Ids: ids}}
 }
 
-func (c *WipeCommand) deleteRoute53Record(res Resources) {
+func filterRoute53Record(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 
 	// HostedZoneId is a required field for input
-	for _, r := range res.raw.(*route53.ListResourceRecordSetsOutput).ResourceRecordSets {
+	for _, r := range res.Raw.(*route53.ListResourceRecordSetsOutput).ResourceRecordSets {
 		for _, rr := range r.ResourceRecords {
-			if c.inCfg(res.ttype, rr.Value) {
+			if f.Matches(res.Type, *rr.Value) {
 				ids = append(ids, rr.Value)
 			}
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids})
+	return []Resources{{Type: res.Type, Ids: ids}}
 }
 
-func (c *WipeCommand) deleteRoute53Zone(res Resources) {
+func filterRoute53Zone(res Resources, f Filter, c *AWSClient) []Resources {
 	hzIds := []*string{}
 	rsIds := []*string{}
 	rsAttrs := []*map[string]string{}
 	hzAttrs := []*map[string]string{}
 
-	for _, hz := range res.raw.(*route53.ListHostedZonesOutput).HostedZones {
-		if c.inCfg(res.ttype, hz.Id) {
-			res, err := c.client.r53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+	for _, hz := range res.Raw.(*route53.ListHostedZonesOutput).HostedZones {
+		if f.Matches(res.Type, *hz.Id) {
+			res, err := c.R53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
 				HostedZoneId: hz.Id,
 			})
-			check(err)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			for _, rs := range res.ResourceRecordSets {
 				rsIds = append(rsIds, rs.Name)
@@ -124,16 +130,16 @@ func (c *WipeCommand) deleteRoute53Zone(res Resources) {
 			})
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: hzIds, attrs: hzAttrs})
+	return []Resources{{Type: res.Type, Ids: hzIds, Attrs: hzAttrs}}
 }
 
-func (c *WipeCommand) deleteEfsFileSystem(res Resources) {
+func filterEfsFileSystem(res Resources, f Filter, c *AWSClient) []Resources {
 	fsIds := []*string{}
 	mtIds := []*string{}
 
-	for _, r := range res.raw.(*efs.DescribeFileSystemsOutput).FileSystems {
-		if c.inCfg(res.ttype, r.Name) {
-			res, err := c.client.efsconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
+	for _, r := range res.Raw.(*efs.DescribeFileSystemsOutput).FileSystems {
+		if f.Matches(res.Type, *r.Name) {
+			res, err := c.EFSconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
 				FileSystemId: r.FileSystemId,
 			})
 
@@ -146,22 +152,24 @@ func (c *WipeCommand) deleteEfsFileSystem(res Resources) {
 			fsIds = append(fsIds, r.FileSystemId)
 		}
 	}
-	c.wipe(Resources{ttype: "aws_efs_mount_target", ids: mtIds})
-	c.wipe(Resources{ttype: res.ttype, ids: fsIds})
+
+	return []Resources{
+		{Type: "aws_efs_mount_target", Ids: mtIds},
+		{Type: res.Type, Ids: fsIds},
+	}
 }
 
-func (c *WipeCommand) deleteIamUser(res Resources) {
+func filterIamUser(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	pIds := []*string{}
 	upIds := []*string{}
 	attrs := []*map[string]string{}
 	pAttrs := []*map[string]string{}
 
-	for _, u := range res.raw.(*iam.ListUsersOutput).Users {
-		if c.inCfg(res.ttype, u.UserName) {
-
+	for _, u := range res.Raw.(*iam.ListUsersOutput).Users {
+		if f.Matches(res.Type, *u.UserName) {
 			// list inline policies, delete with "aws_iam_user_policy" delete routine
-			ups, err := c.client.iamconn.ListUserPolicies(&iam.ListUserPoliciesInput{
+			ups, err := c.IAMconn.ListUserPolicies(&iam.ListUserPoliciesInput{
 				UserName: u.UserName,
 			})
 			if err == nil {
@@ -171,7 +179,7 @@ func (c *WipeCommand) deleteIamUser(res Resources) {
 			}
 
 			// Lists all managed policies that are attached  to user (inline and others)
-			upols, err := c.client.iamconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+			upols, err := c.IAMconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
 				// required
 				UserName: u.UserName,
 			})
@@ -191,23 +199,28 @@ func (c *WipeCommand) deleteIamUser(res Resources) {
 			})
 		}
 	}
+
 	// aws_iam_user_policy to delete inline policies
-	c.wipe(Resources{ttype: "aws_iam_user_policy", ids: upIds})
-	c.wipe(Resources{ttype: "aws_iam_user_policy_attachment", ids: pIds, attrs: pAttrs})
-	c.wipe(Resources{ttype: res.ttype, ids: ids, attrs: attrs})
+	return []Resources{
+		{Type: "aws_iam_user_policy", Ids: upIds},
+		{Type: "aws_iam_user_policy_attachment", Ids: pIds, Attrs: pAttrs},
+		{Type: res.Type, Ids: ids, Attrs: attrs},
+	}
 }
 
-func (c *WipeCommand) deleteIamPolicy(res Resources) {
+func filterIamPolicy(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	eIds := []*string{}
 	attributes := []*map[string]string{}
 
-	for _, pol := range res.raw.(*iam.ListPoliciesOutput).Policies {
-		if c.inCfg(res.ttype, pol.Arn) {
-			es, err := c.client.iamconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
+	for _, pol := range res.Raw.(*iam.ListPoliciesOutput).Policies {
+		if f.Matches(res.Type, *pol.Arn) {
+			es, err := c.IAMconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
 				PolicyArn: pol.Arn,
 			})
-			check(err)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			roles := []string{}
 			users := []string{}
@@ -234,24 +247,29 @@ func (c *WipeCommand) deleteIamPolicy(res Resources) {
 			ids = append(ids, pol.Arn)
 		}
 	}
+
 	// policy attachments are not resources
 	// what happens here, is that policy is detached from groups, users and roles
-	c.wipe(Resources{ttype: "aws_iam_policy_attachment", ids: eIds, attrs: attributes})
-	c.wipe(Resources{ttype: res.ttype, ids: ids})
+	return []Resources{
+		{Type: "aws_iam_policy_attachment", Ids: eIds, Attrs: attributes},
+		{Type: res.Type, Ids: ids},
+	}
 }
 
-func (c *WipeCommand) deleteIamRole(res Resources) {
+func filterIamRole(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	rpolIds := []*string{}
 	rpolAttributes := []*map[string]string{}
 	pIds := []*string{}
 
-	for _, role := range res.raw.(*iam.ListRolesOutput).Roles {
-		if c.inCfg(res.ttype, role.RoleName) {
-			rpols, err := c.client.iamconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
+	for _, role := range res.Raw.(*iam.ListRolesOutput).Roles {
+		if f.Matches(res.Type, *role.RoleName) {
+			rpols, err := c.IAMconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
 				RoleName: role.RoleName,
 			})
-			check(err)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			for _, rpol := range rpols.AttachedPolicies {
 				rpolIds = append(rpolIds, rpol.PolicyArn)
@@ -261,17 +279,19 @@ func (c *WipeCommand) deleteIamRole(res Resources) {
 				})
 			}
 
-			rps, err := c.client.iamconn.ListRolePolicies(&iam.ListRolePoliciesInput{
+			rps, err := c.IAMconn.ListRolePolicies(&iam.ListRolePoliciesInput{
 				RoleName: role.RoleName,
 			})
-			check(err)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			for _, rp := range rps.PolicyNames {
 				bla := *role.RoleName + ":" + *rp
 				pIds = append(pIds, &bla)
 			}
 
-			//ips, err := c.client.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
+			//ips, err := c.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
 			//	RoleName: role.RoleName,
 			//})
 			//check(err)
@@ -285,17 +305,19 @@ func (c *WipeCommand) deleteIamRole(res Resources) {
 	}
 
 	// aws_iam_policy_attachment could be used to detach a policy from users, groups and roles
-	c.wipe(Resources{ttype: "aws_iam_role_policy_attachment", ids: rpolIds, attrs: rpolAttributes})
-	c.wipe(Resources{ttype: "aws_iam_role_policy", ids: pIds})
-	c.wipe(Resources{ttype: res.ttype, ids: ids})
+	return []Resources{
+		{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes},
+		{Type: "aws_iam_role_policy", Ids: pIds},
+		{Type: res.Type, Ids: ids},
+	}
 }
 
-func (c *WipeCommand) deleteInstanceProfiles(res Resources) {
+func filterInstanceProfiles(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	attributes := []*map[string]string{}
 
-	for _, r := range res.raw.(*iam.ListInstanceProfilesOutput).InstanceProfiles {
-		if c.inCfg(res.ttype, r.InstanceProfileName) {
+	for _, r := range res.Raw.(*iam.ListInstanceProfilesOutput).InstanceProfiles {
+		if f.Matches(res.Type, *r.InstanceProfileName) {
 			ids = append(ids, r.InstanceProfileName)
 
 			roles := []string{}
@@ -308,16 +330,16 @@ func (c *WipeCommand) deleteInstanceProfiles(res Resources) {
 			})
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids})
+	return []Resources{{Type: res.Type, Ids: ids}}
 }
 
-func (c *WipeCommand) deleteKmsKeys(res Resources) {
+func filterKmsKeys(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	attributes := []*map[string]string{}
 
-	for _, r := range res.raw.(*kms.ListKeysOutput).Keys {
-		if c.inCfg(res.ttype, r.KeyArn) {
-			req, res := c.client.kmsconn.DescribeKeyRequest(&kms.DescribeKeyInput{
+	for _, r := range res.Raw.(*kms.ListKeysOutput).Keys {
+		if f.Matches(res.Type, *r.KeyArn) {
+			req, res := c.KMSconn.DescribeKeyRequest(&kms.DescribeKeyInput{
 				KeyId: r.KeyId,
 			})
 			err := req.Send()
@@ -331,51 +353,50 @@ func (c *WipeCommand) deleteKmsKeys(res Resources) {
 			}
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids})
+	return []Resources{{Type: res.Type, Ids: ids}}
 }
 
-func (c *WipeCommand) deleteAmis(res Resources) {
+func filterAmis(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	accountId := *c.getAccountId()
-
-	for _, r := range res.raw.(*ec2.DescribeImagesOutput).Images {
+	for _, r := range res.Raw.(*ec2.DescribeImagesOutput).Images {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
 		}
 
-		if accountId == *r.OwnerId && c.inCfg(res.ttype, r.ImageId, m) {
+		if accountId(c) == *r.OwnerId && (f.Matches(res.Type, *r.ImageId, *m)) {
 			ids = append(ids, r.ImageId)
 			tags = append(tags, m)
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids, tags: tags})
+	return []Resources{{Type: res.Type, Ids: ids, Tags: tags}}
 }
 
-func (c *WipeCommand) deleteSnapshots(res Resources) {
+func filterSnapshots(res Resources, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	tags := []*map[string]string{}
 
-	accountId := *c.getAccountId()
-
-	for _, r := range res.raw.(*ec2.DescribeSnapshotsOutput).Snapshots {
+	for _, r := range res.Raw.(*ec2.DescribeSnapshotsOutput).Snapshots {
 		m := &map[string]string{}
 		for _, t := range r.Tags {
 			(*m)[*t.Key] = *t.Value
 		}
 
-		if accountId == *r.OwnerId && c.inCfg(res.ttype, r.SnapshotId, m) {
+		if accountId(c) == *r.OwnerId && (f.Matches(res.Type, *r.SnapshotId, *m)) {
 			ids = append(ids, r.SnapshotId)
 			tags = append(tags, m)
 		}
 	}
-	c.wipe(Resources{ttype: res.ttype, ids: ids, tags: tags})
+	return []Resources{{Type: res.Type, Ids: ids, Tags: tags}}
 }
 
-func (c *WipeCommand) getAccountId() *string {
-	res, err := c.client.stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-	check(err)
-	return res.Account
+func accountId(c *AWSClient) string {
+	res, err := c.STSconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return *res.Account
 }

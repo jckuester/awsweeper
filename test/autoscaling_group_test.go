@@ -9,13 +9,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/cloudetc/awsweeper/command_wipe"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
 )
 
-func TestAvvAutoscalingGroup_deleteByTags(t *testing.T) {
+func TestAccAutoscalingGroup_deleteByTags(t *testing.T) {
 	var asg1, asg2 autoscaling.Group
 
 	resource.Test(t, resource.TestCase{
@@ -144,11 +145,11 @@ func testAutoscalingGroupDeleted(asg *autoscaling.Group) resource.TestCheckFunc 
 
 func testMainAutoscalingGroupIds(args []string, group *autoscaling.Group) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		command_wipe.OsFs = afero.NewMemMapFs()
-		afero.WriteFile(command_wipe.OsFs, "config.yml", []byte(testAccAutoscalingGroupAWSweeperIdsConfig(group)), 0644)
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccAutoscalingGroupAWSweeperIdsConfig(group)), 0644)
 		os.Args = args
 
-		command_wipe.WrappedMain()
+		command.WrappedMain()
 		return nil
 	}
 }
