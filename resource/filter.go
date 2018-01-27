@@ -31,7 +31,7 @@ type yamlEntry struct {
 
 // Filter selects resources for deletion.
 type Filter interface {
-	Validate(resInfos []ResourceInfo) error
+	Validate(apiInfos []ApiDesc) error
 	Matches(resType string, id string, tags ...map[string]string) bool
 	Types() []string
 }
@@ -71,11 +71,11 @@ func read(file string) YamlCfg {
 
 // Validate checks if all resource types appearing in the config
 // of the filter are currently supported.
-func (f YamlFilter) Validate(resInfos []ResourceInfo) error {
+func (f YamlFilter) Validate(apiInfos []ApiDesc) error {
 	for _, resType := range f.Types() {
 		isTerraformType := false
-		for _, rInfo := range resInfos {
-			if resType == rInfo.TerraformType {
+		for _, apiInfo := range apiInfos {
+			if resType == apiInfo.TerraformType {
 				isTerraformType = true
 			}
 		}

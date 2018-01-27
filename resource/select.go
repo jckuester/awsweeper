@@ -4,7 +4,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -13,210 +12,198 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 )
 
-func filterGeneric(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	tags := []*map[string]string{}
+func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
 
-	for i, r := range res.Ids {
-		if f.Matches(res.Type, *r, *res.Tags[i]) {
-			ids = append(ids, r)
-			tags = append(tags, res.Tags[i])
+	for _, r := range res {
+		if f.Matches(r.Type, r.Id, r.Tags) {
+			result = append(result, r)
 		}
 	}
-
-	return []Resources{{Type: res.Type, Ids: ids, Tags: tags}}
+	return []Resources{result}
 }
 
-func filterInstances(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	tags := []*map[string]string{}
+func filterInstances(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
 
-	for _, r := range res.Raw.(*ec2.DescribeInstancesOutput).Reservations {
+	for _, r := range raw.(*ec2.DescribeInstancesOutput).Reservations {
 		for _, in := range r.Instances {
 			if *in.State.Name != "terminated" {
-				m := &map[string]string{}
+				m := map[string]string{}
 				for _, t := range in.Tags {
-					(*m)[*t.Key] = *t.Value
+					m[*t.Key] = *t.Value
 				}
 
-				if f.Matches(res.Type, *in.InstanceId, *m) {
-					ids = append(ids, in.InstanceId)
-					tags = append(tags, m)
+				if f.Matches(res[0].Type, *in.InstanceId, m) {
+					result = append(result, &Resource{
+						Id:   *in.InstanceId,
+						Tags: m,
+					})
 				}
 			}
 		}
 	}
-
-	return []Resources{{Type: res.Type, Ids: ids, Tags: tags}}
+	return []Resources{result}
 }
 
-func filterInternetGateways(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	attrs := []*map[string]string{}
-	tags := []*map[string]string{}
+func filterInternetGateways(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
 
-	for _, r := range res.Raw.(*ec2.DescribeInternetGatewaysOutput).InternetGateways {
-		m := &map[string]string{}
-		for _, t := range r.Tags {
-			(*m)[*t.Key] = *t.Value
-		}
-
-		if f.Matches(res.Type, *r.InternetGatewayId, *m) {
-			ids = append(ids, r.InternetGatewayId)
-			attrs = append(attrs, &map[string]string{
-				"vpc_id": *r.Attachments[0].VpcId,
-			})
-			tags = append(tags, m)
+	for i, r := range res {
+		if f.Matches(r.Type, r.Id, r.Tags) {
+			r.Attrs = map[string]string{
+				"vpc_id": *raw.(*ec2.DescribeInternetGatewaysOutput).InternetGateways[i].Attachments[0].VpcId,
+			}
+			result = append(result, r)
 		}
 	}
-
-	return []Resources{{Type: res.Type, Ids: ids, Attrs: attrs, Tags: tags}}
+	return []Resources{result}
 }
 
-func filterNatGateways(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
+func filterNatGateways(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
 
-	for _, r := range res.Raw.(*ec2.DescribeNatGatewaysOutput).NatGateways {
-		if f.Matches(res.Type, *r.NatGatewayId) {
-			if *r.State == "available" {
-				ids = append(ids, r.NatGatewayId)
+	for i, r := range res {
+		if f.Matches(r.Type, r.Id) {
+			if *raw.(*ec2.DescribeNatGatewaysOutput).NatGateways[i].State == "available" {
+				result = append(result, r)
 			}
 		}
 	}
-	return []Resources{{Type: res.Type, Ids: ids}}
+	return []Resources{result}
 }
 
-func filterRoute53Record(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
+//func filterRoute53Record(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+//	ids := []*string{}
+//
+//	// HostedZoneId is a required field for input
+//	for _, r := range raw.(*route53.ListResourceRecordSetsOutput).ResourceRecordSets {
+//		for _, rr := range r.ResourceRecords {
+//			if f.Matches(res.Type, *rr.Value) {
+//				ids = append(ids, rr.Value)
+//			}
+//		}
+//	}
+//	return []Resources{{Type: res.Type, Ids: ids}}
+//}
 
-	// HostedZoneId is a required field for input
-	for _, r := range res.Raw.(*route53.ListResourceRecordSetsOutput).ResourceRecordSets {
-		for _, rr := range r.ResourceRecords {
-			if f.Matches(res.Type, *rr.Value) {
-				ids = append(ids, rr.Value)
-			}
-		}
-	}
-	return []Resources{{Type: res.Type, Ids: ids}}
-}
+func filterRoute53Zone(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
 
-func filterRoute53Zone(res Resources, f Filter, c *AWSClient) []Resources {
-	hzIds := []*string{}
-	rsIds := []*string{}
-	rsAttrs := []*map[string]string{}
-	hzAttrs := []*map[string]string{}
+	//rsIds := []*string{}
+	//rsAttrs := []*map[string]string{}
 
-	for _, hz := range res.Raw.(*route53.ListHostedZonesOutput).HostedZones {
-		if f.Matches(res.Type, *hz.Id) {
-			res, err := c.R53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
-				HostedZoneId: hz.Id,
-			})
-			if err != nil {
-				log.Fatal(err)
-			}
+	for _, hz := range raw.(*route53.ListHostedZonesOutput).HostedZones {
+		if f.Matches(res[0].Type, *hz.Id) {
+			//res, err := c.R53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+			//	HostedZoneId: hz.Id,
+			//})
+			//if err != nil {
+			//	log.Fatal(err)
+			//}
 
-			for _, rs := range res.ResourceRecordSets {
-				rsIds = append(rsIds, rs.Name)
-				rsAttrs = append(rsAttrs, &map[string]string{
-					"zone_id": *hz.Id,
-					"name":    *rs.Name,
-					"type":    *rs.Type,
-				})
-			}
-			hzIds = append(hzIds, hz.Id)
-			hzAttrs = append(hzAttrs, &map[string]string{
-				"force_destroy": "true",
-				"name":          *hz.Name,
+			//for _, rs := range res.ResourceRecordSets {
+			//	rsIds = append(rsIds, rs.Name)
+			//	rsAttrs = append(rsAttrs, &map[string]string{
+			//		"zone_id": *hz.Id,
+			//		"name":    *rs.Name,
+			//		"type":    *rs.Type,
+			//	})
+			//}
+
+			result = append(result, &Resource{
+				Type: res[0].Type,
+				Id:   *hz.Id,
+				Attrs: map[string]string{
+					"force_destroy": "true",
+					"name":          *hz.Name,
+				},
 			})
 		}
 	}
-	return []Resources{{Type: res.Type, Ids: hzIds, Attrs: hzAttrs}}
+	return []Resources{result}
 }
 
-func filterEfsFileSystem(res Resources, f Filter, c *AWSClient) []Resources {
-	fsIds := []*string{}
-	mtIds := []*string{}
+func filterEfsFileSystem(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
+	resultMt := Resources{}
 
-	for _, r := range res.Raw.(*efs.DescribeFileSystemsOutput).FileSystems {
-		if f.Matches(res.Type, *r.Name) {
+	for _, r := range res {
+		if f.Matches(r.Type, *raw.(*efs.DescribeFileSystemsOutput).FileSystems[0].Name) {
 			res, err := c.EFSconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
-				FileSystemId: r.FileSystemId,
+				FileSystemId: &r.Id,
 			})
 
 			if err == nil {
 				for _, r := range res.MountTargets {
-					mtIds = append(mtIds, r.MountTargetId)
+					resultMt = append(resultMt, &Resource{
+						Type: "aws_efs_mount_target",
+						Id:   *r.MountTargetId,
+					})
 				}
 			}
-
-			fsIds = append(fsIds, r.FileSystemId)
+			result = append(result, r)
 		}
 	}
-
-	return []Resources{
-		{Type: "aws_efs_mount_target", Ids: mtIds},
-		{Type: res.Type, Ids: fsIds},
-	}
+	return []Resources{resultMt, result}
 }
 
-func filterIamUser(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	pIds := []*string{}
-	upIds := []*string{}
-	attrs := []*map[string]string{}
-	pAttrs := []*map[string]string{}
+func filterIamUser(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
+	resultAttPol := Resources{}
+	resultUserPol := Resources{}
 
-	for _, u := range res.Raw.(*iam.ListUsersOutput).Users {
-		if f.Matches(res.Type, *u.UserName) {
+	for _, r := range res {
+		if f.Matches(r.Type, r.Id) {
 			// list inline policies, delete with "aws_iam_user_policy" delete routine
 			ups, err := c.IAMconn.ListUserPolicies(&iam.ListUserPoliciesInput{
-				UserName: u.UserName,
+				UserName: &r.Id,
 			})
 			if err == nil {
 				for _, up := range ups.PolicyNames {
-					upIds = append(upIds, aws.String(*u.UserName+":"+*up))
+					resultUserPol = append(resultUserPol, &Resource{
+						Type: "aws_iam_user_policy",
+						Id:   r.Id + ":" + *up,
+					})
 				}
 			}
 
 			// Lists all managed policies that are attached  to user (inline and others)
 			upols, err := c.IAMconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
 				// required
-				UserName: u.UserName,
+				UserName: &r.Id,
 			})
 			if err == nil {
 				for _, upol := range upols.AttachedPolicies {
-					pIds = append(pIds, upol.PolicyArn)
-					pAttrs = append(pAttrs, &map[string]string{
-						"user":       *u.UserName,
-						"policy_arn": *upol.PolicyArn,
+					resultAttPol = append(resultAttPol, &Resource{
+						Type: "aws_iam_user_policy_attachment",
+						Id:   *upol.PolicyArn,
+						Attrs: map[string]string{
+							"user":       r.Id,
+							"policy_arn": *upol.PolicyArn,
+						},
 					})
 				}
 			}
 
-			ids = append(ids, u.UserName)
-			attrs = append(attrs, &map[string]string{
-				"force_destroy": "true",
-			})
+			result = append(result, r)
+			//attrs = append(attrs, &map[string]string{
+			//	"force_destroy": "true",
+			//})
 		}
 	}
-
 	// aws_iam_user_policy to delete inline policies
-	return []Resources{
-		{Type: "aws_iam_user_policy", Ids: upIds},
-		{Type: "aws_iam_user_policy_attachment", Ids: pIds, Attrs: pAttrs},
-		{Type: res.Type, Ids: ids, Attrs: attrs},
-	}
+	return []Resources{resultUserPol, resultAttPol, result}
 }
 
-func filterIamPolicy(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	eIds := []*string{}
-	attributes := []*map[string]string{}
+func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
+	resultAtt := Resources{}
 
-	for _, pol := range res.Raw.(*iam.ListPoliciesOutput).Policies {
-		if f.Matches(res.Type, *pol.Arn) {
+	for i, r := range res {
+		if f.Matches(r.Type, r.Id) {
 			es, err := c.IAMconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
-				PolicyArn: pol.Arn,
+				PolicyArn: &r.Id,
 			})
 			if err != nil {
 				log.Fatal(err)
@@ -236,34 +223,33 @@ func filterIamPolicy(res Resources, f Filter, c *AWSClient) []Resources {
 				roles = append(roles, *r.RoleName)
 			}
 
-			eIds = append(eIds, pol.Arn)
-			attributes = append(attributes, &map[string]string{
-				"policy_arn": *pol.Arn,
-				"name":       *pol.PolicyName,
-				"users":      strings.Join(users, "."),
-				"roles":      strings.Join(roles, "."),
-				"groups":     strings.Join(groups, "."),
+			resultAtt = append(resultAtt, &Resource{
+				Type: "aws_iam_policy_attachment",
+				Id:   r.Id,
+				Attrs: map[string]string{
+					"policy_arn": r.Id,
+					"name":       *raw.(*iam.ListPoliciesOutput).Policies[i].PolicyName,
+					"users":      strings.Join(users, "."),
+					"roles":      strings.Join(roles, "."),
+					"groups":     strings.Join(groups, "."),
+				},
 			})
-			ids = append(ids, pol.Arn)
+			result = append(result, r)
 		}
 	}
-
 	// policy attachments are not resources
 	// what happens here, is that policy is detached from groups, users and roles
-	return []Resources{
-		{Type: "aws_iam_policy_attachment", Ids: eIds, Attrs: attributes},
-		{Type: res.Type, Ids: ids},
-	}
+	return []Resources{resultAtt, result}
 }
 
-func filterIamRole(res Resources, f Filter, c *AWSClient) []Resources {
+func filterIamRole(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	rpolIds := []*string{}
 	rpolAttributes := []*map[string]string{}
 	pIds := []*string{}
 
-	for _, role := range res.Raw.(*iam.ListRolesOutput).Roles {
-		if f.Matches(res.Type, *role.RoleName) {
+	for _, role := range raw.(*iam.ListRolesOutput).Roles {
+		if f.Matches(res[0].Type, *role.RoleName) {
 			rpols, err := c.IAMconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
 				RoleName: role.RoleName,
 			})
@@ -306,18 +292,18 @@ func filterIamRole(res Resources, f Filter, c *AWSClient) []Resources {
 
 	// aws_iam_policy_attachment could be used to detach a policy from users, groups and roles
 	return []Resources{
-		{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes},
-		{Type: "aws_iam_role_policy", Ids: pIds},
-		{Type: res.Type, Ids: ids},
+	//{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes},
+	//{Type: "aws_iam_role_policy", Ids: pIds},
+	//{Type: res.Type, Ids: ids},
 	}
 }
 
-func filterInstanceProfiles(res Resources, f Filter, c *AWSClient) []Resources {
+func filterInstanceProfiles(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	attributes := []*map[string]string{}
 
-	for _, r := range res.Raw.(*iam.ListInstanceProfilesOutput).InstanceProfiles {
-		if f.Matches(res.Type, *r.InstanceProfileName) {
+	for _, r := range raw.(*iam.ListInstanceProfilesOutput).InstanceProfiles {
+		if f.Matches(res[0].Type, *r.InstanceProfileName) {
 			ids = append(ids, r.InstanceProfileName)
 
 			roles := []string{}
@@ -330,15 +316,17 @@ func filterInstanceProfiles(res Resources, f Filter, c *AWSClient) []Resources {
 			})
 		}
 	}
-	return []Resources{{Type: res.Type, Ids: ids}}
+	return []Resources{
+	//{Type: res.Type, Ids: ids}
+	}
 }
 
-func filterKmsKeys(res Resources, f Filter, c *AWSClient) []Resources {
+func filterKmsKeys(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	attributes := []*map[string]string{}
 
-	for _, r := range res.Raw.(*kms.ListKeysOutput).Keys {
-		if f.Matches(res.Type, *r.KeyArn) {
+	for _, r := range raw.(*kms.ListKeysOutput).Keys {
+		if f.Matches(res[0].Type, *r.KeyArn) {
 			req, res := c.KMSconn.DescribeKeyRequest(&kms.DescribeKeyInput{
 				KeyId: r.KeyId,
 			})
@@ -353,43 +341,33 @@ func filterKmsKeys(res Resources, f Filter, c *AWSClient) []Resources {
 			}
 		}
 	}
-	return []Resources{{Type: res.Type, Ids: ids}}
+	return []Resources{
+	//{Type: res.Type, Ids: ids}
+	}
 }
 
-func filterAmis(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	tags := []*map[string]string{}
+func filterAmis(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
 
-	for _, r := range res.Raw.(*ec2.DescribeImagesOutput).Images {
-		m := &map[string]string{}
-		for _, t := range r.Tags {
-			(*m)[*t.Key] = *t.Value
-		}
-
-		if accountId(c) == *r.OwnerId && (f.Matches(res.Type, *r.ImageId, *m)) {
-			ids = append(ids, r.ImageId)
-			tags = append(tags, m)
+	for i, r := range res {
+		if accountId(c) == *raw.(*ec2.DescribeImagesOutput).Images[i].OwnerId &&
+			(f.Matches(r.Type, r.Id, r.Tags)) {
+			result = append(result, r)
 		}
 	}
-	return []Resources{{Type: res.Type, Ids: ids, Tags: tags}}
+	return []Resources{result}
 }
 
-func filterSnapshots(res Resources, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	tags := []*map[string]string{}
+func filterSnapshots(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+	result := Resources{}
 
-	for _, r := range res.Raw.(*ec2.DescribeSnapshotsOutput).Snapshots {
-		m := &map[string]string{}
-		for _, t := range r.Tags {
-			(*m)[*t.Key] = *t.Value
-		}
-
-		if accountId(c) == *r.OwnerId && (f.Matches(res.Type, *r.SnapshotId, *m)) {
-			ids = append(ids, r.SnapshotId)
-			tags = append(tags, m)
+	for i, r := range res {
+		if accountId(c) == *raw.(*ec2.DescribeSnapshotsOutput).Snapshots[i].OwnerId &&
+			(f.Matches(r.Type, r.Id, r.Tags)) {
+			result = append(result, r)
 		}
 	}
-	return []Resources{{Type: res.Type, Ids: ids, Tags: tags}}
+	return []Resources{result}
 }
 
 func accountId(c *AWSClient) string {
@@ -397,6 +375,5 @@ func accountId(c *AWSClient) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	return *res.Account
 }

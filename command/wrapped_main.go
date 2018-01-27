@@ -29,7 +29,7 @@ func WrappedMain() int {
 	app := "awsweeper"
 	version := "0.1.1"
 
-	set := flag.NewFlagSet("awsweeper", 0)
+	set := flag.NewFlagSet(app, 0)
 	versionFlag := set.Bool("version", false, "Show version")
 	helpFlag := set.Bool("help", false, "Show help")
 	dryRunFlag := set.Bool("dry-run", false, "Don't delete anything, just show what would happen")

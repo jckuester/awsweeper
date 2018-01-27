@@ -2,13 +2,12 @@ package command
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
+
+	"github.com/cloudetc/awsweeper/resource"
 
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
 )
@@ -53,9 +52,10 @@ func (c *Wipe) Run(args []string) int {
 	}
 
 	for _, resType := range c.filter.Types() {
-		for _, rInfo := range resource.Supported(c.client) {
-			if resType == rInfo.TerraformType {
-				resList := rInfo.SelectFn(listResources(rInfo), c.filter, c.client)
+		for _, apiInfo := range resource.Supported(c.client) {
+			if resType == apiInfo.TerraformType {
+				res, raw := resource.List(apiInfo)
+				resList := apiInfo.Select(res, raw, c.filter, c.client)
 				for _, res := range resList {
 					c.wipe(res)
 				}
@@ -74,96 +74,51 @@ func (c *Wipe) Synopsis() string {
 	return "Delete AWS resources via a yaml configuration"
 }
 
-func listResources(info resource.ResourceInfo) resource.Resources {
-	ids := []*string{}
-	tags := []*map[string]string{}
-
-	v := reflect.ValueOf(info.DescribeFn)
-	args := make([]reflect.Value, 1)
-	args[0] = reflect.ValueOf(info.DescribeFnInput)
-
-	raw := v.Call(args)
-	descOutput := raw[0].Elem().FieldByName(info.DescribeOutputName)
-
-	if info.TerraformType != "aws_instance" {
-		for i := 0; i < descOutput.Len(); i++ {
-			bla := descOutput.Index(i)
-			ids = append(ids, aws.String(reflect.Indirect(bla).FieldByName(info.DeleteId).Elem().String()))
-			tags = append(tags, getTags(descOutput.Index(i)))
-		}
-	}
-
-	return resource.Resources{
-		Type: info.TerraformType,
-		Ids:  ids,
-		Tags: tags,
-		Raw:  raw[0].Interface(),
-	}
-}
-
-func getTags(res reflect.Value) *map[string]string {
-	tags := map[string]string{}
-
-	ts := reflect.Indirect(res).FieldByName("Tags")
-	if !ts.IsValid() {
-		ts = reflect.Indirect(res).FieldByName("TagSet")
-	}
-
-	if ts.IsValid() {
-		for i := 0; i < ts.Len(); i++ {
-			key := reflect.Indirect(ts.Index(i)).FieldByName("Key").Elem()
-			value := reflect.Indirect(ts.Index(i)).FieldByName("Value").Elem()
-			tags[key.String()] = value.String()
-		}
-	}
-	return &tags
-}
-
 func (c *Wipe) wipe(res resource.Resources) {
 	numWorkerThreads := 10
 
-	if len(res.Ids) == 0 {
+	if len(res) == 0 {
 		return
 	}
 
-	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res.Type, len(res.Ids))
+	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res[0].Type, len(res))
 
 	ii := &terraform.InstanceInfo{
-		Type: res.Type,
+		Type: res[0].Type,
 	}
 
 	d := &terraform.InstanceDiff{
 		Destroy: true,
 	}
 
-	a := []*map[string]string{}
-	if len(res.Attrs) > 0 {
-		a = res.Attrs
-	} else {
-		for i := 0; i < len(res.Ids); i++ {
-			a = append(a, &map[string]string{})
-		}
-	}
-
-	ts := make([]*map[string]string, len(res.Ids))
-	if len(res.Tags) > 0 {
-		ts = res.Tags
-	}
+	//a := []*map[string]string{}
+	//if len(res.Attrs) > 0 {
+	//	a = res.Attrs
+	//} else {
+	//	for i := 0; i < len(res.Ids); i++ {
+	//		a = append(a, &map[string]string{})
+	//	}
+	//}
+	//
+	//ts := make([]*map[string]string, len(res))
+	//if len(res.Tags) > 0 {
+	//	ts = res.Tags
+	//}
 	chResources := make(chan *resource.Resource, numWorkerThreads)
 
 	var wg sync.WaitGroup
-	wg.Add(len(res.Ids))
+	wg.Add(len(res))
 
 	for j := 1; j <= numWorkerThreads; j++ {
 		go func() {
 			for {
-				res, more := <-chResources
+				r, more := <-chResources
 				if more {
-					printStat := fmt.Sprintf("\tId:\t%s", *res.Id)
-					if res.Tags != nil {
-						if len(*res.Tags) > 0 {
+					printStat := fmt.Sprintf("\tId:\t%s", r.Id)
+					if r.Tags != nil {
+						if len(r.Tags) > 0 {
 							printStat += "\n\tTags:\t"
-							for k, v := range *res.Tags {
+							for k, v := range r.Tags {
 								printStat += fmt.Sprintf("[%s: %v] ", k, v)
 							}
 						}
@@ -171,12 +126,13 @@ func (c *Wipe) wipe(res resource.Resources) {
 					}
 					fmt.Println(printStat)
 
-					a := res.Attrs
-					(*a)["force_destroy"] = "true"
+					if r.Attrs != nil {
+						r.Attrs["force_destroy"] = "true"
+					}
 
 					s := &terraform.InstanceState{
-						ID:         *res.Id,
-						Attributes: *a,
+						ID:         r.Id,
+						Attributes: r.Attrs,
 					}
 
 					st, err := (*c.provider).Refresh(ii, s)
@@ -201,17 +157,11 @@ func (c *Wipe) wipe(res resource.Resources) {
 		}()
 	}
 
-	for i, id := range res.Ids {
-		if id != nil {
-			chResources <- &resource.Resource{
-				Id:    id,
-				Attrs: a[i],
-				Tags:  ts[i],
-			}
-		}
+	for _, r := range res {
+		chResources <- r
 	}
 	close(chResources)
 
 	wg.Wait()
-	fmt.Println("---\n")
+	fmt.Print("---\n\n")
 }

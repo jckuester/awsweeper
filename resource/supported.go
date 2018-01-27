@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/pkg/errors"
 )
 
 type AWSClient struct {
@@ -26,31 +27,42 @@ type AWSClient struct {
 	STSconn *sts.STS
 }
 
-type ResourceInfo struct {
+// ApiDesc stores the necessary information about
+// resource types (identified by its terraform type)
+// to list and delete its resources via the go-aws-sdk
+// and Terraform AWS provider API.
+type ApiDesc struct {
 	TerraformType      string
 	DescribeOutputName string
 	DeleteId           string
 	DescribeFn         interface{}
 	DescribeFnInput    interface{}
-	SelectFn           func(Resources, Filter, *AWSClient) []Resources
+	Select             func(Resources, interface{}, Filter, *AWSClient) []Resources
 }
 
-type Resources struct {
+/*type Resources struct {
 	Type  string // we use the terraform type for identification
 	Ids   []*string
 	Attrs []*map[string]string
 	Tags  []*map[string]string
 	Raw   interface{}
-}
+}*/
+
+type Resources []*Resource
 
 type Resource struct {
-	Id    *string
-	Attrs *map[string]string
-	Tags  *map[string]string
+	Type  string // we use the terraform type for identification
+	Id    string
+	Attrs map[string]string
+	Tags  map[string]string
 }
 
-func Supported(c *AWSClient) []ResourceInfo {
-	return []ResourceInfo{
+// Supported returns for all supported
+// resource types the API information
+// to list (go-sdk API) and delete (AWS Terraform provider API)
+// corresponding resources.
+func Supported(c *AWSClient) []ApiDesc {
+	return []ApiDesc{
 		{
 			"aws_autoscaling_group",
 			"AutoScalingGroups",
@@ -70,7 +82,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		{
 			"aws_instance",
 			"Reservations",
-			"Instances",
+			"InstanceId",
 			c.EC2conn.DescribeInstances,
 			&ec2.DescribeInstancesInput{},
 			filterInstances,
@@ -297,4 +309,15 @@ func Supported(c *AWSClient) []ResourceInfo {
 			filterAmis,
 		},
 	}
+}
+
+// getSupported returns the apiInfo by the name of
+// a given resource type
+func getSupported(resType string, c *AWSClient) (ApiDesc, error) {
+	for _, apiInfo := range Supported(c) {
+		if apiInfo.TerraformType == resType {
+			return apiInfo, nil
+		}
+	}
+	return ApiDesc{}, errors.Errorf("no ApiDesc found for resource type %s", resType)
 }
