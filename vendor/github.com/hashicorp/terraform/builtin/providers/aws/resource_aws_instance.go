@@ -470,7 +470,7 @@ func resourceAwsInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Run configuration: %s", runOpts)
 
 	var runResp *ec2.Reservation
-	err = resource.Retry(15*time.Second, func() *resource.RetryError {
+	err = resource.Retry(30*time.Second, func() *resource.RetryError {
 		var err error
 		runResp, err = conn.RunInstances(runOpts)
 		// IAM instance profiles can take ~10 seconds to propagate in AWS:
@@ -815,14 +815,19 @@ func resourceAwsInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 	// SourceDestCheck can only be modified on an instance without manually specified network interfaces.
 	// SourceDestCheck, in that case, is configured at the network interface level
 	if _, ok := d.GetOk("network_interface"); !ok {
-		if d.HasChange("source_dest_check") || d.IsNewResource() {
-			// SourceDestCheck can only be set on VPC instances	// AWS will return an error of InvalidParameterCombination if we attempt
+
+		// If we have a new resource and source_dest_check is still true, don't modify
+		sourceDestCheck := d.Get("source_dest_check").(bool)
+
+		if d.HasChange("source_dest_check") || d.IsNewResource() && !sourceDestCheck {
+			// SourceDestCheck can only be set on VPC instances
+			// AWS will return an error of InvalidParameterCombination if we attempt
 			// to modify the source_dest_check of an instance in EC2 Classic
 			log.Printf("[INFO] Modifying `source_dest_check` on Instance %s", d.Id())
 			_, err := conn.ModifyInstanceAttribute(&ec2.ModifyInstanceAttributeInput{
 				InstanceId: aws.String(d.Id()),
 				SourceDestCheck: &ec2.AttributeBooleanValue{
-					Value: aws.Bool(d.Get("source_dest_check").(bool)),
+					Value: aws.Bool(sourceDestCheck),
 				},
 			})
 			if err != nil {
