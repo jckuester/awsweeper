@@ -1,3 +1,5 @@
+# Used to find the order in which supported resources have to be deleted
+
 variable "profile" {
   description = "Use a specific profile from your credential file"
 }
