@@ -1,4 +1,11 @@
+
+
 # AWSweeper
+
+<p align="right">
+  <a href="https://goreportcard.com/report/github.com/cloudetc/awsweeper">
+  <img src="https://goreportcard.com/badge/github.com/cloudetc/awsweeper" /></a>
+</p>
 
 AWSweeper wipes out all (or parts) of the resources in your AWS account. Resources to be deleted can be filtered by their tags or IDs
 using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared in a yaml file (see [test.yml](test/test.yml)).
