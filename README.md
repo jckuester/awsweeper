@@ -1,3 +1,4 @@
+[![AWSweeper tutorial](img/asciinema-tutorial.gif)](https://asciinema.org/a/149097)
 
 
 # AWSweeper
@@ -14,9 +15,9 @@ AWSweeper [can delete many](#supported-resources), but not all resources yet.
 
 We are working on it. Happy erasing!
 
-[![AWSweeper tutorial](img/asciinema-awsweeper-tutorial.png)](https://asciinema.org/a/149097)
+## Download
 
-Download the tool for your platform [here](https://github.com/cloudetc/awsweeper/releases).
+Releases for your platform are [here](https://github.com/cloudetc/awsweeper/releases).
 
 ## Usage
 
