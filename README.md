@@ -1,11 +1,24 @@
-[![AWSweeper tutorial](img/asciinema-tutorial.gif)](https://asciinema.org/a/149097)
-
-
 # AWSweeper
 
 <p align="right">
+  <a href="https://github.com/cloudetc/awsweeper/releases/latest">
+    <img alt="Release" src="https://img.shields.io/github/release/cloudetc/awsweeper.svg?style=flat-square">
+  </a>
+  <a href="https://github.com/cloudetc/awsweeper/master">
+    <img alt="Travis" src="https://img.shields.io/travis/cloudetc/awsweeper/master.svg?style=flat-square">
+  </a>
   <a href="https://goreportcard.com/report/github.com/cloudetc/awsweeper">
-  <img src="https://goreportcard.com/badge/github.com/cloudetc/awsweeper" /></a>
+    <img alt="Go Report" src="https://goreportcard.com/badge/github.com/cloudetc/awsweeper?style=flat-square" />
+  </a>
+  <a href="https://codecov.io/gh/cloudetc/awsweeper">
+    <img alt="Codecov branch" src="https://codecov.io/gh/cloudetc/awsweeper/branch/master/graph/badge.svg?style=flat-square" />
+  </a>
+  <a href="https://godoc.org/github.com/cloudetc/awsweeper">
+    <img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square" />
+  </a>
+  <a href="https://github.com/cloudetc/awsweeper/blob/master/LICENSE">
+    <img alt="Software License" src="https://img.shields.io/github/license/cloudetc/awsweeper.svg?style=flat-square" />
+  </a>
 </p>
 
 AWSweeper wipes out all (or parts) of the resources in your AWS account. Resources to be deleted can be filtered by their tags or IDs
@@ -14,6 +27,8 @@ using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared in a
 AWSweeper [can delete many](#supported-resources), but not all resources yet.
 
 We are working on it. Happy erasing!
+
+[![AWSweeper tutorial](img/asciinema-tutorial.gif)](https://asciinema.org/a/149097)
 
 ## Download
 
