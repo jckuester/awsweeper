@@ -7,10 +7,9 @@ import (
 	"crypto/elliptic"
 	"encoding/binary"
 	"errors"
+	"github.com/keybase/go-crypto/curve25519"
 	"io"
 	"math/big"
-
-	"github.com/keybase/go-crypto/curve25519"
 )
 
 type PublicKey struct {

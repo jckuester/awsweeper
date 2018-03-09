@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"strings"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"strings"
 )
 
 func resourceAwsDynamoDbTableMigrateState(

@@ -6,11 +6,10 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 
-	"time"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/elasticbeanstalk"
+	"time"
 )
 
 func resourceAwsElasticBeanstalkApplicationVersion() *schema.Resource {
