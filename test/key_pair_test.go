@@ -8,7 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/cloudetc/awsweeper/command_wipe"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
@@ -70,11 +71,11 @@ func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheck
 
 func testMainKeyPairIds(args []string, kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		command_wipe.OsFs = afero.NewMemMapFs()
-		afero.WriteFile(command_wipe.OsFs, "config.yml", []byte(testAccKeyPairAWSweeperIdsConfig(kp)), 0644)
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccKeyPairAWSweeperIdsConfig(kp)), 0644)
 		os.Args = args
 
-		command_wipe.WrappedMain()
+		command.WrappedMain()
 		return nil
 	}
 }

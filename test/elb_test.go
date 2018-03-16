@@ -8,7 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/cloudetc/awsweeper/command_wipe"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
@@ -109,11 +110,11 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 
 func testMainElbIds(args []string, lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		command_wipe.OsFs = afero.NewMemMapFs()
-		afero.WriteFile(command_wipe.OsFs, "config.yml", []byte(testAccElbAWSweeperIdsConfig(lb.LoadBalancerName)), 0644)
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccElbAWSweeperIdsConfig(lb.LoadBalancerName)), 0644)
 		os.Args = args
 
-		command_wipe.WrappedMain()
+		command.WrappedMain()
 		return nil
 	}
 }

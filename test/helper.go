@@ -16,7 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/cloudetc/awsweeper/command_wipe"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -92,11 +93,11 @@ func testAccPreCheck(t *testing.T) {
 
 func testMainTags(args []string, config string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		command_wipe.OsFs = afero.NewMemMapFs()
-		afero.WriteFile(command_wipe.OsFs, "config.yml", []byte(config), 0644)
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(config), 0644)
 		os.Args = args
 
-		command_wipe.WrappedMain()
+		command.WrappedMain()
 		return nil
 	}
 }

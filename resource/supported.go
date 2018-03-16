@@ -1,4 +1,4 @@
-package command_wipe
+package resource
 
 import (
 	"github.com/aws/aws-sdk-go/service/autoscaling"
@@ -10,98 +10,135 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
-func getResourceInfos(c *WipeCommand) []ResourceInfo {
+type AWSClient struct {
+	EC2conn *ec2.EC2
+	ASconn  *autoscaling.AutoScaling
+	ELBconn *elb.ELB
+	R53conn *route53.Route53
+	CFconn  *cloudformation.CloudFormation
+	EFSconn *efs.EFS
+	IAMconn *iam.IAM
+	KMSconn *kms.KMS
+	S3conn  *s3.S3
+	STSconn *sts.STS
+}
+
+type ResourceInfo struct {
+	TerraformType      string
+	DescribeOutputName string
+	DeleteId           string
+	DescribeFn         interface{}
+	DescribeFnInput    interface{}
+	SelectFn           func(Resources, Filter, *AWSClient) []Resources
+}
+
+type Resources struct {
+	Type  string // we use the terraform type for identification
+	Ids   []*string
+	Attrs []*map[string]string
+	Tags  []*map[string]string
+	Raw   interface{}
+}
+
+type Resource struct {
+	Id    *string
+	Attrs *map[string]string
+	Tags  *map[string]string
+}
+
+func Supported(c *AWSClient) []ResourceInfo {
 	return []ResourceInfo{
 		{
 			"aws_autoscaling_group",
 			"AutoScalingGroups",
 			"AutoScalingGroupName",
-			c.client.autoscalingconn.DescribeAutoScalingGroups,
+			c.ASconn.DescribeAutoScalingGroups,
 			&autoscaling.DescribeAutoScalingGroupsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_launch_configuration",
 			"LaunchConfigurations",
 			"LaunchConfigurationName",
-			c.client.autoscalingconn.DescribeLaunchConfigurations,
+			c.ASconn.DescribeLaunchConfigurations,
 			&autoscaling.DescribeLaunchConfigurationsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_instance",
 			"Reservations",
 			"Instances",
-			c.client.ec2conn.DescribeInstances,
+			c.EC2conn.DescribeInstances,
 			&ec2.DescribeInstancesInput{},
-			c.deleteInstances,
+			filterInstances,
 		},
 		{
 			"aws_key_pair",
 			"KeyPairs",
 			"KeyName",
-			c.client.ec2conn.DescribeKeyPairs,
+			c.EC2conn.DescribeKeyPairs,
 			&ec2.DescribeKeyPairsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_elb",
 			"LoadBalancerDescriptions",
 			"LoadBalancerName",
-			c.client.elbconn.DescribeLoadBalancers,
+			c.ELBconn.DescribeLoadBalancers,
 			&elb.DescribeLoadBalancersInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_vpc_endpoint",
 			"VpcEndpoints",
 			"VpcEndpointId",
-			c.client.ec2conn.DescribeVpcEndpoints,
+			c.EC2conn.DescribeVpcEndpoints,
 			&ec2.DescribeVpcEndpointsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		// support tags
 		{
 			"aws_nat_gateway",
 			"NatGateways",
 			"NatGatewayId",
-			c.client.ec2conn.DescribeNatGateways,
+			c.EC2conn.DescribeNatGateways,
 			&ec2.DescribeNatGatewaysInput{},
-			c.deleteNatGateways,
+			filterNatGateways,
 		},
 		{
 			"aws_cloudformation_stack",
 			"Stacks",
 			"StackId",
-			c.client.cfconn.DescribeStacks,
+			c.CFconn.DescribeStacks,
 			&cloudformation.DescribeStacksInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_route53_zone",
 			"HostedZones",
 			"Id",
-			c.client.r53conn.ListHostedZones,
+			c.R53conn.ListHostedZones,
 			&route53.ListHostedZonesInput{},
-			c.deleteRoute53Zone,
+			filterRoute53Zone,
 		},
 		{
 			"aws_efs_file_system",
 			"FileSystems",
 			"FileSystemId",
-			c.client.efsconn.DescribeFileSystems,
+			c.EFSconn.DescribeFileSystems,
 			&efs.DescribeFileSystemsInput{},
-			c.deleteEfsFileSystem,
+			filterEfsFileSystem,
 		},
 		//{
 		//	"aws_route53_record",
 		//	"ResourceRecordSets",
 		//	"bla",
-		//	c.client.r53conn.ListResourceRecordSets,
+		//	c.r53conn.ListResourceRecordSets,
 		//	&route53.ListResourceRecordSetsInput{},
-		//	c.deleteRoute53Record,
+		//	filterRoute53Record,
 		//},
 		// Elastic network interface (ENI) resource
 		// sort by owner of the network interface?
@@ -111,153 +148,153 @@ func getResourceInfos(c *WipeCommand) []ResourceInfo {
 			"aws_network_interface",
 			"NetworkInterfaces",
 			"NetworkInterfaceId",
-			c.client.ec2conn.DescribeNetworkInterfaces,
+			c.EC2conn.DescribeNetworkInterfaces,
 			&ec2.DescribeNetworkInterfacesInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_eip",
 			"Addresses",
 			"AllocationId",
-			c.client.ec2conn.DescribeAddresses,
+			c.EC2conn.DescribeAddresses,
 			&ec2.DescribeAddressesInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_internet_gateway",
 			"InternetGateways",
 			"InternetGatewayId",
-			c.client.ec2conn.DescribeInternetGateways,
+			c.EC2conn.DescribeInternetGateways,
 			&ec2.DescribeInternetGatewaysInput{},
-			c.deleteInternetGateways,
+			filterInternetGateways,
 		},
 		{
 			"aws_subnet",
 			"Subnets",
 			"SubnetId",
-			c.client.ec2conn.DescribeSubnets,
+			c.EC2conn.DescribeSubnets,
 			&ec2.DescribeSubnetsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_route_table",
 			"RouteTables",
 			"RouteTableId",
-			c.client.ec2conn.DescribeRouteTables,
+			c.EC2conn.DescribeRouteTables,
 			&ec2.DescribeRouteTablesInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_security_group",
 			"SecurityGroups",
 			"GroupId",
-			c.client.ec2conn.DescribeSecurityGroups,
+			c.EC2conn.DescribeSecurityGroups,
 			&ec2.DescribeSecurityGroupsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_network_acl",
 			"NetworkAcls",
 			"NetworkAclId",
-			c.client.ec2conn.DescribeNetworkAcls,
+			c.EC2conn.DescribeNetworkAcls,
 			&ec2.DescribeNetworkAclsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_vpc",
 			"Vpcs",
 			"VpcId",
-			c.client.ec2conn.DescribeVpcs,
+			c.EC2conn.DescribeVpcs,
 			&ec2.DescribeVpcsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_iam_policy",
 			"Policies",
 			"Arn",
-			c.client.iamconn.ListPolicies,
+			c.IAMconn.ListPolicies,
 			&iam.ListPoliciesInput{},
-			c.deleteIamPolicy,
+			filterIamPolicy,
 		},
 		{
 			"aws_iam_group",
 			"Groups",
 			"GroupName",
-			c.client.iamconn.ListGroups,
+			c.IAMconn.ListGroups,
 			&iam.ListGroupsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_iam_user",
 			"Users",
 			"UserName",
-			c.client.iamconn.ListUsers,
+			c.IAMconn.ListUsers,
 			&iam.ListUsersInput{},
-			c.deleteIamUser,
+			filterIamUser,
 		},
 		{
 			"aws_iam_role",
 			"Roles",
 			"RoleName",
-			c.client.iamconn.ListRoles,
+			c.IAMconn.ListRoles,
 			&iam.ListRolesInput{},
-			c.deleteIamRole,
+			filterIamRole,
 		},
 		{
 			"aws_iam_instance_profile",
 			"InstanceProfiles",
 			"InstanceProfileName",
-			c.client.iamconn.ListInstanceProfiles,
+			c.IAMconn.ListInstanceProfiles,
 			&iam.ListInstanceProfilesInput{},
-			c.deleteInstanceProfiles,
+			filterInstanceProfiles,
 		},
 		{
 			"aws_kms_alias",
 			"Aliases",
 			"AliasName",
-			c.client.kmsconn.ListAliases,
+			c.KMSconn.ListAliases,
 			&kms.ListAliasesInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_kms_key",
 			"Keys",
 			"KeyId",
-			c.client.kmsconn.ListKeys,
+			c.KMSconn.ListKeys,
 			&kms.ListKeysInput{},
-			c.deleteKmsKeys,
+			filterKmsKeys,
 		},
 		{
 			"aws_s3_bucket",
 			"Buckets",
 			"Name",
-			c.client.s3conn.ListBuckets,
+			c.S3conn.ListBuckets,
 			&s3.ListBucketsInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_ebs_snapshot",
 			"Snapshots",
 			"SnapshotId",
-			c.client.ec2conn.DescribeSnapshots,
+			c.EC2conn.DescribeSnapshots,
 			&ec2.DescribeSnapshotsInput{},
-			c.deleteSnapshots,
+			filterSnapshots,
 		},
 		{
 			"aws_ebs_volume",
 			"Volumes",
 			"VolumeId",
-			c.client.ec2conn.DescribeVolumes,
+			c.EC2conn.DescribeVolumes,
 			&ec2.DescribeVolumesInput{},
-			c.deleteGeneric,
+			filterGeneric,
 		},
 		{
 			"aws_ami",
 			"Images",
 			"ImageId",
-			c.client.ec2conn.DescribeImages,
+			c.EC2conn.DescribeImages,
 			&ec2.DescribeImagesInput{},
-			c.deleteAmis,
+			filterAmis,
 		},
 	}
 }
