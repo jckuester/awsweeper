@@ -19,7 +19,7 @@ var (
 
 	apiInfoVpc = ApiDesc{
 		"aws_vpc",
-		"Vpcs",
+		[]string{"Vpcs"},
 		"VpcId",
 		mockEC2.DescribeVpcs,
 		&ec2.DescribeVpcsInput{},
@@ -44,7 +44,7 @@ var (
 
 	apiInfoInstance = ApiDesc{
 		"aws_instance",
-		"Instances",
+		[]string{"Reservations", "Instances"},
 		"InstanceId",
 		mockEC2.DescribeInstances,
 		&ec2.DescribeInstancesInput{},
@@ -138,4 +138,25 @@ func mockInstance() {
 	mockEC2.On("DescribeInstances", mock.MatchedBy(func(input *ec2.DescribeInstancesInput) bool {
 		return true
 	})).Return(mockResultFn, nil)
+}
+
+func TestFindSlice(t *testing.T) {
+	desc := ec2.DescribeVpcsOutput{
+		Vpcs: vpcs,
+	}
+	expectedId := vpcs[0].VpcId
+
+	result, err := findSlice(apiInfoVpc.DescribeOutputName[0], reflect.ValueOf(desc))
+	actualId := result.Index(0).Elem().FieldByName("VpcId").Elem().String()
+
+	require.Equal(t, *expectedId, actualId)
+	require.NoError(t, err)
+}
+
+func TestFindSlice_InvalidInput(t *testing.T) {
+	desc := "input is not a struct"
+
+	_, err := findSlice(apiInfoVpc.DescribeOutputName[0], reflect.ValueOf(desc))
+
+	require.Error(t, err)
 }

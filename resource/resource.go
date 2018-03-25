@@ -11,18 +11,18 @@ import (
 func List(a ApiDesc) (Resources, interface{}) {
 	descOut := invoke(a.DescribeFn, a.DescribeFnInput)
 
-	foundRes, err := findSlice(a, descOut.Elem())
+	foundRes, err := findSlice(a.DescribeOutputName[0], descOut.Elem())
 	if err != nil {
-		for i := 0; i < descOut.Elem().NumField(); i++ {
-			log.Println(descOut.Elem().Field(i))
-			log.Println(descOut.Elem().Field(i).Type().Kind())
-			foundRes, err := findSlice(a, descOut.Elem().Field(i))
-			if err != nil {
-				continue
-			}
-			log.Println(foundRes)
+		log.Fatal(err)
+	}
+
+	if len(a.DescribeOutputName) == 2 {
+		// find resources in the case the output structs are nested
+		// (e.g. "Reservations" -> "Instances")
+		foundRes, err = findSlice(a.DescribeOutputName[1], foundRes.Index(0).Elem())
+		if err != nil {
+			log.Fatal(err)
 		}
-		return nil, nil
 	}
 
 	res := Resources{}
@@ -33,13 +33,12 @@ func List(a ApiDesc) (Resources, interface{}) {
 			continue
 		}
 
-		if field.Type().Kind() != reflect.Slice {
-			res = append(res, &Resource{
-				Type: a.TerraformType,
-				Id:   field.Elem().String(),
-				Tags: Tags(foundRes.Index(i)),
-			})
-		}
+		res = append(res, &Resource{
+			Type: a.TerraformType,
+			Id:   field.Elem().String(),
+			Tags: Tags(foundRes.Index(i)),
+		})
+
 	}
 
 	return res, descOut.Interface()
@@ -58,23 +57,23 @@ func invoke(fn interface{}, arg interface{}) reflect.Value {
 	return outputs[0]
 }
 
-func findField(info ApiDesc, v reflect.Value) (reflect.Value, error) {
-	field := v.FieldByName(info.DeleteId)
+func findField(a ApiDesc, v reflect.Value) (reflect.Value, error) {
+	field := v.FieldByName(a.DeleteId)
 
 	if !field.IsValid() {
-		return reflect.Value{}, errors.Errorf("Field %s does not exist", info.DeleteId)
+		return reflect.Value{}, errors.Errorf("Field %s does not exist", a.DeleteId)
 	}
 	return field, nil
 }
 
-func findSlice(a ApiDesc, v reflect.Value) (reflect.Value, error) {
-	if v.Type().Kind() != reflect.Slice {
-
+func findSlice(name string, v reflect.Value) (reflect.Value, error) {
+	if v.Type().Kind() != reflect.Struct {
+		return reflect.Value{}, errors.Errorf("Input not a struct: %s", v)
 	}
-	slice := v.FieldByName(a.DescribeOutputName)
+	slice := v.FieldByName(name)
 
 	if !slice.IsValid() {
-		return reflect.Value{}, errors.Errorf("Slice %s does not exist", a.DescribeOutputName)
+		return reflect.Value{}, errors.Errorf("Slice %s does not exist", name)
 	}
 	return slice, nil
 }

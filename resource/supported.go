@@ -33,7 +33,7 @@ type AWSClient struct {
 // and Terraform AWS provider API.
 type ApiDesc struct {
 	TerraformType      string
-	DescribeOutputName string
+	DescribeOutputName []string
 	DeleteId           string
 	DescribeFn         interface{}
 	DescribeFnInput    interface{}
@@ -65,7 +65,7 @@ func Supported(c *AWSClient) []ApiDesc {
 	return []ApiDesc{
 		{
 			"aws_autoscaling_group",
-			"AutoScalingGroups",
+			[]string{"AutoScalingGroups"},
 			"AutoScalingGroupName",
 			c.ASconn.DescribeAutoScalingGroups,
 			&autoscaling.DescribeAutoScalingGroupsInput{},
@@ -73,7 +73,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_launch_configuration",
-			"LaunchConfigurations",
+			[]string{"LaunchConfigurations"},
 			"LaunchConfigurationName",
 			c.ASconn.DescribeLaunchConfigurations,
 			&autoscaling.DescribeLaunchConfigurationsInput{},
@@ -81,7 +81,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_instance",
-			"Reservations",
+			[]string{"Reservations", "Instances"},
 			"InstanceId",
 			c.EC2conn.DescribeInstances,
 			&ec2.DescribeInstancesInput{},
@@ -89,7 +89,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_key_pair",
-			"KeyPairs",
+			[]string{"KeyPairs"},
 			"KeyName",
 			c.EC2conn.DescribeKeyPairs,
 			&ec2.DescribeKeyPairsInput{},
@@ -97,7 +97,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_elb",
-			"LoadBalancerDescriptions",
+			[]string{"LoadBalancerDescriptions"},
 			"LoadBalancerName",
 			c.ELBconn.DescribeLoadBalancers,
 			&elb.DescribeLoadBalancersInput{},
@@ -105,7 +105,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_vpc_endpoint",
-			"VpcEndpoints",
+			[]string{"VpcEndpoints"},
 			"VpcEndpointId",
 			c.EC2conn.DescribeVpcEndpoints,
 			&ec2.DescribeVpcEndpointsInput{},
@@ -114,7 +114,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		// support tags
 		{
 			"aws_nat_gateway",
-			"NatGateways",
+			[]string{"NatGateways"},
 			"NatGatewayId",
 			c.EC2conn.DescribeNatGateways,
 			&ec2.DescribeNatGatewaysInput{},
@@ -122,7 +122,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_cloudformation_stack",
-			"Stacks",
+			[]string{"Stacks"},
 			"StackId",
 			c.CFconn.DescribeStacks,
 			&cloudformation.DescribeStacksInput{},
@@ -130,7 +130,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_route53_zone",
-			"HostedZones",
+			[]string{"HostedZones"},
 			"Id",
 			c.R53conn.ListHostedZones,
 			&route53.ListHostedZonesInput{},
@@ -138,7 +138,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_efs_file_system",
-			"FileSystems",
+			[]string{"FileSystems"},
 			"FileSystemId",
 			c.EFSconn.DescribeFileSystems,
 			&efs.DescribeFileSystemsInput{},
@@ -158,7 +158,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		// attached to subnet
 		{
 			"aws_network_interface",
-			"NetworkInterfaces",
+			[]string{"NetworkInterfaces"},
 			"NetworkInterfaceId",
 			c.EC2conn.DescribeNetworkInterfaces,
 			&ec2.DescribeNetworkInterfacesInput{},
@@ -166,7 +166,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_eip",
-			"Addresses",
+			[]string{"Addresses"},
 			"AllocationId",
 			c.EC2conn.DescribeAddresses,
 			&ec2.DescribeAddressesInput{},
@@ -174,7 +174,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_internet_gateway",
-			"InternetGateways",
+			[]string{"InternetGateways"},
 			"InternetGatewayId",
 			c.EC2conn.DescribeInternetGateways,
 			&ec2.DescribeInternetGatewaysInput{},
@@ -182,7 +182,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_subnet",
-			"Subnets",
+			[]string{"Subnets"},
 			"SubnetId",
 			c.EC2conn.DescribeSubnets,
 			&ec2.DescribeSubnetsInput{},
@@ -190,7 +190,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_route_table",
-			"RouteTables",
+			[]string{"RouteTables"},
 			"RouteTableId",
 			c.EC2conn.DescribeRouteTables,
 			&ec2.DescribeRouteTablesInput{},
@@ -198,7 +198,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_security_group",
-			"SecurityGroups",
+			[]string{"SecurityGroups"},
 			"GroupId",
 			c.EC2conn.DescribeSecurityGroups,
 			&ec2.DescribeSecurityGroupsInput{},
@@ -206,7 +206,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_network_acl",
-			"NetworkAcls",
+			[]string{"NetworkAcls"},
 			"NetworkAclId",
 			c.EC2conn.DescribeNetworkAcls,
 			&ec2.DescribeNetworkAclsInput{},
@@ -214,7 +214,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_vpc",
-			"Vpcs",
+			[]string{"Vpcs"},
 			"VpcId",
 			c.EC2conn.DescribeVpcs,
 			&ec2.DescribeVpcsInput{},
@@ -222,7 +222,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_iam_policy",
-			"Policies",
+			[]string{"Policies"},
 			"Arn",
 			c.IAMconn.ListPolicies,
 			&iam.ListPoliciesInput{},
@@ -230,7 +230,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_iam_group",
-			"Groups",
+			[]string{"Groups"},
 			"GroupName",
 			c.IAMconn.ListGroups,
 			&iam.ListGroupsInput{},
@@ -238,7 +238,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_iam_user",
-			"Users",
+			[]string{"Users"},
 			"UserName",
 			c.IAMconn.ListUsers,
 			&iam.ListUsersInput{},
@@ -246,7 +246,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_iam_role",
-			"Roles",
+			[]string{"Roles"},
 			"RoleName",
 			c.IAMconn.ListRoles,
 			&iam.ListRolesInput{},
@@ -254,7 +254,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_iam_instance_profile",
-			"InstanceProfiles",
+			[]string{"InstanceProfiles"},
 			"InstanceProfileName",
 			c.IAMconn.ListInstanceProfiles,
 			&iam.ListInstanceProfilesInput{},
@@ -262,7 +262,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_kms_alias",
-			"Aliases",
+			[]string{"Aliases"},
 			"AliasName",
 			c.KMSconn.ListAliases,
 			&kms.ListAliasesInput{},
@@ -270,7 +270,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_kms_key",
-			"Keys",
+			[]string{"Keys"},
 			"KeyId",
 			c.KMSconn.ListKeys,
 			&kms.ListKeysInput{},
@@ -278,7 +278,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_s3_bucket",
-			"Buckets",
+			[]string{"Buckets"},
 			"Name",
 			c.S3conn.ListBuckets,
 			&s3.ListBucketsInput{},
@@ -286,7 +286,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_ebs_snapshot",
-			"Snapshots",
+			[]string{"Snapshots"},
 			"SnapshotId",
 			c.EC2conn.DescribeSnapshots,
 			&ec2.DescribeSnapshotsInput{},
@@ -294,7 +294,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_ebs_volume",
-			"Volumes",
+			[]string{"Volumes"},
 			"VolumeId",
 			c.EC2conn.DescribeVolumes,
 			&ec2.DescribeVolumesInput{},
@@ -302,7 +302,7 @@ func Supported(c *AWSClient) []ApiDesc {
 		},
 		{
 			"aws_ami",
-			"Images",
+			[]string{"Images"},
 			"ImageId",
 			c.EC2conn.DescribeImages,
 			&ec2.DescribeImagesInput{},
