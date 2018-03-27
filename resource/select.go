@@ -23,29 +23,6 @@ func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	return []Resources{result}
 }
 
-func filterInstances(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	result := Resources{}
-
-	for _, r := range raw.(*ec2.DescribeInstancesOutput).Reservations {
-		for _, in := range r.Instances {
-			if *in.State.Name != "terminated" {
-				m := map[string]string{}
-				for _, t := range in.Tags {
-					m[*t.Key] = *t.Value
-				}
-
-				if f.Matches(res[0].Type, *in.InstanceId, m) {
-					result = append(result, &Resource{
-						Id:   *in.InstanceId,
-						Tags: m,
-					})
-				}
-			}
-		}
-	}
-	return []Resources{result}
-}
-
 func filterInternetGateways(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	result := Resources{}
 

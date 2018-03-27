@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -84,8 +85,18 @@ func Supported(c *AWSClient) []ApiDesc {
 			[]string{"Reservations", "Instances"},
 			"InstanceId",
 			c.EC2conn.DescribeInstances,
-			&ec2.DescribeInstancesInput{},
-			filterInstances,
+			&ec2.DescribeInstancesInput{
+				Filters: []*ec2.Filter{
+					{
+						Name: aws.String("instance-state-name"),
+						Values: []*string{
+							aws.String("pending"), aws.String("running"),
+							aws.String("stopping"), aws.String("stopped"),
+						},
+					},
+				},
+			},
+			filterGeneric,
 		},
 		{
 			"aws_key_pair",

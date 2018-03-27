@@ -11,34 +11,37 @@ import (
 func List(a ApiDesc) (Resources, interface{}) {
 	descOut := invoke(a.DescribeFn, a.DescribeFnInput)
 
-	foundRes, err := findSlice(a.DescribeOutputName[0], descOut.Elem())
+	descOutRes, err := findSlice(a.DescribeOutputName[0], descOut.Elem())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if len(a.DescribeOutputName) == 2 {
-		// find resources in the case the output structs are nested
-		// (e.g. "Reservations" -> "Instances")
-		foundRes, err = findSlice(a.DescribeOutputName[1], foundRes.Index(0).Elem())
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
 	res := Resources{}
 
-	for i := 0; i < foundRes.Len(); i++ {
-		field, err := findField(a, reflect.Indirect(foundRes.Index(i)))
-		if err != nil {
-			continue
+	for i := 0; i < descOutRes.Len(); i++ {
+		nestedDescOut := descOutRes
+
+		if len(a.DescribeOutputName) == 2 {
+			// find resources in the case the output is a nested struct
+			// (e.g. "Reservations" -> "Instances")
+			nestedDescOut, err = findSlice(a.DescribeOutputName[1], descOutRes.Index(i).Elem())
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
-		res = append(res, &Resource{
-			Type: a.TerraformType,
-			Id:   field.Elem().String(),
-			Tags: Tags(foundRes.Index(i)),
-		})
+		for i := 0; i < nestedDescOut.Len(); i++ {
+			field, err := findField(a, reflect.Indirect(nestedDescOut.Index(i)))
+			if err != nil {
+				log.Fatal(err)
+			}
 
+			res = append(res, &Resource{
+				Type: a.TerraformType,
+				Id:   field.Elem().String(),
+				Tags: Tags(nestedDescOut.Index(i)),
+			})
+		}
 	}
 
 	return res, descOut.Interface()
