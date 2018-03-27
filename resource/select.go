@@ -23,33 +23,6 @@ func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	return []Resources{result}
 }
 
-func filterInternetGateways(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	result := Resources{}
-
-	for i, r := range res {
-		if f.Matches(r.Type, r.Id, r.Tags) {
-			r.Attrs = map[string]string{
-				"vpc_id": *raw.(*ec2.DescribeInternetGatewaysOutput).InternetGateways[i].Attachments[0].VpcId,
-			}
-			result = append(result, r)
-		}
-	}
-	return []Resources{result}
-}
-
-func filterNatGateways(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	result := Resources{}
-
-	for i, r := range res {
-		if f.Matches(r.Type, r.Id) {
-			if *raw.(*ec2.DescribeNatGatewaysOutput).NatGateways[i].State == "available" {
-				result = append(result, r)
-			}
-		}
-	}
-	return []Resources{result}
-}
-
 //func filterRoute53Record(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 //	ids := []*string{}
 //

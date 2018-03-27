@@ -122,14 +122,23 @@ func Supported(c *AWSClient) []ApiDesc {
 			&ec2.DescribeVpcEndpointsInput{},
 			filterGeneric,
 		},
-		// support tags
 		{
+			// TODO support tags
 			"aws_nat_gateway",
 			[]string{"NatGateways"},
 			"NatGatewayId",
 			c.EC2conn.DescribeNatGateways,
-			&ec2.DescribeNatGatewaysInput{},
-			filterNatGateways,
+			&ec2.DescribeNatGatewaysInput{
+				Filter: []*ec2.Filter{
+					{
+						Name: aws.String("state"),
+						Values: []*string{
+							aws.String("available"),
+						},
+					},
+				},
+			},
+			filterGeneric,
 		},
 		{
 			"aws_cloudformation_stack",
@@ -189,7 +198,7 @@ func Supported(c *AWSClient) []ApiDesc {
 			"InternetGatewayId",
 			c.EC2conn.DescribeInternetGateways,
 			&ec2.DescribeInternetGatewaysInput{},
-			filterInternetGateways,
+			filterGeneric,
 		},
 		{
 			"aws_subnet",
