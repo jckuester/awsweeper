@@ -16,10 +16,11 @@ import (
 )
 
 func TestAccElb_deleteByTags(t *testing.T) {
+	t.SkipNow()
+	// TODO tag support
+
 	var lb1, lb2 elb.LoadBalancerDescription
 
-	// TODO implement tag support for aws_elb
-	t.SkipNow()
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
