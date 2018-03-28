@@ -26,8 +26,8 @@ func TestAccRoute53Zone_deleteByTags(t *testing.T) {
 				Config:             testAccRoute53ZoneConfig,
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoute53ZoneExists("aws_vpc.foo", &zone1),
-					testAccCheckRoute53ZoneExists("aws_vpc.bar", &zone2),
+					testAccCheckRoute53ZoneExists("aws_route53_zone.foo", &zone1),
+					testAccCheckRoute53ZoneExists("aws_route53_zone.bar", &zone2),
 					testMainTags(argsDryRun, testAccRoute53ZoneAWSweeperTagsConfig),
 					testRoute53ZoneExists(&zone1),
 					testRoute53ZoneExists(&zone2),
@@ -51,8 +51,8 @@ func TestAccRoute53Zone_deleteByIds(t *testing.T) {
 				Config:             testAccRoute53ZoneConfig,
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoute53ZoneExists("aws_vpc.foo", &zone1),
-					testAccCheckRoute53ZoneExists("aws_vpc.bar", &zone2),
+					testAccCheckRoute53ZoneExists("aws_route53_zone.foo", &zone1),
+					testAccCheckRoute53ZoneExists("aws_route53_zone.bar", &zone2),
 					testMainRoute53ZoneIds(argsDryRun, &zone1),
 					testRoute53ZoneExists(&zone1),
 					testRoute53ZoneExists(&zone2),
@@ -65,7 +65,7 @@ func TestAccRoute53Zone_deleteByIds(t *testing.T) {
 	})
 }
 
-func testAccCheckRoute53ZoneExists(n string, vpc *route53.HostedZone) resource.TestCheckFunc {
+func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -82,13 +82,17 @@ func testAccCheckRoute53ZoneExists(n string, vpc *route53.HostedZone) resource.T
 		}
 		resp, err := conn.GetHostedZone(desc)
 		if err != nil {
+			route53err, ok := err.(awserr.Error)
+			if !ok {
+				return err
+			}
+			if route53err.Code() == "NoSuchHostedZone" {
+				return nil
+			}
 			return err
 		}
-		if len(resp.HostedZone.Id) == 0 {
-			return fmt.Errorf("VPC not found")
-		}
 
-		*vpc = *resp.HostedZone
+		*z = *resp.HostedZone
 
 		return nil
 	}
@@ -108,15 +112,19 @@ func testMainRoute53ZoneIds(args []string, z *route53.HostedZone) resource.TestC
 func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		conn := client.r53conn
-		desc := &route53.DescribeRoute53ZonesInput{
-			Route53ZoneIds: []*string{z.Route53ZoneId},
+		desc := &route53.GetHostedZoneInput{
+			Id: z.Id,
 		}
-		resp, err := conn.DescribeRoute53Zones(desc)
+		_, err := conn.GetHostedZone(desc)
 		if err != nil {
+			route53err, ok := err.(awserr.Error)
+			if !ok {
+				return err
+			}
+			if route53err.Code() == "NoSuchHostedZone" {
+				return fmt.Errorf("Route53 Zone has been deleted")
+			}
 			return err
-		}
-		if len(resp.Route53Zones) == 0 {
-			return fmt.Errorf("VPC has been deleted")
 		}
 
 		return nil
@@ -126,27 +134,21 @@ func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 func testRoute53ZoneDeleted(z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		conn := client.r53conn
-		desc := &route53.DescribeRoute53ZonesInput{
-			Route53ZoneIds: []*string{z.Route53ZoneId},
+		desc := &route53.GetHostedZoneInput{
+			Id: z.Id,
 		}
-		resp, err := conn.DescribeRoute53Zones(desc)
+		_, err := conn.GetHostedZone(desc)
 		if err != nil {
 			route53err, ok := err.(awserr.Error)
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "InvalidRoute53ZoneID.NotFound" {
+			if route53err.Code() == "NoSuchHostedZone" {
 				return nil
 			}
 			return err
 		}
-
-		if len(resp.Route53Zones) != 0 {
-			return fmt.Errorf("VPC hasn't been deleted")
-
-		}
-
-		return nil
+		return fmt.Errorf("Route53 Zone hasn't been deleted")
 	}
 }
 
@@ -171,7 +173,7 @@ resource "aws_route53_zone" "bar" {
 
 resource "aws_route53_record" "foo" {
   zone_id = "${aws_route53_zone.foo.zone_id}"
-  name    = "bar".com"
+  name    = "bar.com"
   type    = "NS"
   ttl     = "30"
 
