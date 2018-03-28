@@ -65,22 +65,22 @@ func TestAccVpc_deleteByIds(t *testing.T) {
 	})
 }
 
-func testAccCheckVpcExists(n string, vpc *ec2.Vpc) resource.TestCheckFunc {
+func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
+		rs, ok := s.RootModule().Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("Not found: %s", name)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No VPC ID is set")
+			return fmt.Errorf("No ID is set")
 		}
 
 		conn := client.ec2conn
-		DescribeVpcOpts := &ec2.DescribeVpcsInput{
+		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{aws.String(rs.Primary.ID)},
 		}
-		resp, err := conn.DescribeVpcs(DescribeVpcOpts)
+		resp, err := conn.DescribeVpcs(desc)
 		if err != nil {
 			return err
 		}
@@ -108,10 +108,10 @@ func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
 func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		conn := client.ec2conn
-		DescribeVpcOpts := &ec2.DescribeVpcsInput{
+		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{vpc.VpcId},
 		}
-		resp, err := conn.DescribeVpcs(DescribeVpcOpts)
+		resp, err := conn.DescribeVpcs(desc)
 		if err != nil {
 			return err
 		}
@@ -126,10 +126,10 @@ func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
 func testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		conn := client.ec2conn
-		DescribeVpcOpts := &ec2.DescribeVpcsInput{
+		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{vpc.VpcId},
 		}
-		resp, err := conn.DescribeVpcs(DescribeVpcOpts)
+		resp, err := conn.DescribeVpcs(desc)
 		if err != nil {
 			ec2err, ok := err.(awserr.Error)
 			if !ok {
