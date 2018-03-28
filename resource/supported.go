@@ -1,6 +1,8 @@
 package resource
 
 import (
+	"log"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -309,8 +311,17 @@ func Supported(c *AWSClient) []ApiDesc {
 			[]string{"Snapshots"},
 			"SnapshotId",
 			c.EC2conn.DescribeSnapshots,
-			&ec2.DescribeSnapshotsInput{},
-			filterSnapshots,
+			&ec2.DescribeSnapshotsInput{
+				Filters: []*ec2.Filter{
+					{
+						Name: aws.String("owner-id"),
+						Values: []*string{
+							accountId(c),
+						},
+					},
+				},
+			},
+			filterGeneric,
 		},
 		{
 			"aws_ebs_volume",
@@ -325,8 +336,17 @@ func Supported(c *AWSClient) []ApiDesc {
 			[]string{"Images"},
 			"ImageId",
 			c.EC2conn.DescribeImages,
-			&ec2.DescribeImagesInput{},
-			filterAmis,
+			&ec2.DescribeImagesInput{
+				Filters: []*ec2.Filter{
+					{
+						Name: aws.String("owner-id"),
+						Values: []*string{
+							accountId(c),
+						},
+					},
+				},
+			},
+			filterGeneric,
 		},
 	}
 }
@@ -340,4 +360,14 @@ func getSupported(resType string, c *AWSClient) (ApiDesc, error) {
 		}
 	}
 	return ApiDesc{}, errors.Errorf("no ApiDesc found for resource type %s", resType)
+}
+
+// accountId returns the account ID of the AWS account
+// for the currently used credentials or AWS profile, resp.
+func accountId(c *AWSClient) *string {
+	res, err := c.STSconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return res.Account
 }

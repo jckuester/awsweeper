@@ -4,12 +4,10 @@ import (
 	"log"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
@@ -294,36 +292,4 @@ func filterKmsKeys(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	return []Resources{
 	//{Type: res.Type, Ids: ids}
 	}
-}
-
-func filterAmis(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	result := Resources{}
-
-	for i, r := range res {
-		if accountId(c) == *raw.(*ec2.DescribeImagesOutput).Images[i].OwnerId &&
-			(f.Matches(r.Type, r.Id, r.Tags)) {
-			result = append(result, r)
-		}
-	}
-	return []Resources{result}
-}
-
-func filterSnapshots(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	result := Resources{}
-
-	for i, r := range res {
-		if accountId(c) == *raw.(*ec2.DescribeSnapshotsOutput).Snapshots[i].OwnerId &&
-			(f.Matches(r.Type, r.Id, r.Tags)) {
-			result = append(result, r)
-		}
-	}
-	return []Resources{result}
-}
-
-func accountId(c *AWSClient) string {
-	res, err := c.STSconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return *res.Account
 }
