@@ -5,29 +5,39 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/aws/aws-sdk-go/service/elb/elbiface"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/pkg/errors"
 )
 
 type AWSClient struct {
-	EC2conn *ec2.EC2
-	ASconn  *autoscaling.AutoScaling
-	ELBconn *elb.ELB
-	R53conn *route53.Route53
-	CFconn  *cloudformation.CloudFormation
-	EFSconn *efs.EFS
-	IAMconn *iam.IAM
-	KMSconn *kms.KMS
-	S3conn  *s3.S3
-	STSconn *sts.STS
+	EC2conn ec2iface.EC2API
+	ASconn  autoscalingiface.AutoScalingAPI
+	ELBconn elbiface.ELBAPI
+	R53conn route53iface.Route53API
+	CFconn  cloudformationiface.CloudFormationAPI
+	EFSconn efsiface.EFSAPI
+	IAMconn iamiface.IAMAPI
+	KMSconn kmsiface.KMSAPI
+	S3conn  s3iface.S3API
+	STSconn stsiface.STSAPI
 }
 
 // ApiDesc stores the necessary information about
@@ -351,12 +361,12 @@ func Supported(c *AWSClient) []ApiDesc {
 	}
 }
 
-// getSupported returns the apiInfo by the name of
+// getSupported returns the apiDesc by the name of
 // a given resource type
 func getSupported(resType string, c *AWSClient) (ApiDesc, error) {
-	for _, apiInfo := range Supported(c) {
-		if apiInfo.TerraformType == resType {
-			return apiInfo, nil
+	for _, apiDesc := range Supported(c) {
+		if apiDesc.TerraformType == resType {
+			return apiDesc, nil
 		}
 	}
 	return ApiDesc{}, errors.Errorf("no ApiDesc found for resource type %s", resType)

@@ -9,7 +9,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/mocks"
+	"github.com/prometheus/common/log"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -153,15 +155,28 @@ func TestTags_Vpc(t *testing.T) {
 }
 
 func mockVpc() ApiDesc {
+	mockAS := &mocks.AutoScalingAPI{}
+	mockCF := &mocks.CloudFormationAPI{}
 	mockEC2 := &mocks.EC2API{}
+	mockEFS := &mocks.EFSAPI{}
+	mockELB := &mocks.ELBAPI{}
+	mockIAM := &mocks.IAMAPI{}
+	mockKMS := &mocks.KMSAPI{}
+	mockR53 := &mocks.Route53API{}
+	mockS3 := &mocks.S3API{}
+	mockSTS := &mocks.STSAPI{}
 
-	a := ApiDesc{
-		"aws_vpc",
-		[]string{"Vpcs"},
-		"VpcId",
-		mockEC2.DescribeVpcs,
-		&ec2.DescribeVpcsInput{},
-		filterGeneric,
+	c := &AWSClient{
+		ASconn:  mockAS,
+		CFconn:  mockCF,
+		EC2conn: mockEC2,
+		EFSconn: mockEFS,
+		ELBconn: mockELB,
+		IAMconn: mockIAM,
+		KMSconn: mockKMS,
+		R53conn: mockR53,
+		S3conn:  mockS3,
+		STSconn: mockSTS,
 	}
 
 	mockResultFn := func(input *ec2.DescribeVpcsInput) *ec2.DescribeVpcsOutput {
@@ -174,19 +189,47 @@ func mockVpc() ApiDesc {
 		return true
 	})).Return(mockResultFn, nil)
 
+	mockGetCallerIdentityFn := func(input *sts.GetCallerIdentityInput) *sts.GetCallerIdentityOutput {
+		output := &sts.GetCallerIdentityOutput{}
+		output.SetAccount("123456789")
+		return output
+	}
+
+	mockSTS.On("GetCallerIdentity", mock.MatchedBy(func(input *sts.GetCallerIdentityInput) bool {
+		return true
+	})).Return(mockGetCallerIdentityFn, nil)
+
+	a, err := getSupported("aws_vpc", c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return a
 }
 
 func mockInstance(rs []*ec2.Reservation) ApiDesc {
+	mockAS := &mocks.AutoScalingAPI{}
+	mockCF := &mocks.CloudFormationAPI{}
 	mockEC2 := &mocks.EC2API{}
+	mockEFS := &mocks.EFSAPI{}
+	mockELB := &mocks.ELBAPI{}
+	mockIAM := &mocks.IAMAPI{}
+	mockKMS := &mocks.KMSAPI{}
+	mockR53 := &mocks.Route53API{}
+	mockS3 := &mocks.S3API{}
+	mockSTS := &mocks.STSAPI{}
 
-	a := ApiDesc{
-		"aws_instance",
-		[]string{"Reservations", "Instances"},
-		"InstanceId",
-		mockEC2.DescribeInstances,
-		&ec2.DescribeInstancesInput{},
-		filterGeneric,
+	c := &AWSClient{
+		ASconn:  mockAS,
+		CFconn:  mockCF,
+		EC2conn: mockEC2,
+		EFSconn: mockEFS,
+		ELBconn: mockELB,
+		IAMconn: mockIAM,
+		KMSconn: mockKMS,
+		R53conn: mockR53,
+		S3conn:  mockS3,
+		STSconn: mockSTS,
 	}
 
 	mockResultFn := func(input *ec2.DescribeInstancesInput) *ec2.DescribeInstancesOutput {
@@ -199,5 +242,20 @@ func mockInstance(rs []*ec2.Reservation) ApiDesc {
 		return true
 	})).Return(mockResultFn, nil)
 
-	return a
+	mockGetCallerIdentityFn := func(input *sts.GetCallerIdentityInput) *sts.GetCallerIdentityOutput {
+		output := &sts.GetCallerIdentityOutput{}
+		output.SetAccount("123456789")
+		return output
+	}
+
+	mockSTS.On("GetCallerIdentity", mock.MatchedBy(func(input *sts.GetCallerIdentityInput) bool {
+		return true
+	})).Return(mockGetCallerIdentityFn, nil)
+
+	as, err := getSupported("aws_instance", c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return as
 }

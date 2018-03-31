@@ -79,13 +79,13 @@ func WrappedMain() int {
 
 	client := &resource.AWSClient{
 		ASconn:  autoscaling.New(sess),
-		EC2conn: ec2.New(sess),
-		ELBconn: elb.New(sess),
-		R53conn: route53.New(sess),
 		CFconn:  cloudformation.New(sess),
+		EC2conn: ec2.New(sess),
 		EFSconn: efs.New(sess),
+		ELBconn: elb.New(sess),
 		IAMconn: iam.New(sess),
 		KMSconn: kms.New(sess),
+		R53conn: route53.New(sess),
 		S3conn:  s3.New(sess),
 		STSconn: sts.New(sess),
 	}

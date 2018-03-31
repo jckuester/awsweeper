@@ -52,10 +52,10 @@ func (c *Wipe) Run(args []string) int {
 	}
 
 	for _, resType := range c.filter.Types() {
-		for _, apiInfo := range resource.Supported(c.client) {
-			if resType == apiInfo.TerraformType {
-				res, raw := resource.List(apiInfo)
-				resList := apiInfo.Select(res, raw, c.filter, c.client)
+		for _, apiDesc := range resource.Supported(c.client) {
+			if resType == apiDesc.TerraformType {
+				res, raw := resource.List(apiDesc)
+				resList := apiDesc.Select(res, raw, c.filter, c.client)
 				for _, res := range resList {
 					c.wipe(res)
 				}
