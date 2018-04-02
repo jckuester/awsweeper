@@ -17,13 +17,15 @@ import (
 )
 
 var (
-	vpcId    = "some-vpc-id"
-	tagKey   = "bla"
-	tagValue = "blub"
+	someVpcId = "some-vpc-id"
+	tagKey    = "bla"
+	tagValue  = "blub"
+
+	otherVpcId = "other-vpc-id"
 
 	vpcs = []*ec2.Vpc{
 		{
-			VpcId: aws.String(vpcId),
+			VpcId: aws.String(someVpcId),
 			Tags: []*ec2.Tag{
 				{
 					Key:   aws.String(tagKey),
@@ -31,15 +33,25 @@ var (
 				},
 			},
 		},
+		{
+			VpcId: aws.String(otherVpcId),
+		},
 	}
 )
 
 func TestList_Vpc(t *testing.T) {
-	apiDesc := mockVpc()
+	apiDesc := mockVpc(vpcs)
 
 	res, _ := List(apiDesc)
 
-	require.Equal(t, vpcId, res[0].Id)
+	result := []string{}
+	for _, r := range res {
+		result = append(result, r.Id)
+	}
+
+	require.Len(t, res, 2)
+	require.Contains(t, result, someVpcId)
+	require.Contains(t, result, otherVpcId)
 }
 
 func TestList_NestedDescribeOutput(t *testing.T) {
@@ -114,16 +126,24 @@ func TestList_OnlyTerminatedInstances(t *testing.T) {
 }
 
 func TestInvoke(t *testing.T) {
-	apiDesc := mockVpc()
+	apiDesc := mockVpc(vpcs)
 
 	describeOut := invoke(apiDesc.DescribeFn, apiDesc.DescribeFnInput)
-	actualId := describeOut.Elem().FieldByName("Vpcs").Index(0).Elem().FieldByName("VpcId").Elem().String()
+	actualVpcs := describeOut.Elem().FieldByName("Vpcs")
 
-	require.Equal(t, vpcId, actualId)
+	result := []string{}
+	for i := 0; i < actualVpcs.Len(); i++ {
+		actualId := actualVpcs.Index(i).Elem().FieldByName("VpcId").Elem().String()
+		result = append(result, actualId)
+	}
+
+	require.Len(t, result, 2)
+	require.Contains(t, result, someVpcId)
+	require.Contains(t, result, otherVpcId)
 }
 
 func TestFindSlice(t *testing.T) {
-	apiDesc := mockVpc()
+	apiDesc := mockVpc(vpcs)
 
 	desc := ec2.DescribeVpcsOutput{
 		Vpcs: vpcs,
@@ -138,7 +158,7 @@ func TestFindSlice(t *testing.T) {
 }
 
 func TestFindSlice_InvalidInput(t *testing.T) {
-	apiDesc := mockVpc()
+	apiDesc := mockVpc(vpcs)
 	desc := "input is not a struct"
 
 	_, err := findSlice(apiDesc.DescribeOutputName[0], reflect.ValueOf(desc))
@@ -147,14 +167,14 @@ func TestFindSlice_InvalidInput(t *testing.T) {
 }
 
 func TestTags_Vpc(t *testing.T) {
-	apiDesc := mockVpc()
+	apiDesc := mockVpc(vpcs)
 
 	res, _ := List(apiDesc)
 
 	require.Equal(t, tagValue, res[0].Tags[tagKey])
 }
 
-func mockVpc() ApiDesc {
+func mockVpc(vpcs []*ec2.Vpc) ApiDesc {
 	mockAS := &mocks.AutoScalingAPI{}
 	mockCF := &mocks.CloudFormationAPI{}
 	mockEC2 := &mocks.EC2API{}
