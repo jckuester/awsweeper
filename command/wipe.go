@@ -91,19 +91,6 @@ func (c *Wipe) wipe(res resource.Resources) {
 		Destroy: true,
 	}
 
-	//a := []*map[string]string{}
-	//if len(res.Attrs) > 0 {
-	//	a = res.Attrs
-	//} else {
-	//	for i := 0; i < len(res.Ids); i++ {
-	//		a = append(a, &map[string]string{})
-	//	}
-	//}
-	//
-	//ts := make([]*map[string]string, len(res))
-	//if len(res.Tags) > 0 {
-	//	ts = res.Tags
-	//}
 	chResources := make(chan *resource.Resource, numWorkerThreads)
 
 	var wg sync.WaitGroup
@@ -128,6 +115,8 @@ func (c *Wipe) wipe(res resource.Resources) {
 
 					if r.Attrs != nil {
 						r.Attrs["force_destroy"] = "true"
+					} else {
+						r.Attrs = map[string]string{"force_destroy": "true"}
 					}
 
 					s := &terraform.InstanceState{
@@ -137,9 +126,7 @@ func (c *Wipe) wipe(res resource.Resources) {
 
 					st, err := (*c.provider).Refresh(ii, s)
 					if err != nil {
-						fmt.Println("err: ", err)
-						st = s
-						st.Attributes["force_destroy"] = "true"
+						log.Fatal(err)
 					}
 
 					if !c.dryRun {

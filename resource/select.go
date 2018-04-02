@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/route53"
 )
 
 func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
@@ -34,43 +33,6 @@ func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 //	}
 //	return []Resources{{Type: res.Type, Ids: ids}}
 //}
-
-func filterRoute53Zone(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	result := Resources{}
-
-	//rsIds := []*string{}
-	//rsAttrs := []*map[string]string{}
-
-	for _, hz := range raw.(*route53.ListHostedZonesOutput).HostedZones {
-		if f.Matches(res[0].Type, *hz.Id) {
-			//res, err := c.R53conn.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
-			//	HostedZoneId: hz.Id,
-			//})
-			//if err != nil {
-			//	log.Fatal(err)
-			//}
-
-			//for _, rs := range res.ResourceRecordSets {
-			//	rsIds = append(rsIds, rs.Name)
-			//	rsAttrs = append(rsAttrs, &map[string]string{
-			//		"zone_id": *hz.Id,
-			//		"name":    *rs.Name,
-			//		"type":    *rs.Type,
-			//	})
-			//}
-
-			result = append(result, &Resource{
-				Type: res[0].Type,
-				Id:   *hz.Id,
-				Attrs: map[string]string{
-					"force_destroy": "true",
-					"name":          *hz.Name,
-				},
-			})
-		}
-	}
-	return []Resources{result}
-}
 
 func filterEfsFileSystem(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	result := Resources{}

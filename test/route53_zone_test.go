@@ -16,6 +16,8 @@ import (
 )
 
 func TestAccRoute53Zone_deleteByTags(t *testing.T) {
+	// TODO tags are a special case for this resource and are not supported yet
+	t.SkipNow()
 	var zone1, zone2 route53.HostedZone
 
 	resource.Test(t, resource.TestCase{

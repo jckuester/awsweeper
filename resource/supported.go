@@ -166,7 +166,7 @@ func Supported(c *AWSClient) []ApiDesc {
 			"Id",
 			c.R53conn.ListHostedZones,
 			&route53.ListHostedZonesInput{},
-			filterRoute53Zone,
+			filterGeneric,
 		},
 		{
 			"aws_efs_file_system",
