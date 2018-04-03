@@ -20,20 +20,6 @@ func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	return []Resources{result}
 }
 
-//func filterRoute53Record(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-//	ids := []*string{}
-//
-//	// HostedZoneId is a required field for input
-//	for _, r := range raw.(*route53.ListResourceRecordSetsOutput).ResourceRecordSets {
-//		for _, rr := range r.ResourceRecords {
-//			if f.Matches(res.Type, *rr.Value) {
-//				ids = append(ids, rr.Value)
-//			}
-//		}
-//	}
-//	return []Resources{{Type: res.Type, Ids: ids}}
-//}
-
 func filterEfsFileSystem(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	result := Resources{}
 	resultMt := Resources{}

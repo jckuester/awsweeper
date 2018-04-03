@@ -176,14 +176,6 @@ func Supported(c *AWSClient) []ApiDesc {
 			&efs.DescribeFileSystemsInput{},
 			filterEfsFileSystem,
 		},
-		//{
-		//	"aws_route53_record",
-		//	"ResourceRecordSets",
-		//	"bla",
-		//	c.r53conn.ListResourceRecordSets,
-		//	&route53.ListResourceRecordSetsInput{},
-		//	filterRoute53Record,
-		//},
 		// Elastic network interface (ENI) resource
 		// sort by owner of the network interface?
 		// support tags
