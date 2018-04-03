@@ -9658,6 +9658,29 @@ func (_m *IAMAPI) UpdateOpenIDConnectProviderThumbprintWithContext(_a0 aws.Conte
 	return r0, r1
 }
 
+// UpdateRole provides a mock function with given fields: _a0
+func (_m *IAMAPI) UpdateRole(_a0 *iam.UpdateRoleInput) (*iam.UpdateRoleOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *iam.UpdateRoleOutput
+	if rf, ok := ret.Get(0).(func(*iam.UpdateRoleInput) *iam.UpdateRoleOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*iam.UpdateRoleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*iam.UpdateRoleInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UpdateRoleDescription provides a mock function with given fields: _a0
 func (_m *IAMAPI) UpdateRoleDescription(_a0 *iam.UpdateRoleDescriptionInput) (*iam.UpdateRoleDescriptionOutput, error) {
 	ret := _m.Called(_a0)
@@ -9728,6 +9751,61 @@ func (_m *IAMAPI) UpdateRoleDescriptionWithContext(_a0 aws.Context, _a1 *iam.Upd
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(aws.Context, *iam.UpdateRoleDescriptionInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateRoleRequest provides a mock function with given fields: _a0
+func (_m *IAMAPI) UpdateRoleRequest(_a0 *iam.UpdateRoleInput) (*request.Request, *iam.UpdateRoleOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*iam.UpdateRoleInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *iam.UpdateRoleOutput
+	if rf, ok := ret.Get(1).(func(*iam.UpdateRoleInput) *iam.UpdateRoleOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*iam.UpdateRoleOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// UpdateRoleWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *IAMAPI) UpdateRoleWithContext(_a0 aws.Context, _a1 *iam.UpdateRoleInput, _a2 ...request.Option) (*iam.UpdateRoleOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *iam.UpdateRoleOutput
+	if rf, ok := ret.Get(0).(func(aws.Context, *iam.UpdateRoleInput, ...request.Option) *iam.UpdateRoleOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*iam.UpdateRoleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(aws.Context, *iam.UpdateRoleInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)

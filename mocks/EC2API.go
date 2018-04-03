@@ -7968,6 +7968,84 @@ func (_m *EC2API) DescribeAddressesWithContext(_a0 aws.Context, _a1 *ec2.Describ
 	return r0, r1
 }
 
+// DescribeAggregateIdFormat provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeAggregateIdFormat(_a0 *ec2.DescribeAggregateIdFormatInput) (*ec2.DescribeAggregateIdFormatOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribeAggregateIdFormatOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeAggregateIdFormatInput) *ec2.DescribeAggregateIdFormatOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeAggregateIdFormatOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeAggregateIdFormatInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAggregateIdFormatRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeAggregateIdFormatRequest(_a0 *ec2.DescribeAggregateIdFormatInput) (*request.Request, *ec2.DescribeAggregateIdFormatOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeAggregateIdFormatInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribeAggregateIdFormatOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeAggregateIdFormatInput) *ec2.DescribeAggregateIdFormatOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribeAggregateIdFormatOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeAggregateIdFormatWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribeAggregateIdFormatWithContext(_a0 aws.Context, _a1 *ec2.DescribeAggregateIdFormatInput, _a2 ...request.Option) (*ec2.DescribeAggregateIdFormatOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribeAggregateIdFormatOutput
+	if rf, ok := ret.Get(0).(func(aws.Context, *ec2.DescribeAggregateIdFormatInput, ...request.Option) *ec2.DescribeAggregateIdFormatOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeAggregateIdFormatOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(aws.Context, *ec2.DescribeAggregateIdFormatInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeAvailabilityZones provides a mock function with given fields: _a0
 func (_m *EC2API) DescribeAvailabilityZones(_a0 *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error) {
 	ret := _m.Called(_a0)
@@ -11029,6 +11107,84 @@ func (_m *EC2API) DescribePrefixListsWithContext(_a0 aws.Context, _a1 *ec2.Descr
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(aws.Context, *ec2.DescribePrefixListsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribePrincipalIdFormat provides a mock function with given fields: _a0
+func (_m *EC2API) DescribePrincipalIdFormat(_a0 *ec2.DescribePrincipalIdFormatInput) (*ec2.DescribePrincipalIdFormatOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribePrincipalIdFormatOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribePrincipalIdFormatInput) *ec2.DescribePrincipalIdFormatOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribePrincipalIdFormatOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribePrincipalIdFormatInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribePrincipalIdFormatRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribePrincipalIdFormatRequest(_a0 *ec2.DescribePrincipalIdFormatInput) (*request.Request, *ec2.DescribePrincipalIdFormatOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribePrincipalIdFormatInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribePrincipalIdFormatOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribePrincipalIdFormatInput) *ec2.DescribePrincipalIdFormatOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribePrincipalIdFormatOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribePrincipalIdFormatWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribePrincipalIdFormatWithContext(_a0 aws.Context, _a1 *ec2.DescribePrincipalIdFormatInput, _a2 ...request.Option) (*ec2.DescribePrincipalIdFormatOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribePrincipalIdFormatOutput
+	if rf, ok := ret.Get(0).(func(aws.Context, *ec2.DescribePrincipalIdFormatInput, ...request.Option) *ec2.DescribePrincipalIdFormatOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribePrincipalIdFormatOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(aws.Context, *ec2.DescribePrincipalIdFormatInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)

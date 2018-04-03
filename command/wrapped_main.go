@@ -19,10 +19,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/resource"
-	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
+	"github.com/terraform-providers/terraform-provider-aws/aws"
 )
 
 func WrappedMain() int {
