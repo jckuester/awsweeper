@@ -208,29 +208,6 @@ func filterIamRole(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	}
 }
 
-func filterInstanceProfiles(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	attributes := []*map[string]string{}
-
-	for _, r := range raw.(*iam.ListInstanceProfilesOutput).InstanceProfiles {
-		if f.Matches(res[0].Type, *r.InstanceProfileName) {
-			ids = append(ids, r.InstanceProfileName)
-
-			roles := []string{}
-			for _, role := range r.Roles {
-				roles = append(roles, *role.RoleName)
-			}
-
-			attributes = append(attributes, &map[string]string{
-				"roles": strings.Join(roles, "."),
-			})
-		}
-	}
-	return []Resources{
-	//{Type: res.Type, Ids: ids}
-	}
-}
-
 func filterKmsKeys(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	attributes := []*map[string]string{}

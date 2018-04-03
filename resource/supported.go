@@ -290,7 +290,7 @@ func Supported(c *AWSClient) []ApiDesc {
 			"InstanceProfileName",
 			c.IAMconn.ListInstanceProfiles,
 			&iam.ListInstanceProfilesInput{},
-			filterInstanceProfiles,
+			filterGeneric,
 		},
 		{
 			"aws_kms_alias",
