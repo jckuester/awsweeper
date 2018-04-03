@@ -92,11 +92,11 @@ func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 		}
 		_, err := conn.GetRole(desc)
 		if err != nil {
-			route53err, ok := err.(awserr.Error)
+			iamErr, ok := err.(awserr.Error)
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchEntity" {
+			if iamErr.Code() == "NoSuchEntity" {
 				return fmt.Errorf("IAM role has been deleted")
 			}
 			return err
@@ -115,11 +115,11 @@ func testIamRoleDeleted(r *iam.Role) resource.TestCheckFunc {
 		}
 		_, err := conn.GetRole(desc)
 		if err != nil {
-			route53err, ok := err.(awserr.Error)
+			iamErr, ok := err.(awserr.Error)
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchEntity" {
+			if iamErr.Code() == "NoSuchEntity" {
 				return nil
 			}
 			return err

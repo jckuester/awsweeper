@@ -92,11 +92,11 @@ func testIamUserExists(r *iam.User) resource.TestCheckFunc {
 		}
 		_, err := conn.GetUser(desc)
 		if err != nil {
-			route53err, ok := err.(awserr.Error)
+			iamErr, ok := err.(awserr.Error)
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchEntity" {
+			if iamErr.Code() == "NoSuchEntity" {
 				return fmt.Errorf("IAM user has been deleted")
 			}
 			return err
@@ -115,11 +115,11 @@ func testIamUserDeleted(r *iam.User) resource.TestCheckFunc {
 		}
 		_, err := conn.GetUser(desc)
 		if err != nil {
-			route53err, ok := err.(awserr.Error)
+			iamErr, ok := err.(awserr.Error)
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchEntity" {
+			if iamErr.Code() == "NoSuchEntity" {
 				return nil
 			}
 			return err
