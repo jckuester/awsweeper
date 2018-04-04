@@ -274,7 +274,7 @@ func Supported(c *AWSClient) []ApiDesc {
 			"RoleName",
 			c.IAMconn.ListRoles,
 			&iam.ListRolesInput{},
-			filterIamRole,
+			filterGeneric,
 		},
 		{
 			"aws_iam_instance_profile",

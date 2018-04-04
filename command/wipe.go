@@ -113,12 +113,6 @@ func (c *Wipe) wipe(res resource.Resources) {
 					}
 					fmt.Println(printStat)
 
-					if r.Attrs != nil {
-						r.Attrs["force_destroy"] = "true"
-					} else {
-						r.Attrs = map[string]string{"force_destroy": "true"}
-					}
-
 					s := &terraform.InstanceState{
 						ID:         r.Id,
 						Attributes: r.Attrs,
@@ -128,6 +122,9 @@ func (c *Wipe) wipe(res resource.Resources) {
 					if err != nil {
 						log.Fatal(err)
 					}
+
+					st.Attributes["force_detach_policies"] = "true"
+					st.Attributes["force_destroy"] = "true"
 
 					if !c.dryRun {
 						_, err = (*c.provider).Apply(ii, st, d)

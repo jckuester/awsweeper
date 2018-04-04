@@ -138,62 +138,6 @@ func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []R
 	return []Resources{resultAtt, result}
 }
 
-func filterIamRole(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	rpolIds := []*string{}
-	rpolAttributes := []*map[string]string{}
-	pIds := []*string{}
-
-	for _, role := range raw.(*iam.ListRolesOutput).Roles {
-		if f.Matches(res[0].Type, *role.RoleName) {
-			rpols, err := c.IAMconn.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
-				RoleName: role.RoleName,
-			})
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			for _, rpol := range rpols.AttachedPolicies {
-				rpolIds = append(rpolIds, rpol.PolicyArn)
-				rpolAttributes = append(rpolAttributes, &map[string]string{
-					"role":       *role.RoleName,
-					"policy_arn": *rpol.PolicyArn,
-				})
-			}
-
-			rps, err := c.IAMconn.ListRolePolicies(&iam.ListRolePoliciesInput{
-				RoleName: role.RoleName,
-			})
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			for _, rp := range rps.PolicyNames {
-				bla := *role.RoleName + ":" + *rp
-				pIds = append(pIds, &bla)
-			}
-
-			//ips, err := c.iamconn.ListInstanceProfilesForRole(&iam.ListInstanceProfilesForRoleInput{
-			//	RoleName: role.RoleName,
-			//})
-			//check(err)
-			//
-			//for _, ip := range ips.InstanceProfiles {
-			//	fmt.Println(*ip.InstanceProfileName)
-			//}
-
-			ids = append(ids, role.RoleName)
-		}
-	}
-
-	// aws_iam_policy_attachment could be used to detach a policy from users, groups and roles
-	return []Resources{
-	//{Type: "aws_iam_role_policy_attachment", Ids: rpolIds, Attrs: rpolAttributes},
-	//{Type: "aws_iam_role_policy", Ids: pIds},
-	//{Type: res.Type, Ids: ids},
-	}
-}
-
 func filterKmsKeys(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	ids := []*string{}
 	attributes := []*map[string]string{}
