@@ -53,14 +53,6 @@ type ApiDesc struct {
 	Select             func(Resources, interface{}, Filter, *AWSClient) []Resources
 }
 
-/*type Resources struct {
-	Type  string // we use the terraform type for identification
-	Ids   []*string
-	Attrs []*map[string]string
-	Tags  []*map[string]string
-	Raw   interface{}
-}*/
-
 type Resources []*Resource
 
 type Resource struct {

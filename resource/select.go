@@ -1,12 +1,11 @@
 package resource
 
 import (
-	"log"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"strings"
+	"log"
 )
 
 func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
@@ -66,7 +65,6 @@ func filterIamUser(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 
 			// Lists all managed policies that are attached  to user (inline and others)
 			upols, err := c.IAMconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
-				// required
 				UserName: &r.Id,
 			})
 			if err == nil {
@@ -83,12 +81,8 @@ func filterIamUser(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 			}
 
 			result = append(result, r)
-			//attrs = append(attrs, &map[string]string{
-			//	"force_destroy": "true",
-			//})
 		}
 	}
-	// aws_iam_user_policy to delete inline policies
 	return []Resources{resultUserPol, resultAttPol, result}
 }
 
@@ -121,7 +115,7 @@ func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []R
 
 			resultAtt = append(resultAtt, &Resource{
 				Type: "aws_iam_policy_attachment",
-				Id:   r.Id,
+				Id:   "none",
 				Attrs: map[string]string{
 					"policy_arn": r.Id,
 					"name":       *raw.(*iam.ListPoliciesOutput).Policies[i].PolicyName,
