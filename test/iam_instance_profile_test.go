@@ -51,7 +51,7 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 			return fmt.Errorf("No ID is set")
 		}
 
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: aws.String(rs.Primary.ID),
 		}
@@ -86,7 +86,7 @@ func testMainIamInstanceProfileIds(args []string, r *iam.InstanceProfile) resour
 
 func testIamInstanceProfileExists(r *iam.InstanceProfile) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: r.InstanceProfileName,
 		}
@@ -108,7 +108,7 @@ func testIamInstanceProfileExists(r *iam.InstanceProfile) resource.TestCheckFunc
 
 func testIamInstanceProfileDeleted(r *iam.InstanceProfile) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: r.InstanceProfileName,

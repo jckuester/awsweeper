@@ -76,7 +76,7 @@ func testAccCheckInstanceExists(n string, instance *ec2.Instance) resource.TestC
 			return fmt.Errorf("No instance ID is set")
 		}
 
-		conn := client.ec2conn
+		conn := client.EC2conn
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -96,7 +96,7 @@ func testAccCheckInstanceExists(n string, instance *ec2.Instance) resource.TestC
 
 func testInstanceExists(instance *ec2.Instance) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
+		conn := client.EC2conn
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{instance.InstanceId},
 		}
@@ -114,7 +114,7 @@ func testInstanceExists(instance *ec2.Instance) resource.TestCheckFunc {
 
 func testInstanceDeleted(instance *ec2.Instance) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
+		conn := client.EC2conn
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{instance.InstanceId},
 		}

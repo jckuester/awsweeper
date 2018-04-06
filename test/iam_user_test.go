@@ -51,7 +51,7 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 			return fmt.Errorf("No ID is set")
 		}
 
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetUserInput{
 			UserName: aws.String(rs.Primary.ID),
 		}
@@ -86,7 +86,7 @@ func testMainIamUserIds(args []string, u *iam.User) resource.TestCheckFunc {
 
 func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetUserInput{
 			UserName: u.UserName,
 		}
@@ -108,7 +108,7 @@ func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 
 func testIamUserDeleted(u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 
 		desc := &iam.GetUserInput{
 			UserName: u.UserName,

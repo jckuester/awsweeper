@@ -76,7 +76,7 @@ func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 
-		conn := client.EC2conn
+		conn := client.ec2conn
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -107,7 +107,7 @@ func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
 
 func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.ec2conn
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{vpc.VpcId},
 		}
@@ -125,7 +125,7 @@ func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
 
 func testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.ec2conn
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{vpc.VpcId},
 		}

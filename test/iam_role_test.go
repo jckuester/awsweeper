@@ -51,7 +51,7 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 			return fmt.Errorf("No ID is set")
 		}
 
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetRoleInput{
 			RoleName: aws.String(rs.Primary.ID),
 		}
@@ -86,7 +86,7 @@ func testMainIamRoleIds(args []string, r *iam.Role) resource.TestCheckFunc {
 
 func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetRoleInput{
 			RoleName: r.RoleName,
 		}
@@ -108,7 +108,7 @@ func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 
 func testIamRoleDeleted(r *iam.Role) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 
 		desc := &iam.GetRoleInput{
 			RoleName: r.RoleName,

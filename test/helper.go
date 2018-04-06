@@ -33,35 +33,22 @@ var testAccProvider *schema.Provider
 var argsDryRun = []string{"cmd", "--dry-run", "config.yml"}
 var argsForceDelete = []string{"cmd", "--force", "config.yml"}
 
-type AWSClient struct {
-	ec2conn         *ec2.EC2
-	autoscalingconn *autoscaling.AutoScaling
-	elbconn         *elb.ELB
-	r53conn         *route53.Route53
-	cfconn          *cloudformation.CloudFormation
-	efsconn         *efs.EFS
-	iamconn         *iam.IAM
-	kmsconn         *kms.KMS
-	s3conn          *s3.S3
-	stsconn         *sts.STS
-}
-
-func initClient() *AWSClient {
+func initClient() *res.AWSClient {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	return &AWSClient{
-		autoscalingconn: autoscaling.New(sess),
-		ec2conn:         ec2.New(sess),
-		elbconn:         elb.New(sess),
-		r53conn:         route53.New(sess),
-		cfconn:          cloudformation.New(sess),
-		efsconn:         efs.New(sess),
-		iamconn:         iam.New(sess),
-		kmsconn:         kms.New(sess),
-		s3conn:          s3.New(sess),
-		stsconn:         sts.New(sess),
+	return &res.AWSClient{
+		ASconn:  autoscaling.New(sess),
+		CFconn:  cloudformation.New(sess),
+		EC2conn: ec2.New(sess),
+		EFSconn: efs.New(sess),
+		ELBconn: elb.New(sess),
+		IAMconn: iam.New(sess),
+		KMSconn: kms.New(sess),
+		R53conn: route53.New(sess),
+		S3conn:  s3.New(sess),
+		STSconn: sts.New(sess),
 	}
 }
 

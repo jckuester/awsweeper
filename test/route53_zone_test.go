@@ -78,7 +78,7 @@ func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.Tes
 			return fmt.Errorf("No ID is set")
 		}
 
-		conn := client.r53conn
+		conn := client.R53conn
 		desc := &route53.GetHostedZoneInput{
 			Id: aws.String(rs.Primary.ID),
 		}
@@ -113,7 +113,7 @@ func testMainRoute53ZoneIds(args []string, z *route53.HostedZone) resource.TestC
 
 func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.r53conn
+		conn := client.R53conn
 		desc := &route53.GetHostedZoneInput{
 			Id: z.Id,
 		}
@@ -135,7 +135,7 @@ func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 
 func testRoute53ZoneDeleted(z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.r53conn
+		conn := client.R53conn
 		desc := &route53.GetHostedZoneInput{
 			Id: z.Id,
 		}

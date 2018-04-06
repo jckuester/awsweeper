@@ -76,7 +76,7 @@ func testAccCheckAWSAutoScalingGroupExists(n string, group *autoscaling.Group) r
 			return fmt.Errorf("No AutoScaling Group ID is set")
 		}
 
-		conn := client.autoscalingconn
+		conn := client.ASconn
 
 		describeGroups, err := conn.DescribeAutoScalingGroups(
 			&autoscaling.DescribeAutoScalingGroupsInput{
@@ -100,7 +100,7 @@ func testAccCheckAWSAutoScalingGroupExists(n string, group *autoscaling.Group) r
 
 func testAutoscalingGroupExists(asg *autoscaling.Group) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.autoscalingconn
+		conn := client.ASconn
 		DescribeAutoscalingGroupOpts := &autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: []*string{asg.AutoScalingGroupName},
 		}
@@ -119,7 +119,7 @@ func testAutoscalingGroupExists(asg *autoscaling.Group) resource.TestCheckFunc {
 
 func testAutoscalingGroupDeleted(asg *autoscaling.Group) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.autoscalingconn
+		conn := client.ASconn
 		DescribeAutoscalingGroupOpts := &autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: []*string{asg.AutoScalingGroupName},
 		}

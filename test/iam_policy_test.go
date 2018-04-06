@@ -76,7 +76,7 @@ func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckF
 			return fmt.Errorf("No ID is set")
 		}
 
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetPolicyInput{
 			PolicyArn: aws.String(rs.Primary.ID),
 		}
@@ -111,7 +111,7 @@ func testMainIamPolicyIds(args []string, p *iam.Policy) resource.TestCheckFunc {
 
 func testIamPolicyExists(p *iam.Policy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetPolicyInput{
 			PolicyArn: p.Arn,
 		}
@@ -133,7 +133,7 @@ func testIamPolicyExists(p *iam.Policy) resource.TestCheckFunc {
 
 func testIamPolicyDeleted(p *iam.Policy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 
 		desc := &iam.GetPolicyInput{
 			PolicyArn: p.Arn,

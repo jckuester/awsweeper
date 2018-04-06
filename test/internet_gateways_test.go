@@ -79,7 +79,7 @@ func testAccCheckInternetGatewayExists(n string, ig *ec2.InternetGateway) resour
 			return fmt.Errorf("No ID is set")
 		}
 
-		conn := client.ec2conn
+		conn := client.EC2conn
 		resp, err := conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{aws.String(rs.Primary.ID)},
 		})
@@ -98,7 +98,7 @@ func testAccCheckInternetGatewayExists(n string, ig *ec2.InternetGateway) resour
 
 func testInternetGatewayExists(ig *ec2.InternetGateway) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
+		conn := client.EC2conn
 		opts := &ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{ig.InternetGatewayId},
 		}
@@ -117,7 +117,7 @@ func testInternetGatewayExists(ig *ec2.InternetGateway) resource.TestCheckFunc {
 
 func testInternetGatewayDeleted(ig *ec2.InternetGateway) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
+		conn := client.EC2conn
 		desc := &ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{ig.InternetGatewayId},
 		}
