@@ -37,7 +37,7 @@ script:
   - go vet ./...                             # go vet is the official Go static analyzer
   - megacheck ./...                          # "go vet on steroids" + linter
   - gocyclo -over 19 $GO_FILES               # forbid code with huge functions
-  - golint -set_exit_status $(go list ./...) # one last linter
+  - golint -set_exit_status $(go list ./... | grep -v /mocks) # one last linter
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
