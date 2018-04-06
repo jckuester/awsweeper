@@ -23,6 +23,8 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
+	"time"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 var client = initClient()
@@ -87,4 +89,21 @@ func testMainTags(args []string, config string) resource.TestCheckFunc {
 		command.WrappedMain()
 		return nil
 	}
+}
+
+func retryOnAwsCode(code string, f func() (interface{}, error)) (interface{}, error) {
+	var resp interface{}
+	err := resource.Retry(1*time.Minute, func() *resource.RetryError {
+		var err error
+		resp, err = f()
+		if err != nil {
+			awsErr, ok := err.(awserr.Error)
+			if ok && awsErr.Code() == code {
+				return resource.RetryableError(err)
+			}
+			return resource.NonRetryableError(err)
+		}
+		return nil
+	})
+	return resp, err
 }

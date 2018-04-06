@@ -7,97 +7,99 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
+	"github.com/aws/aws-sdk-go/service/kms"
 )
 
-func TestAccVpc_deleteByTags(t *testing.T) {
-	var vpc1, vpc2 ec2.Vpc
+func TestAccKmsKey_deleteByTags(t *testing.T) {
+	// TODO implement tag support
+	t.Skip()
+	var k1, k2 kms.KeyMetadata
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:             testAccVpcConfig,
+				Config:             testAccKmsKeyConfig,
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckVpcExists("aws_vpc.foo", &vpc1),
-					testAccCheckVpcExists("aws_vpc.bar", &vpc2),
-					testMainTags(argsDryRun, testAccVpcAWSweeperTagsConfig),
-					testVpcExists(&vpc1),
-					testVpcExists(&vpc2),
-					testMainTags(argsForceDelete, testAccVpcAWSweeperTagsConfig),
-					testVpcDeleted(&vpc1),
-					testVpcExists(&vpc2),
+					testAccCheckKmsKeyExists("aws_kms_key.foo", &k1),
+					testAccCheckKmsKeyExists("aws_kms_key.bar", &k2),
+					testMainTags(argsDryRun, testAccKmsKeyAWSweeperTagsConfig),
+					testKmsKeyExists(&k1),
+					testKmsKeyExists(&k2),
+					testMainTags(argsForceDelete, testAccKmsKeyAWSweeperTagsConfig),
+					testKmsKeyDeleted(&k1),
+					testKmsKeyExists(&k2),
 				),
 			},
 		},
 	})
 }
 
-func TestAccVpc_deleteByIds(t *testing.T) {
-	var vpc1, vpc2 ec2.Vpc
+func TestAccKmsKey_deleteByIds(t *testing.T) {
+	var k1, k2 kms.KeyMetadata
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:             testAccVpcConfig,
+				Config:             testAccKmsKeyConfig,
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckVpcExists("aws_vpc.foo", &vpc1),
-					testAccCheckVpcExists("aws_vpc.bar", &vpc2),
-					testMainVpcIds(argsDryRun, &vpc1),
-					testVpcExists(&vpc1),
-					testVpcExists(&vpc2),
-					testMainVpcIds(argsForceDelete, &vpc1),
-					testVpcDeleted(&vpc1),
-					testVpcExists(&vpc2),
+					testAccCheckKmsKeyExists("aws_kms_key.foo", &k1),
+					testAccCheckKmsKeyExists("aws_kms_key.bar", &k2),
+					testMainKmsKeyIds(argsDryRun, &k1),
+					testKmsKeyExists(&k1),
+					testKmsKeyExists(&k2),
+					testMainKmsKeyIds(argsForceDelete, &k1),
+					testKmsKeyDeleted(&k1),
+					testKmsKeyExists(&k2),
 				),
 			},
 		},
 	})
 }
 
-func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
+func testAccCheckKmsKeyExists(name string, k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %s", name)
+			return fmt.Errorf("not found: %s", name)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.ec2conn
-		desc := &ec2.DescribeVpcsInput{
-			VpcIds: []*string{aws.String(rs.Primary.ID)},
-		}
-		resp, err := conn.DescribeVpcs(desc)
+		conn := client.KMSconn
+
+		o, err := retryOnAwsCode("NotFoundException", func() (interface{}, error) {
+			return conn.DescribeKey(&kms.DescribeKeyInput{
+				KeyId: aws.String(rs.Primary.ID),
+			})
+		})
 		if err != nil {
 			return err
 		}
-		if len(resp.Vpcs) == 0 {
-			return fmt.Errorf("VPC not found")
-		}
+		out := o.(*kms.DescribeKeyOutput)
 
-		*vpc = *resp.Vpcs[0]
+		*k = *out.KeyMetadata
 
 		return nil
 	}
 }
 
-func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
+func testMainKmsKeyIds(args []string, k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccVpcAWSweeperIdsConfig(vpc)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccKmsKeyAWSweeperIdsConfig(k)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -105,81 +107,85 @@ func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
 	}
 }
 
-func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
+func testKmsKeyExists(k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
-		desc := &ec2.DescribeVpcsInput{
-			VpcIds: []*string{vpc.VpcId},
-		}
-		resp, err := conn.DescribeVpcs(desc)
+		conn := client.KMSconn
+		_, err := retryOnAwsCode("NotFoundException", func() (interface{}, error) {
+			return conn.DescribeKey(&kms.DescribeKeyInput{
+				KeyId: k.KeyId,
+			})
+		})
 		if err != nil {
+			kmsErr, ok := err.(awserr.Error)
+			if !ok {
+				return err
+			}
+			if kmsErr.Code() == "NotFoundException" {
+				return fmt.Errorf("KMS key not found")
+			}
 			return err
-		}
-		if len(resp.Vpcs) == 0 {
-			return fmt.Errorf("VPC has been deleted")
 		}
 
 		return nil
 	}
 }
 
-func testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
+func testKmsKeyDeleted(k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
-		desc := &ec2.DescribeVpcsInput{
-			VpcIds: []*string{vpc.VpcId},
-		}
-		resp, err := conn.DescribeVpcs(desc)
+		conn := client.KMSconn
+
+		resp, err := conn.DescribeKey(&kms.DescribeKeyInput{
+			KeyId: k.KeyId,
+		})
 		if err != nil {
-			ec2err, ok := err.(awserr.Error)
+			kmsErr, ok := err.(awserr.Error)
 			if !ok {
 				return err
 			}
-			if ec2err.Code() == "InvalidVpcID.NotFound" {
+			if kmsErr.Code() == "NotFoundException" {
 				return nil
 			}
 			return err
 		}
-
-		if len(resp.Vpcs) != 0 {
-			return fmt.Errorf("VPC hasn't been deleted")
-
+		if *resp.KeyMetadata.KeyState == "PendingDeletion" {
+			return nil
 		}
-
-		return nil
+		return fmt.Errorf("KMS key hasn't been deleted")
 	}
 }
 
-const testAccVpcConfig = `
-resource "aws_vpc" "foo" {
-	cidr_block = "10.1.0.0/16"
+const testAccKmsKeyConfig = `
+resource "aws_kms_key" "foo" {
+    description = "AWSweeper acc test"
+    deletion_window_in_days = 7
 
-	tags {
+    tags {
 		foo = "bar"
 		Name = "awsweeper-testacc"
 	}
 }
 
-resource "aws_vpc" "bar" {
-	cidr_block = "10.2.0.0/16"
+resource "aws_kms_key" "bar" {
+    description = "AWSweeper acc test"
+    deletion_window_in_days = 7
 
-	tags {
+    tags {
 		bar = "baz"
 		Name = "awsweeper-testacc"
 	}
 }
 `
 
-const testAccVpcAWSweeperTagsConfig = `
-aws_vpc:
+const testAccKmsKeyAWSweeperTagsConfig = `
+aws_kms_key:
   tags:
     foo: bar
 `
 
-func testAccVpcAWSweeperIdsConfig(vpc *ec2.Vpc) string {
-	id := vpc.VpcId
+func testAccKmsKeyAWSweeperIdsConfig(k *kms.KeyMetadata) string {
+	id := k.KeyId
 	return fmt.Sprintf(`
-aws_vpc:
+aws_kms_key:
   ids:
     - %s
 `, *id)

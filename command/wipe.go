@@ -113,6 +113,11 @@ func (c *Wipe) wipe(res resource.Resources) {
 					}
 					fmt.Println(printStat)
 
+					// dirty hack to fix aws_key_pair
+					if r.Attrs == nil {
+						r.Attrs = map[string]string{"public_key": ""}
+					}
+
 					s := &terraform.InstanceState{
 						ID:         r.Id,
 						Attributes: r.Attrs,

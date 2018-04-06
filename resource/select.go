@@ -133,8 +133,7 @@ func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []R
 }
 
 func filterKmsKeys(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
-	ids := []*string{}
-	attributes := []*map[string]string{}
+	result := Resources{}
 
 	for _, r := range raw.(*kms.ListKeysOutput).Keys {
 		if f.Matches(res[0].Type, *r.KeyArn) {
@@ -144,15 +143,14 @@ func filterKmsKeys(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 			err := req.Send()
 			if err == nil {
 				if *res.KeyMetadata.KeyState != "PendingDeletion" {
-					attributes = append(attributes, &map[string]string{
-						"key_id": *r.KeyId,
+					result = append(result, &Resource{
+						Type: "aws_kms_key",
+						Id:   *r.KeyArn,
 					})
-					ids = append(ids, r.KeyArn)
 				}
 			}
 		}
 	}
-	return []Resources{
-	//{Type: res.Type, Ids: ids}
-	}
+	// associated aliases will also be deleted after waiting period (between 7 to 30 days)
+	return []Resources{result}
 }
