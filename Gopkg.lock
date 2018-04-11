@@ -130,10 +130,12 @@
     "service/kms",
     "service/kms/kmsiface",
     "service/lambda",
+    "service/lexmodelbuildingservice",
     "service/lightsail",
     "service/mediastore",
     "service/mq",
     "service/opsworks",
+    "service/organizations",
     "service/rds",
     "service/redshift",
     "service/route53",
@@ -293,6 +295,7 @@
     "dag",
     "flatmap",
     "helper/config",
+    "helper/customdiff",
     "helper/encryption",
     "helper/hashcode",
     "helper/hilmapstructure",
@@ -476,8 +479,8 @@
 [[projects]]
   name = "github.com/terraform-providers/terraform-provider-aws"
   packages = ["aws"]
-  revision = "684291f45b87da88f39a8b4050ebc1c5e6c2f6e0"
-  version = "v1.10.0"
+  revision = "b3fb3db28c722c145398c7080746e035ec307165"
+  version = "v1.14.0"
 
 [[projects]]
   name = "github.com/ulikunitz/xz"
