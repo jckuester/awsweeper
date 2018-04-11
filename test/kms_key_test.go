@@ -7,12 +7,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
-	"github.com/aws/aws-sdk-go/service/kms"
 )
 
 func TestAccKmsKey_deleteByTags(t *testing.T) {

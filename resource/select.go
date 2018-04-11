@@ -1,12 +1,12 @@
 package resource
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"strings"
 	"log"
-	"github.com/aws/aws-sdk-go/aws"
+	"strings"
 )
 
 func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
