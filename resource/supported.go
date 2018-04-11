@@ -27,6 +27,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AWSClient stores all the clients to AWS
+// services with their session
 type AWSClient struct {
 	EC2conn ec2iface.EC2API
 	ASconn  autoscalingiface.AutoScalingAPI
@@ -40,24 +42,27 @@ type AWSClient struct {
 	STSconn stsiface.STSAPI
 }
 
-// ApiDesc stores the necessary information about
+// APIDesc stores the necessary information about
 // resource types (identified by its terraform type)
 // to list and delete its resources via the go-aws-sdk
 // and Terraform AWS provider API.
-type ApiDesc struct {
+type APIDesc struct {
 	TerraformType      string
 	DescribeOutputName []string
-	DeleteId           string
-	DescribeFn         interface{}
-	DescribeFnInput    interface{}
+	DeleteID           string
+	Describe           interface{}
+	DescribeInput      interface{}
 	Select             func(Resources, interface{}, Filter, *AWSClient) []Resources
 }
 
+// Resources is a list of AWS resources
 type Resources []*Resource
 
+// Resource contains information about
+// a single AWS resource
 type Resource struct {
 	Type  string // we use the terraform type for identification
-	Id    string
+	ID    string
 	Attrs map[string]string
 	Tags  map[string]string
 }
@@ -66,8 +71,8 @@ type Resource struct {
 // resource types the API information
 // to list (go-sdk API) and delete (AWS Terraform provider API)
 // corresponding resources.
-func Supported(c *AWSClient) []ApiDesc {
-	return []ApiDesc{
+func Supported(c *AWSClient) []APIDesc {
+	return []APIDesc{
 		{
 			"aws_autoscaling_group",
 			[]string{"AutoScalingGroups"},
@@ -310,7 +315,7 @@ func Supported(c *AWSClient) []ApiDesc {
 					{
 						Name: aws.String("owner-id"),
 						Values: []*string{
-							accountId(c),
+							accountID(c),
 						},
 					},
 				},
@@ -335,7 +340,7 @@ func Supported(c *AWSClient) []ApiDesc {
 					{
 						Name: aws.String("owner-id"),
 						Values: []*string{
-							accountId(c),
+							accountID(c),
 						},
 					},
 				},
@@ -347,18 +352,18 @@ func Supported(c *AWSClient) []ApiDesc {
 
 // getSupported returns the apiDesc by the name of
 // a given resource type
-func getSupported(resType string, c *AWSClient) (ApiDesc, error) {
+func getSupported(resType string, c *AWSClient) (APIDesc, error) {
 	for _, apiDesc := range Supported(c) {
 		if apiDesc.TerraformType == resType {
 			return apiDesc, nil
 		}
 	}
-	return ApiDesc{}, errors.Errorf("no ApiDesc found for resource type %s", resType)
+	return APIDesc{}, errors.Errorf("no APIDesc found for resource type %s", resType)
 }
 
-// accountId returns the account ID of the AWS account
+// accountID returns the account ID of the AWS account
 // for the currently used credentials or AWS profile, resp.
-func accountId(c *AWSClient) *string {
+func accountID(c *AWSClient) *string {
 	res, err := c.STSconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 	if err != nil {
 		log.Fatal(err)

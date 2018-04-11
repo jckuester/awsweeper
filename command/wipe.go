@@ -12,8 +12,11 @@ import (
 	"github.com/mitchellh/cli"
 )
 
+// Wipe stores information needed to delete selected AWS resources, i.e.
+// a given filter (yaml configuration file), AWS account credentials, and
+// if deletion should be happen as dry run.
 type Wipe struct {
-	Ui          cli.Ui
+	UI          cli.Ui
 	dryRun      bool
 	forceDelete bool
 	client      *resource.AWSClient
@@ -21,18 +24,19 @@ type Wipe struct {
 	filter      *resource.YamlFilter
 }
 
+// Run runs the deletion process of AWS resources
 func (c *Wipe) Run(args []string) int {
 	if len(args) == 1 {
 		c.filter = resource.NewFilter(args[0])
 	} else {
-		fmt.Println(Help())
+		fmt.Println(help())
 		return 1
 	}
 
 	if c.dryRun {
-		c.Ui.Output("INFO: This is a test run, nothing will be deleted!")
+		c.UI.Output("INFO: This is a test run, nothing will be deleted!")
 	} else if !c.forceDelete {
-		v, err := c.Ui.Ask(
+		v, err := c.UI.Ask(
 			"Do you really want to delete resources filtered by '" + args[0] + "'?\n" +
 				"Only 'yes' will be accepted to approve.\n\n" +
 				"Enter a value: ")
@@ -66,10 +70,12 @@ func (c *Wipe) Run(args []string) int {
 	return 0
 }
 
+// Help returns help information of this command
 func (c *Wipe) Help() string {
-	return Help()
+	return help()
 }
 
+// Synopsis returns a short version of the help information of this command
 func (c *Wipe) Synopsis() string {
 	return "Delete AWS resources via a yaml configuration"
 }
@@ -101,7 +107,7 @@ func (c *Wipe) wipe(res resource.Resources) {
 			for {
 				r, more := <-chResources
 				if more {
-					printStat := fmt.Sprintf("\tId:\t%s", r.Id)
+					printStat := fmt.Sprintf("\tId:\t%s", r.ID)
 					if r.Tags != nil {
 						if len(r.Tags) > 0 {
 							printStat += "\n\tTags:\t"
@@ -119,7 +125,7 @@ func (c *Wipe) wipe(res resource.Resources) {
 					}
 
 					s := &terraform.InstanceState{
-						ID:         r.Id,
+						ID:         r.ID,
 						Attributes: r.Attrs,
 					}
 

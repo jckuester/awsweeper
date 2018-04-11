@@ -13,7 +13,7 @@ func TestGetSupported(t *testing.T) {
 	apiDesc, err := getSupported("aws_vpc", mockAWSClient())
 
 	require.Equal(t, apiDesc.TerraformType, "aws_vpc")
-	require.Equal(t, apiDesc.DeleteId, "VpcId")
+	require.Equal(t, apiDesc.DeleteID, "VpcId")
 
 	require.NoError(t, err)
 }
