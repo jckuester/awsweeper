@@ -16,7 +16,7 @@ import (
 )
 
 func TestAccIamUser_deleteByIds(t *testing.T) {
-	var r1, r2 iam.User
+	var u1, u2 iam.User
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -26,21 +26,21 @@ func TestAccIamUser_deleteByIds(t *testing.T) {
 				Config:             testAccIamUserConfig,
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckIamUserExists("aws_iam_user.foo", &r1),
-					testAccCheckIamUserExists("aws_iam_user.bar", &r2),
-					testMainIamUserIds(argsDryRun, &r1),
-					testIamUserExists(&r1),
-					testIamUserExists(&r2),
-					testMainIamUserIds(argsForceDelete, &r1),
-					testIamUserDeleted(&r1),
-					testIamUserExists(&r2),
+					testAccCheckIamUserExists("aws_iam_user.foo", &u1),
+					testAccCheckIamUserExists("aws_iam_user.bar", &u2),
+					testMainIamUserIds(argsDryRun, &u1),
+					testIamUserExists(&u1),
+					testIamUserExists(&u2),
+					testMainIamUserIds(argsForceDelete, &u1),
+					testIamUserDeleted(&u1),
+					testIamUserExists(&u2),
 				),
 			},
 		},
 	})
 }
 
-func testAccCheckIamUserExists(name string, r *iam.User) resource.TestCheckFunc {
+func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
@@ -51,7 +51,7 @@ func testAccCheckIamUserExists(name string, r *iam.User) resource.TestCheckFunc 
 			return fmt.Errorf("No ID is set")
 		}
 
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetUserInput{
 			UserName: aws.String(rs.Primary.ID),
 		}
@@ -67,16 +67,16 @@ func testAccCheckIamUserExists(name string, r *iam.User) resource.TestCheckFunc 
 			return err
 		}
 
-		*r = *resp.User
+		*u = *resp.User
 
 		return nil
 	}
 }
 
-func testMainIamUserIds(args []string, r *iam.User) resource.TestCheckFunc {
+func testMainIamUserIds(args []string, u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccIamUserAWSweeperIdsConfig(r)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccIamUserAWSweeperIdsConfig(u)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -84,19 +84,19 @@ func testMainIamUserIds(args []string, r *iam.User) resource.TestCheckFunc {
 	}
 }
 
-func testIamUserExists(r *iam.User) resource.TestCheckFunc {
+func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 		desc := &iam.GetUserInput{
-			UserName: r.UserName,
+			UserName: u.UserName,
 		}
 		_, err := conn.GetUser(desc)
 		if err != nil {
-			route53err, ok := err.(awserr.Error)
+			iamErr, ok := err.(awserr.Error)
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchEntity" {
+			if iamErr.Code() == "NoSuchEntity" {
 				return fmt.Errorf("IAM user has been deleted")
 			}
 			return err
@@ -106,20 +106,20 @@ func testIamUserExists(r *iam.User) resource.TestCheckFunc {
 	}
 }
 
-func testIamUserDeleted(r *iam.User) resource.TestCheckFunc {
+func testIamUserDeleted(u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.iamconn
+		conn := client.IAMconn
 
 		desc := &iam.GetUserInput{
-			UserName: r.UserName,
+			UserName: u.UserName,
 		}
 		_, err := conn.GetUser(desc)
 		if err != nil {
-			route53err, ok := err.(awserr.Error)
+			iamErr, ok := err.(awserr.Error)
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchEntity" {
+			if iamErr.Code() == "NoSuchEntity" {
 				return nil
 			}
 			return err
@@ -187,8 +187,8 @@ resource "aws_iam_user_policy_attachment" "test_attach" {
 }
 `
 
-func testAccIamUserAWSweeperIdsConfig(r *iam.User) string {
-	id := r.UserName
+func testAccIamUserAWSweeperIdsConfig(u *iam.User) string {
+	id := u.UserName
 	return fmt.Sprintf(`
 aws_iam_user:
   ids:

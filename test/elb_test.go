@@ -79,7 +79,7 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 			return fmt.Errorf("No ELB ID is set")
 		}
 
-		conn := client.elbconn
+		conn := client.ELBconn
 
 		describe, err := conn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{aws.String(rs.Primary.ID)},
@@ -122,7 +122,7 @@ func testMainElbIds(args []string, lb *elb.LoadBalancerDescription) resource.Tes
 
 func testElbExists(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.elbconn
+		conn := client.ELBconn
 
 		DescribeElbOpts := &elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{lb.LoadBalancerName},
@@ -142,7 +142,7 @@ func testElbExists(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 
 func testElbDeleted(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.elbconn
+		conn := client.ELBconn
 		DescribeElbOpts := &elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{lb.LoadBalancerName},
 		}

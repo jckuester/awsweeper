@@ -1,59 +1,76 @@
 package resource
 
 import (
+	"log"
+
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/aws/aws-sdk-go/service/elb/elbiface"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/pkg/errors"
 )
 
 type AWSClient struct {
-	EC2conn *ec2.EC2
-	ASconn  *autoscaling.AutoScaling
-	ELBconn *elb.ELB
-	R53conn *route53.Route53
-	CFconn  *cloudformation.CloudFormation
-	EFSconn *efs.EFS
-	IAMconn *iam.IAM
-	KMSconn *kms.KMS
-	S3conn  *s3.S3
-	STSconn *sts.STS
+	EC2conn ec2iface.EC2API
+	ASconn  autoscalingiface.AutoScalingAPI
+	ELBconn elbiface.ELBAPI
+	R53conn route53iface.Route53API
+	CFconn  cloudformationiface.CloudFormationAPI
+	EFSconn efsiface.EFSAPI
+	IAMconn iamiface.IAMAPI
+	KMSconn kmsiface.KMSAPI
+	S3conn  s3iface.S3API
+	STSconn stsiface.STSAPI
 }
 
-type ResourceInfo struct {
+// ApiDesc stores the necessary information about
+// resource types (identified by its terraform type)
+// to list and delete its resources via the go-aws-sdk
+// and Terraform AWS provider API.
+type ApiDesc struct {
 	TerraformType      string
-	DescribeOutputName string
+	DescribeOutputName []string
 	DeleteId           string
 	DescribeFn         interface{}
 	DescribeFnInput    interface{}
-	SelectFn           func(Resources, Filter, *AWSClient) []Resources
+	Select             func(Resources, interface{}, Filter, *AWSClient) []Resources
 }
 
-type Resources struct {
-	Type  string // we use the terraform type for identification
-	Ids   []*string
-	Attrs []*map[string]string
-	Tags  []*map[string]string
-	Raw   interface{}
-}
+type Resources []*Resource
 
 type Resource struct {
-	Id    *string
-	Attrs *map[string]string
-	Tags  *map[string]string
+	Type  string // we use the terraform type for identification
+	Id    string
+	Attrs map[string]string
+	Tags  map[string]string
 }
 
-func Supported(c *AWSClient) []ResourceInfo {
-	return []ResourceInfo{
+// Supported returns for all supported
+// resource types the API information
+// to list (go-sdk API) and delete (AWS Terraform provider API)
+// corresponding resources.
+func Supported(c *AWSClient) []ApiDesc {
+	return []ApiDesc{
 		{
 			"aws_autoscaling_group",
-			"AutoScalingGroups",
+			[]string{"AutoScalingGroups"},
 			"AutoScalingGroupName",
 			c.ASconn.DescribeAutoScalingGroups,
 			&autoscaling.DescribeAutoScalingGroupsInput{},
@@ -61,7 +78,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_launch_configuration",
-			"LaunchConfigurations",
+			[]string{"LaunchConfigurations"},
 			"LaunchConfigurationName",
 			c.ASconn.DescribeLaunchConfigurations,
 			&autoscaling.DescribeLaunchConfigurationsInput{},
@@ -69,15 +86,25 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_instance",
-			"Reservations",
-			"Instances",
+			[]string{"Reservations", "Instances"},
+			"InstanceId",
 			c.EC2conn.DescribeInstances,
-			&ec2.DescribeInstancesInput{},
-			filterInstances,
+			&ec2.DescribeInstancesInput{
+				Filters: []*ec2.Filter{
+					{
+						Name: aws.String("instance-state-name"),
+						Values: []*string{
+							aws.String("pending"), aws.String("running"),
+							aws.String("stopping"), aws.String("stopped"),
+						},
+					},
+				},
+			},
+			filterGeneric,
 		},
 		{
 			"aws_key_pair",
-			"KeyPairs",
+			[]string{"KeyPairs"},
 			"KeyName",
 			c.EC2conn.DescribeKeyPairs,
 			&ec2.DescribeKeyPairsInput{},
@@ -85,7 +112,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_elb",
-			"LoadBalancerDescriptions",
+			[]string{"LoadBalancerDescriptions"},
 			"LoadBalancerName",
 			c.ELBconn.DescribeLoadBalancers,
 			&elb.DescribeLoadBalancersInput{},
@@ -93,24 +120,33 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_vpc_endpoint",
-			"VpcEndpoints",
+			[]string{"VpcEndpoints"},
 			"VpcEndpointId",
 			c.EC2conn.DescribeVpcEndpoints,
 			&ec2.DescribeVpcEndpointsInput{},
 			filterGeneric,
 		},
-		// support tags
 		{
+			// TODO support tags
 			"aws_nat_gateway",
-			"NatGateways",
+			[]string{"NatGateways"},
 			"NatGatewayId",
 			c.EC2conn.DescribeNatGateways,
-			&ec2.DescribeNatGatewaysInput{},
-			filterNatGateways,
+			&ec2.DescribeNatGatewaysInput{
+				Filter: []*ec2.Filter{
+					{
+						Name: aws.String("state"),
+						Values: []*string{
+							aws.String("available"),
+						},
+					},
+				},
+			},
+			filterGeneric,
 		},
 		{
 			"aws_cloudformation_stack",
-			"Stacks",
+			[]string{"Stacks"},
 			"StackId",
 			c.CFconn.DescribeStacks,
 			&cloudformation.DescribeStacksInput{},
@@ -118,35 +154,27 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_route53_zone",
-			"HostedZones",
+			[]string{"HostedZones"},
 			"Id",
 			c.R53conn.ListHostedZones,
 			&route53.ListHostedZonesInput{},
-			filterRoute53Zone,
+			filterGeneric,
 		},
 		{
 			"aws_efs_file_system",
-			"FileSystems",
+			[]string{"FileSystems"},
 			"FileSystemId",
 			c.EFSconn.DescribeFileSystems,
 			&efs.DescribeFileSystemsInput{},
 			filterEfsFileSystem,
 		},
-		//{
-		//	"aws_route53_record",
-		//	"ResourceRecordSets",
-		//	"bla",
-		//	c.r53conn.ListResourceRecordSets,
-		//	&route53.ListResourceRecordSetsInput{},
-		//	filterRoute53Record,
-		//},
 		// Elastic network interface (ENI) resource
 		// sort by owner of the network interface?
 		// support tags
 		// attached to subnet
 		{
 			"aws_network_interface",
-			"NetworkInterfaces",
+			[]string{"NetworkInterfaces"},
 			"NetworkInterfaceId",
 			c.EC2conn.DescribeNetworkInterfaces,
 			&ec2.DescribeNetworkInterfacesInput{},
@@ -154,7 +182,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_eip",
-			"Addresses",
+			[]string{"Addresses"},
 			"AllocationId",
 			c.EC2conn.DescribeAddresses,
 			&ec2.DescribeAddressesInput{},
@@ -162,15 +190,15 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_internet_gateway",
-			"InternetGateways",
+			[]string{"InternetGateways"},
 			"InternetGatewayId",
 			c.EC2conn.DescribeInternetGateways,
 			&ec2.DescribeInternetGatewaysInput{},
-			filterInternetGateways,
+			filterGeneric,
 		},
 		{
 			"aws_subnet",
-			"Subnets",
+			[]string{"Subnets"},
 			"SubnetId",
 			c.EC2conn.DescribeSubnets,
 			&ec2.DescribeSubnetsInput{},
@@ -178,7 +206,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_route_table",
-			"RouteTables",
+			[]string{"RouteTables"},
 			"RouteTableId",
 			c.EC2conn.DescribeRouteTables,
 			&ec2.DescribeRouteTablesInput{},
@@ -186,7 +214,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_security_group",
-			"SecurityGroups",
+			[]string{"SecurityGroups"},
 			"GroupId",
 			c.EC2conn.DescribeSecurityGroups,
 			&ec2.DescribeSecurityGroupsInput{},
@@ -194,7 +222,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_network_acl",
-			"NetworkAcls",
+			[]string{"NetworkAcls"},
 			"NetworkAclId",
 			c.EC2conn.DescribeNetworkAcls,
 			&ec2.DescribeNetworkAclsInput{},
@@ -202,7 +230,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_vpc",
-			"Vpcs",
+			[]string{"Vpcs"},
 			"VpcId",
 			c.EC2conn.DescribeVpcs,
 			&ec2.DescribeVpcsInput{},
@@ -210,7 +238,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_iam_policy",
-			"Policies",
+			[]string{"Policies"},
 			"Arn",
 			c.IAMconn.ListPolicies,
 			&iam.ListPoliciesInput{},
@@ -218,7 +246,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_iam_group",
-			"Groups",
+			[]string{"Groups"},
 			"GroupName",
 			c.IAMconn.ListGroups,
 			&iam.ListGroupsInput{},
@@ -226,7 +254,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_iam_user",
-			"Users",
+			[]string{"Users"},
 			"UserName",
 			c.IAMconn.ListUsers,
 			&iam.ListUsersInput{},
@@ -234,23 +262,23 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_iam_role",
-			"Roles",
+			[]string{"Roles"},
 			"RoleName",
 			c.IAMconn.ListRoles,
 			&iam.ListRolesInput{},
-			filterIamRole,
+			filterGeneric,
 		},
 		{
 			"aws_iam_instance_profile",
-			"InstanceProfiles",
+			[]string{"InstanceProfiles"},
 			"InstanceProfileName",
 			c.IAMconn.ListInstanceProfiles,
 			&iam.ListInstanceProfilesInput{},
-			filterInstanceProfiles,
+			filterGeneric,
 		},
 		{
 			"aws_kms_alias",
-			"Aliases",
+			[]string{"Aliases"},
 			"AliasName",
 			c.KMSconn.ListAliases,
 			&kms.ListAliasesInput{},
@@ -258,7 +286,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_kms_key",
-			"Keys",
+			[]string{"Keys"},
 			"KeyId",
 			c.KMSconn.ListKeys,
 			&kms.ListKeysInput{},
@@ -266,7 +294,7 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_s3_bucket",
-			"Buckets",
+			[]string{"Buckets"},
 			"Name",
 			c.S3conn.ListBuckets,
 			&s3.ListBucketsInput{},
@@ -274,15 +302,24 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_ebs_snapshot",
-			"Snapshots",
+			[]string{"Snapshots"},
 			"SnapshotId",
 			c.EC2conn.DescribeSnapshots,
-			&ec2.DescribeSnapshotsInput{},
-			filterSnapshots,
+			&ec2.DescribeSnapshotsInput{
+				Filters: []*ec2.Filter{
+					{
+						Name: aws.String("owner-id"),
+						Values: []*string{
+							accountId(c),
+						},
+					},
+				},
+			},
+			filterGeneric,
 		},
 		{
 			"aws_ebs_volume",
-			"Volumes",
+			[]string{"Volumes"},
 			"VolumeId",
 			c.EC2conn.DescribeVolumes,
 			&ec2.DescribeVolumesInput{},
@@ -290,11 +327,41 @@ func Supported(c *AWSClient) []ResourceInfo {
 		},
 		{
 			"aws_ami",
-			"Images",
+			[]string{"Images"},
 			"ImageId",
 			c.EC2conn.DescribeImages,
-			&ec2.DescribeImagesInput{},
-			filterAmis,
+			&ec2.DescribeImagesInput{
+				Filters: []*ec2.Filter{
+					{
+						Name: aws.String("owner-id"),
+						Values: []*string{
+							accountId(c),
+						},
+					},
+				},
+			},
+			filterGeneric,
 		},
 	}
+}
+
+// getSupported returns the apiDesc by the name of
+// a given resource type
+func getSupported(resType string, c *AWSClient) (ApiDesc, error) {
+	for _, apiDesc := range Supported(c) {
+		if apiDesc.TerraformType == resType {
+			return apiDesc, nil
+		}
+	}
+	return ApiDesc{}, errors.Errorf("no ApiDesc found for resource type %s", resType)
+}
+
+// accountId returns the account ID of the AWS account
+// for the currently used credentials or AWS profile, resp.
+func accountId(c *AWSClient) *string {
+	res, err := c.STSconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return res.Account
 }

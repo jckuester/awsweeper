@@ -19,17 +19,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/resource"
-	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
+	"github.com/terraform-providers/terraform-provider-aws/aws"
 )
 
 func WrappedMain() int {
 	app := "awsweeper"
 	version := "0.1.1"
 
-	set := flag.NewFlagSet("awsweeper", 0)
+	set := flag.NewFlagSet(app, 0)
 	versionFlag := set.Bool("version", false, "Show version")
 	helpFlag := set.Bool("help", false, "Show help")
 	dryRunFlag := set.Bool("dry-run", false, "Don't delete anything, just show what would happen")
@@ -79,13 +79,13 @@ func WrappedMain() int {
 
 	client := &resource.AWSClient{
 		ASconn:  autoscaling.New(sess),
-		EC2conn: ec2.New(sess),
-		ELBconn: elb.New(sess),
-		R53conn: route53.New(sess),
 		CFconn:  cloudformation.New(sess),
+		EC2conn: ec2.New(sess),
 		EFSconn: efs.New(sess),
+		ELBconn: elb.New(sess),
 		IAMconn: iam.New(sess),
 		KMSconn: kms.New(sess),
+		R53conn: route53.New(sess),
 		S3conn:  s3.New(sess),
 		STSconn: sts.New(sess),
 	}

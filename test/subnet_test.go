@@ -76,7 +76,7 @@ func testAccCheckSubnetExists(n string, subnet *ec2.Subnet) resource.TestCheckFu
 			return fmt.Errorf("No subnet ID is set")
 		}
 
-		conn := client.ec2conn
+		conn := client.EC2conn
 		DescribeSubnetOpts := &ec2.DescribeSubnetsInput{
 			SubnetIds: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -96,7 +96,7 @@ func testAccCheckSubnetExists(n string, subnet *ec2.Subnet) resource.TestCheckFu
 
 func testSubnetExists(subnet *ec2.Subnet) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
+		conn := client.EC2conn
 		DescribeSubnetOpts := &ec2.DescribeSubnetsInput{
 			SubnetIds: []*string{subnet.SubnetId},
 		}
@@ -114,7 +114,7 @@ func testSubnetExists(subnet *ec2.Subnet) resource.TestCheckFunc {
 
 func testSubnetDeleted(subnet *ec2.Subnet) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
+		conn := client.EC2conn
 		DescribeSubnetOpts := &ec2.DescribeSubnetsInput{
 			SubnetIds: []*string{subnet.SubnetId},
 		}

@@ -51,7 +51,7 @@ func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheck
 			return fmt.Errorf("No key pair ID is set")
 		}
 
-		conn := client.ec2conn
+		conn := client.EC2conn
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -82,7 +82,7 @@ func testMainKeyPairIds(args []string, kp *ec2.KeyPairInfo) resource.TestCheckFu
 
 func testKeyPairExists(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
+		conn := client.EC2conn
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{kp.KeyName},
 		}
@@ -100,7 +100,7 @@ func testKeyPairExists(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 
 func testKeyPairDeleted(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ec2conn
+		conn := client.EC2conn
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{kp.KeyName},
 		}

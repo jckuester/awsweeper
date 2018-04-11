@@ -8,8 +8,6 @@ import (
 )
 
 var (
-	resInfos = Supported(&AWSClient{})
-
 	securityGroupType = "aws_security_group"
 	iamRoleType       = "aws_iam_role"
 	instanceType      = "aws_instance"
@@ -40,26 +38,28 @@ var (
 )
 
 func TestValidate(t *testing.T) {
-	require.NoError(t, f.Validate(resInfos))
+	apiDescs := Supported(mockAWSClient())
+
+	require.NoError(t, f.Validate(apiDescs))
 }
 
-func TestValidateEmptyCfg(t *testing.T) {
-	rf := &YamlFilter{
-		cfg: YamlCfg{},
-	}
+func TestValidate_EmptyCfg(t *testing.T) {
+	apiDescs := Supported(mockAWSClient())
 
-	require.NoError(t, rf.Validate(resInfos))
+	require.NoError(t, f.Validate(apiDescs))
 }
 
-func TestValidateNotSupportedResourceTypeInCfg(t *testing.T) {
-	rf := &YamlFilter{
+func TestValidate_NotSupportedResourceTypeInCfg(t *testing.T) {
+	apiDescs := Supported(mockAWSClient())
+
+	f := &YamlFilter{
 		cfg: YamlCfg{
 			securityGroupType:    {},
 			"not_supported_type": {},
 		},
 	}
 
-	require.Error(t, rf.Validate(resInfos))
+	require.Error(t, f.Validate(apiDescs))
 }
 
 func TestResourceTypes(t *testing.T) {

@@ -18,11 +18,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
-	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
+	"github.com/terraform-providers/terraform-provider-aws/aws"
+	"time"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 var client = initClient()
@@ -33,35 +35,22 @@ var testAccProvider *schema.Provider
 var argsDryRun = []string{"cmd", "--dry-run", "config.yml"}
 var argsForceDelete = []string{"cmd", "--force", "config.yml"}
 
-type AWSClient struct {
-	ec2conn         *ec2.EC2
-	autoscalingconn *autoscaling.AutoScaling
-	elbconn         *elb.ELB
-	r53conn         *route53.Route53
-	cfconn          *cloudformation.CloudFormation
-	efsconn         *efs.EFS
-	iamconn         *iam.IAM
-	kmsconn         *kms.KMS
-	s3conn          *s3.S3
-	stsconn         *sts.STS
-}
-
-func initClient() *AWSClient {
+func initClient() *res.AWSClient {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	return &AWSClient{
-		autoscalingconn: autoscaling.New(sess),
-		ec2conn:         ec2.New(sess),
-		elbconn:         elb.New(sess),
-		r53conn:         route53.New(sess),
-		cfconn:          cloudformation.New(sess),
-		efsconn:         efs.New(sess),
-		iamconn:         iam.New(sess),
-		kmsconn:         kms.New(sess),
-		s3conn:          s3.New(sess),
-		stsconn:         sts.New(sess),
+	return &res.AWSClient{
+		ASconn:  autoscaling.New(sess),
+		CFconn:  cloudformation.New(sess),
+		EC2conn: ec2.New(sess),
+		EFSconn: efs.New(sess),
+		ELBconn: elb.New(sess),
+		IAMconn: iam.New(sess),
+		KMSconn: kms.New(sess),
+		R53conn: route53.New(sess),
+		S3conn:  s3.New(sess),
+		STSconn: sts.New(sess),
 	}
 }
 
@@ -100,4 +89,21 @@ func testMainTags(args []string, config string) resource.TestCheckFunc {
 		command.WrappedMain()
 		return nil
 	}
+}
+
+func retryOnAwsCode(code string, f func() (interface{}, error)) (interface{}, error) {
+	var resp interface{}
+	err := resource.Retry(1*time.Minute, func() *resource.RetryError {
+		var err error
+		resp, err = f()
+		if err != nil {
+			awsErr, ok := err.(awserr.Error)
+			if ok && awsErr.Code() == code {
+				return resource.RetryableError(err)
+			}
+			return resource.NonRetryableError(err)
+		}
+		return nil
+	})
+	return resp, err
 }
