@@ -8,8 +8,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-func List(a ApiDesc) (Resources, interface{}) {
-	descOut := invoke(a.DescribeFn, a.DescribeFnInput)
+// List lists all AWS resources based on a given
+// API description
+func List(a APIDesc) (Resources, interface{}) {
+	descOut := invoke(a.Describe, a.DescribeInput)
 	descOutRes, err := findSlice(a.DescribeOutputName[0], descOut.Elem())
 	if err != nil {
 		log.Fatal(err)
@@ -34,8 +36,8 @@ func List(a ApiDesc) (Resources, interface{}) {
 
 				res = append(res, &Resource{
 					Type: a.TerraformType,
-					Id:   field.Elem().String(),
-					Tags: Tags(nestedDescOut.Index(i)),
+					ID:   field.Elem().String(),
+					Tags: tags(nestedDescOut.Index(i)),
 				})
 			}
 		}
@@ -50,8 +52,8 @@ func List(a ApiDesc) (Resources, interface{}) {
 
 		res = append(res, &Resource{
 			Type: a.TerraformType,
-			Id:   field.Elem().String(),
-			Tags: Tags(descOutRes.Index(i)),
+			ID:   field.Elem().String(),
+			Tags: tags(descOutRes.Index(i)),
 		})
 	}
 
@@ -71,11 +73,11 @@ func invoke(fn interface{}, arg interface{}) reflect.Value {
 	return outputs[0]
 }
 
-func findField(a ApiDesc, v reflect.Value) (reflect.Value, error) {
-	field := v.FieldByName(a.DeleteId)
+func findField(a APIDesc, v reflect.Value) (reflect.Value, error) {
+	field := v.FieldByName(a.DeleteID)
 
 	if !field.IsValid() {
-		return reflect.Value{}, errors.Errorf("Field %s does not exist", a.DeleteId)
+		return reflect.Value{}, errors.Errorf("Field %s does not exist", a.DeleteID)
 	}
 	return field, nil
 }
@@ -92,7 +94,7 @@ func findSlice(name string, v reflect.Value) (reflect.Value, error) {
 	return slice, nil
 }
 
-func Tags(res reflect.Value) map[string]string {
+func tags(res reflect.Value) map[string]string {
 	tags := map[string]string{}
 
 	ts := reflect.Indirect(res).FieldByName("Tags")

@@ -25,6 +25,8 @@ import (
 	"github.com/terraform-providers/terraform-provider-aws/aws"
 )
 
+// WrappedMain is the actual main function
+// that does not exit for acceptance testing purposes
 func WrappedMain() int {
 	app := "awsweeper"
 	version := "0.1.1"
@@ -40,7 +42,7 @@ func WrappedMain() int {
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
 
-	set.Usage = func() { fmt.Println(Help()) }
+	set.Usage = func() { fmt.Println(help()) }
 	set.Parse(os.Args[1:])
 
 	if *versionFlag {
@@ -49,14 +51,14 @@ func WrappedMain() int {
 	}
 
 	if *helpFlag {
-		fmt.Println(Help())
+		fmt.Println(help())
 		os.Exit(0)
 	}
 
 	c := &cli.CLI{
 		Name:     app,
 		Version:  version,
-		HelpFunc: BasicHelpFunc(app),
+		HelpFunc: basicHelpFunc(app),
 	}
 	c.Args = append([]string{"wipe"}, set.Args()...)
 
@@ -93,7 +95,7 @@ func WrappedMain() int {
 	c.Commands = map[string]cli.CommandFactory{
 		"wipe": func() (cli.Command, error) {
 			return &Wipe{
-				Ui: &cli.ColoredUi{
+				UI: &cli.ColoredUi{
 					Ui:          ui,
 					OutputColor: cli.UiColorBlue,
 				},
@@ -113,7 +115,7 @@ func WrappedMain() int {
 	return exitStatus
 }
 
-func Help() string {
+func help() string {
 	return `Usage: awsweeper [options] <config.yaml>
 
   Delete AWS resources via a yaml configuration.
@@ -129,9 +131,9 @@ Options:
 `
 }
 
-func BasicHelpFunc(app string) cli.HelpFunc {
+func basicHelpFunc(app string) cli.HelpFunc {
 	return func(commands map[string]cli.CommandFactory) string {
-		return Help()
+		return help()
 	}
 }
 

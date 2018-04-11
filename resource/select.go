@@ -1,18 +1,19 @@
 package resource
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"strings"
 	"log"
+	"strings"
 )
 
 func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	result := Resources{}
 
 	for _, r := range res {
-		if f.Matches(r.Type, r.Id, r.Tags) {
+		if f.Matches(r.Type, r.ID, r.Tags) {
 			result = append(result, r)
 		}
 	}
@@ -26,14 +27,14 @@ func filterEfsFileSystem(res Resources, raw interface{}, f Filter, c *AWSClient)
 	for _, r := range res {
 		if f.Matches(r.Type, *raw.(*efs.DescribeFileSystemsOutput).FileSystems[0].Name) {
 			res, err := c.EFSconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
-				FileSystemId: &r.Id,
+				FileSystemId: &r.ID,
 			})
 
 			if err == nil {
 				for _, r := range res.MountTargets {
 					resultMt = append(resultMt, &Resource{
 						Type: "aws_efs_mount_target",
-						Id:   *r.MountTargetId,
+						ID:   *r.MountTargetId,
 					})
 				}
 			}
@@ -49,31 +50,31 @@ func filterIamUser(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	resultUserPol := Resources{}
 
 	for _, r := range res {
-		if f.Matches(r.Type, r.Id) {
+		if f.Matches(r.Type, r.ID) {
 			// list inline policies, delete with "aws_iam_user_policy" delete routine
 			ups, err := c.IAMconn.ListUserPolicies(&iam.ListUserPoliciesInput{
-				UserName: &r.Id,
+				UserName: &r.ID,
 			})
 			if err == nil {
 				for _, up := range ups.PolicyNames {
 					resultUserPol = append(resultUserPol, &Resource{
 						Type: "aws_iam_user_policy",
-						Id:   r.Id + ":" + *up,
+						ID:   r.ID + ":" + *up,
 					})
 				}
 			}
 
 			// Lists all managed policies that are attached  to user (inline and others)
 			upols, err := c.IAMconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
-				UserName: &r.Id,
+				UserName: &r.ID,
 			})
 			if err == nil {
 				for _, upol := range upols.AttachedPolicies {
 					resultAttPol = append(resultAttPol, &Resource{
 						Type: "aws_iam_user_policy_attachment",
-						Id:   *upol.PolicyArn,
+						ID:   *upol.PolicyArn,
 						Attrs: map[string]string{
-							"user":       r.Id,
+							"user":       r.ID,
 							"policy_arn": *upol.PolicyArn,
 						},
 					})
@@ -91,9 +92,9 @@ func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []R
 	resultAtt := Resources{}
 
 	for i, r := range res {
-		if f.Matches(r.Type, r.Id) {
+		if f.Matches(r.Type, r.ID) {
 			es, err := c.IAMconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
-				PolicyArn: &r.Id,
+				PolicyArn: &r.ID,
 			})
 			if err != nil {
 				log.Fatal(err)
@@ -115,9 +116,9 @@ func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []R
 
 			resultAtt = append(resultAtt, &Resource{
 				Type: "aws_iam_policy_attachment",
-				Id:   "none",
+				ID:   "none",
 				Attrs: map[string]string{
-					"policy_arn": r.Id,
+					"policy_arn": r.ID,
 					"name":       *raw.(*iam.ListPoliciesOutput).Policies[i].PolicyName,
 					"users":      strings.Join(users, "."),
 					"roles":      strings.Join(roles, "."),
@@ -135,17 +136,17 @@ func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []R
 func filterKmsKeys(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	result := Resources{}
 
-	for _, r := range raw.(*kms.ListKeysOutput).Keys {
-		if f.Matches(res[0].Type, *r.KeyArn) {
+	for _, r := range res {
+		if f.Matches(r.Type, r.ID) {
 			req, res := c.KMSconn.DescribeKeyRequest(&kms.DescribeKeyInput{
-				KeyId: r.KeyId,
+				KeyId: aws.String(r.ID),
 			})
 			err := req.Send()
 			if err == nil {
 				if *res.KeyMetadata.KeyState != "PendingDeletion" {
 					result = append(result, &Resource{
 						Type: "aws_kms_key",
-						Id:   *r.KeyArn,
+						ID:   r.ID,
 					})
 				}
 			}

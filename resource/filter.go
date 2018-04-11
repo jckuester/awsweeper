@@ -31,19 +31,19 @@ type yamlEntry struct {
 
 // Filter selects resources for deletion.
 type Filter interface {
-	Validate(as []ApiDesc) error
+	Validate(as []APIDesc) error
 	Matches(resType string, id string, tags ...map[string]string) bool
 	Types() []string
 }
 
-// ResourceFilter selects resources
+// YamlFilter selects resources
 // stated in a yaml configuration for deletion.
 type YamlFilter struct {
 	file string
 	cfg  YamlCfg
 }
 
-// New creates a new filter to select resources for deletion
+// NewFilter creates a new filter to select resources for deletion
 // based on the path of yaml file.
 func NewFilter(yamlFile string) *YamlFilter {
 	return &YamlFilter{
@@ -71,7 +71,7 @@ func read(file string) YamlCfg {
 
 // Validate checks if all resource types appearing in the config
 // of the filter are currently supported.
-func (f YamlFilter) Validate(as []ApiDesc) error {
+func (f YamlFilter) Validate(as []APIDesc) error {
 	for _, resType := range f.Types() {
 		isTerraformType := false
 		for _, a := range as {
@@ -80,7 +80,7 @@ func (f YamlFilter) Validate(as []ApiDesc) error {
 			}
 		}
 		if !isTerraformType {
-			return errors.New(fmt.Sprintf("Err: Unsupported resource type '%s' found in '%s'\n", resType, f.file))
+			return fmt.Errorf("unsupported resource type '%s' found in '%s'", resType, f.file)
 		}
 	}
 	return nil
@@ -98,13 +98,13 @@ func (f YamlFilter) Types() []string {
 	return resTypes
 }
 
-// MatchId checks whether a resource (given by its type and id)
+// MatchID checks whether a resource (given by its type and id)
 // matches the filter.
-func (f YamlFilter) matchId(resType string, id string) (bool, error) {
+func (f YamlFilter) matchID(resType string, id string) (bool, error) {
 	cfgEntry, _ := f.cfg[resType]
 
 	if len(cfgEntry.Ids) == 0 {
-		return false, errors.New("No entries set in filter to match ids")
+		return false, errors.New("no entries set in filter to match IDs")
 	}
 
 	for _, regex := range cfgEntry.Ids {
@@ -146,19 +146,19 @@ func (f YamlFilter) matchTags(resType string, tags map[string]string) (bool, err
 // Matches checks whether a resource (given by its type and tags) matches
 // the configured filter criteria for tags and ids.
 func (f YamlFilter) Matches(resType string, id string, tags ...map[string]string) bool {
-	var matchesTags bool = false
-	var errTags error = nil
+	var matchesTags = false
+	var errTags error
 
 	if tags != nil {
 		matchesTags, errTags = f.matchTags(resType, tags[0])
 	}
-	matchesId, errId := f.matchId(resType, id)
+	matchesID, errID := f.matchID(resType, id)
 
 	// if the filter has neither an entry to match ids nor tags,
 	// select all resources of that type
-	if errId != nil && errTags != nil {
+	if errID != nil && errTags != nil {
 		return true
 	}
 
-	return matchesId || matchesTags
+	return matchesID || matchesTags
 }

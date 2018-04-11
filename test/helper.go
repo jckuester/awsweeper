@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -24,7 +25,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
 	"time"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 var client = initClient()

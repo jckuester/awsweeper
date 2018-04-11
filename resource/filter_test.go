@@ -83,21 +83,21 @@ func TestResourceTypes_emptyCfg(t *testing.T) {
 }
 
 func TestResourceMatchIds_IdMatchesFilterCriteria(t *testing.T) {
-	matchesId, err := f.matchId(iamRoleType, "foo-lala")
+	matchesID, err := f.matchID(iamRoleType, "foo-lala")
 
-	require.True(t, matchesId)
+	require.True(t, matchesID)
 	require.NoError(t, err)
 }
 
 func TestResourceMatchIds_IdDoesNotMatchFilterCriteria(t *testing.T) {
-	matchesId, err := f.matchId(iamRoleType, "lala-foo")
+	matchesID, err := f.matchID(iamRoleType, "lala-foo")
 
-	require.False(t, matchesId)
+	require.False(t, matchesID)
 	require.NoError(t, err)
 }
 
 func TestResourceMatchIds_NoFilterCriteriaSetForIds(t *testing.T) {
-	_, err := f.matchId(securityGroupType, "matches-any-id")
+	_, err := f.matchID(securityGroupType, "matches-any-id")
 
 	require.Error(t, err)
 }

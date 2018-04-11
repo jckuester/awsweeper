@@ -17,15 +17,15 @@ import (
 )
 
 var (
-	someVpcId = "some-vpc-id"
+	someVpcID = "some-vpc-id"
 	tagKey    = "bla"
 	tagValue  = "blub"
 
-	otherVpcId = "other-vpc-id"
+	otherVpcID = "other-vpc-id"
 
 	vpcs = []*ec2.Vpc{
 		{
-			VpcId: aws.String(someVpcId),
+			VpcId: aws.String(someVpcID),
 			Tags: []*ec2.Tag{
 				{
 					Key:   aws.String(tagKey),
@@ -34,7 +34,7 @@ var (
 			},
 		},
 		{
-			VpcId: aws.String(otherVpcId),
+			VpcId: aws.String(otherVpcID),
 		},
 	}
 )
@@ -46,30 +46,30 @@ func TestList_Vpc(t *testing.T) {
 
 	result := []string{}
 	for _, r := range res {
-		result = append(result, r.Id)
+		result = append(result, r.ID)
 	}
 
 	require.Len(t, res, 2)
-	require.Contains(t, result, someVpcId)
-	require.Contains(t, result, otherVpcId)
+	require.Contains(t, result, someVpcID)
+	require.Contains(t, result, otherVpcID)
 }
 
 func TestList_NestedDescribeOutput(t *testing.T) {
-	someExpectedId := "some-instance-id"
-	otherExpectedId := "other-instance-id"
+	someExpectedID := "some-instance-id"
+	otherExpectedID := "other-instance-id"
 
 	rs := []*ec2.Reservation{
 		{
 			Instances: []*ec2.Instance{
 				{
-					InstanceId: aws.String(someExpectedId),
+					InstanceId: aws.String(someExpectedID),
 				},
 			},
 		},
 		{
 			Instances: []*ec2.Instance{
 				{
-					InstanceId: aws.String(otherExpectedId),
+					InstanceId: aws.String(otherExpectedID),
 				},
 			},
 		},
@@ -80,33 +80,33 @@ func TestList_NestedDescribeOutput(t *testing.T) {
 
 	result := []string{}
 	for _, r := range res {
-		result = append(result, r.Id)
+		result = append(result, r.ID)
 	}
 
 	require.Len(t, res, 2)
-	require.Contains(t, result, otherExpectedId)
-	require.Contains(t, result, someExpectedId)
+	require.Contains(t, result, otherExpectedID)
+	require.Contains(t, result, someExpectedID)
 }
 
 func TestList_OnlyTerminatedInstances(t *testing.T) {
 	// Filtering can not be tested via unit tests
 	// (it happens on AWS server side)
 	t.SkipNow()
-	availInstanceId := "id-of-available-instance"
-	termInstanceId := "id-of-terminated-instance"
+	availInstanceID := "id-of-available-instance"
+	termInstanceID := "id-of-terminated-instance"
 
 	rs := []*ec2.Reservation{
 		{
 			Instances: []*ec2.Instance{
 				{
-					InstanceId: aws.String(termInstanceId),
+					InstanceId: aws.String(termInstanceID),
 					State: &ec2.InstanceState{
 						Code: aws.Int64(48),
 						Name: aws.String("terminated"),
 					},
 				},
 				{
-					InstanceId: aws.String(availInstanceId),
+					InstanceId: aws.String(availInstanceID),
 					State: &ec2.InstanceState{
 						Code: aws.Int64(16),
 						Name: aws.String("running"),
@@ -122,24 +122,24 @@ func TestList_OnlyTerminatedInstances(t *testing.T) {
 	fmt.Println(res)
 
 	require.Len(t, res, 1)
-	require.Equal(t, availInstanceId, res[0].Id)
+	require.Equal(t, availInstanceID, res[0].ID)
 }
 
 func TestInvoke(t *testing.T) {
 	apiDesc := mockVpc(vpcs)
 
-	describeOut := invoke(apiDesc.DescribeFn, apiDesc.DescribeFnInput)
+	describeOut := invoke(apiDesc.Describe, apiDesc.DescribeInput)
 	actualVpcs := describeOut.Elem().FieldByName("Vpcs")
 
 	result := []string{}
 	for i := 0; i < actualVpcs.Len(); i++ {
-		actualId := actualVpcs.Index(i).Elem().FieldByName("VpcId").Elem().String()
-		result = append(result, actualId)
+		actualID := actualVpcs.Index(i).Elem().FieldByName("VpcId").Elem().String()
+		result = append(result, actualID)
 	}
 
 	require.Len(t, result, 2)
-	require.Contains(t, result, someVpcId)
-	require.Contains(t, result, otherVpcId)
+	require.Contains(t, result, someVpcID)
+	require.Contains(t, result, otherVpcID)
 }
 
 func TestFindSlice(t *testing.T) {
@@ -148,12 +148,12 @@ func TestFindSlice(t *testing.T) {
 	desc := ec2.DescribeVpcsOutput{
 		Vpcs: vpcs,
 	}
-	expectedId := vpcs[0].VpcId
+	expectedID := vpcs[0].VpcId
 
 	result, err := findSlice(apiDesc.DescribeOutputName[0], reflect.ValueOf(desc))
-	actualId := result.Index(0).Elem().FieldByName("VpcId").Elem().String()
+	actualID := result.Index(0).Elem().FieldByName("VpcId").Elem().String()
 
-	require.Equal(t, *expectedId, actualId)
+	require.Equal(t, *expectedID, actualID)
 	require.NoError(t, err)
 }
 
@@ -174,7 +174,7 @@ func TestTags_Vpc(t *testing.T) {
 	require.Equal(t, tagValue, res[0].Tags[tagKey])
 }
 
-func mockVpc(vpcs []*ec2.Vpc) ApiDesc {
+func mockVpc(vpcs []*ec2.Vpc) APIDesc {
 	mockAS := &mocks.AutoScalingAPI{}
 	mockCF := &mocks.CloudFormationAPI{}
 	mockEC2 := &mocks.EC2API{}
@@ -227,7 +227,7 @@ func mockVpc(vpcs []*ec2.Vpc) ApiDesc {
 	return a
 }
 
-func mockInstance(rs []*ec2.Reservation) ApiDesc {
+func mockInstance(rs []*ec2.Reservation) APIDesc {
 	mockAS := &mocks.AutoScalingAPI{}
 	mockCF := &mocks.CloudFormationAPI{}
 	mockEC2 := &mocks.EC2API{}
