@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+// here is where the selection of resources happens, i.e.
+// the filter entry for a certain resource type
+// is applied to all resources of that type.
+//
+// For most resource types, this generic method can be used for selection,
+// but some resource types require handling of special cases (see functions below).
 func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
 	result := Resources{}
 

@@ -12,9 +12,10 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-// Wipe stores information needed to delete selected AWS resources, i.e.
-// a given filter (yaml configuration file), AWS account credentials, and
-// if deletion should be happen as dry run.
+// Wipe is currently the only command.
+//
+// It deletes selected AWS resources by
+// a given filter (yaml configuration file).
 type Wipe struct {
 	UI          cli.Ui
 	dryRun      bool
@@ -24,7 +25,7 @@ type Wipe struct {
 	filter      *resource.YamlFilter
 }
 
-// Run runs the deletion process of AWS resources
+// Run executes the wipe command.
 func (c *Wipe) Run(args []string) int {
 	if len(args) == 1 {
 		c.filter = resource.NewFilter(args[0])
@@ -70,16 +71,9 @@ func (c *Wipe) Run(args []string) int {
 	return 0
 }
 
-// Help returns help information of this command
-func (c *Wipe) Help() string {
-	return help()
-}
-
-// Synopsis returns a short version of the help information of this command
-func (c *Wipe) Synopsis() string {
-	return "Delete AWS resources via a yaml configuration"
-}
-
+// wipe does the actual deletion (in parallel) of a given (filtered) list of AWS resources.
+// It takes advantage of the AWS terraform provider by using its delete functions
+// (so we get retries, detaching of policies from some IAM resources before deletion, and other stuff for free).
 func (c *Wipe) wipe(res resource.Resources) {
 	numWorkerThreads := 10
 
@@ -134,6 +128,7 @@ func (c *Wipe) wipe(res resource.Resources) {
 						log.Fatal(err)
 					}
 
+					// doesn't hurt to always add some force attributes
 					st.Attributes["force_detach_policies"] = "true"
 					st.Attributes["force_destroy"] = "true"
 
@@ -159,4 +154,15 @@ func (c *Wipe) wipe(res resource.Resources) {
 
 	wg.Wait()
 	fmt.Print("---\n\n")
+}
+
+
+// Help returns help information of this command
+func (c *Wipe) Help() string {
+	return help()
+}
+
+// Synopsis returns a short version of the help information of this command
+func (c *Wipe) Synopsis() string {
+	return "Delete AWS resources via a yaml configuration"
 }

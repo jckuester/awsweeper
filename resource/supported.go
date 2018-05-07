@@ -27,8 +27,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AWSClient stores all the clients to AWS
-// services with their session
+// AWSClient stores all the clients of AWS
+// services including their sessions.
 type AWSClient struct {
 	EC2conn ec2iface.EC2API
 	ASconn  autoscalingiface.AutoScalingAPI
@@ -43,8 +43,8 @@ type AWSClient struct {
 }
 
 // APIDesc stores the necessary information about
-// resource types (identified by its terraform type)
-// to list and delete its resources via the go-aws-sdk
+// a single resource type (identified by its terraform type)
+// to list and delete resources of that type via the go-aws-sdk
 // and Terraform AWS provider API.
 type APIDesc struct {
 	TerraformType      string
@@ -55,13 +55,13 @@ type APIDesc struct {
 	Select             func(Resources, interface{}, Filter, *AWSClient) []Resources
 }
 
-// Resources is a list of AWS resources
+// Resources is a list of AWS resources.
 type Resources []*Resource
 
 // Resource contains information about
-// a single AWS resource
+// a single AWS resource.
 type Resource struct {
-	Type  string // we use the terraform type for identification
+	Type  string // we use the terraform type to identify the resource type
 	ID    string
 	Attrs map[string]string
 	Tags  map[string]string

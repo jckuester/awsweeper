@@ -9,7 +9,7 @@ import (
 )
 
 // List lists all AWS resources based on a given
-// API description
+// API description.
 func List(a APIDesc) (Resources, interface{}) {
 	descOut := invoke(a.Describe, a.DescribeInput)
 	descOutRes, err := findSlice(a.DescribeOutputName[0], descOut.Elem())
@@ -60,10 +60,10 @@ func List(a APIDesc) (Resources, interface{}) {
 	return res, descOut.Interface()
 }
 
-// invoke is used to generically call any describe function fn
-// of the aws-go-sdk API, where arg is a describe input
-// (e.g. DescribeAutoScalingGroupsInput). Invoke returns
-// a generic describe output and awserr.Error.
+// invoke is used to generically call any describe function
+// of the aws-go-sdk API, where arg is the describe input to
+// a describe function fn (e.g. DescribeAutoScalingGroupsInput).
+// Invoke returns a generic describe output and awserr.Error.
 func invoke(fn interface{}, arg interface{}) reflect.Value {
 	inputs := []reflect.Value{
 		reflect.ValueOf(arg),
@@ -94,6 +94,7 @@ func findSlice(name string, v reflect.Value) (reflect.Value, error) {
 	return slice, nil
 }
 
+// tags finds tags via reflection in the describe output.
 func tags(res reflect.Value) map[string]string {
 	tags := map[string]string{}
 
