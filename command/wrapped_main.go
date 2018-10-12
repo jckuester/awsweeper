@@ -8,16 +8,6 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/efs"
-	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/terraform"
@@ -79,18 +69,7 @@ func WrappedMain() int {
 		ErrorWriter: os.Stderr,
 	}
 
-	client := &resource.AWSClient{
-		ASconn:  autoscaling.New(sess),
-		CFconn:  cloudformation.New(sess),
-		EC2conn: ec2.New(sess),
-		EFSconn: efs.New(sess),
-		ELBconn: elb.New(sess),
-		IAMconn: iam.New(sess),
-		KMSconn: kms.New(sess),
-		R53conn: route53.New(sess),
-		S3conn:  s3.New(sess),
-		STSconn: sts.New(sess),
-	}
+	client := resource.NewAWS(sess)
 
 	c.Commands = map[string]cli.CommandFactory{
 		"wipe": func() (cli.Command, error) {

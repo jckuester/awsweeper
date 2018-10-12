@@ -20,7 +20,7 @@ type Wipe struct {
 	UI          cli.Ui
 	dryRun      bool
 	forceDelete bool
-	client      *resource.AWSClient
+	client      *resource.AWS
 	provider    *terraform.ResourceProvider
 	filter      *resource.YamlFilter
 }
@@ -51,20 +51,11 @@ func (c *Wipe) Run(args []string) int {
 		}
 	}
 
-	err := c.filter.Validate(resource.Supported(c.client))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	for _, resType := range c.filter.Types() {
-		for _, apiDesc := range resource.Supported(c.client) {
-			if resType == apiDesc.TerraformType {
-				res, raw := resource.List(apiDesc)
-				resList := apiDesc.Select(res, raw, c.filter, c.client)
-				for _, res := range resList {
-					c.wipe(res)
-				}
-			}
+		res, raw := c.client.DeletableResource(resType)
+		filteredRes := c.filter.Apply(resType, res, raw, c.client)
+		for _, r := range filteredRes {
+			c.wipe(r)
 		}
 	}
 
@@ -84,7 +75,7 @@ func (c *Wipe) wipe(res resource.Resources) {
 	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res[0].Type, len(res))
 
 	ii := &terraform.InstanceInfo{
-		Type: res[0].Type,
+		Type: string(res[0].Type),
 	}
 
 	d := &terraform.InstanceDiff{
@@ -155,7 +146,6 @@ func (c *Wipe) wipe(res resource.Resources) {
 	wg.Wait()
 	fmt.Print("---\n\n")
 }
-
 
 // Help returns help information of this command
 func (c *Wipe) Help() string {

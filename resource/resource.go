@@ -8,94 +8,60 @@ import (
 	"github.com/pkg/errors"
 )
 
-// List lists all AWS resources based on a given
-// API description.
-func List(a APIDesc) (Resources, interface{}) {
-	descOut := invoke(a.Describe, a.DescribeInput)
-	descOutRes, err := findSlice(a.DescribeOutputName[0], descOut.Elem())
+// DeletableResource lists all AWS resources for a given resource type
+// and converts them into a format that can be deleted by the Terraform API.
+func (aws AWS) DeletableResource(resType TerraformResourceType) (Resources, interface{}) {
+	deletableResources := Resources{}
+
+	rawResources, err := aws.rawResources(resType)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	res := Resources{}
+	value := reflect.ValueOf(rawResources)
 
-	if len(a.DescribeOutputName) == 2 {
-		// find resources in the case the output is a nested struct
-		// (e.g. "Reservations" -> "Instances")
-		for i := 0; i < descOutRes.Len(); i++ {
-			nestedDescOut, err := findSlice(a.DescribeOutputName[1], descOutRes.Index(i).Elem())
-			if err != nil {
-				log.Fatal(err)
-			}
+	for i := 0; i < value.Len(); i++ {
+		deleteID, err := getDeleteID(resType)
 
-			for i := 0; i < nestedDescOut.Len(); i++ {
-				field, err := findField(a, reflect.Indirect(nestedDescOut.Index(i)))
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				res = append(res, &Resource{
-					Type: a.TerraformType,
-					ID:   field.Elem().String(),
-					Tags: tags(nestedDescOut.Index(i)),
-				})
-			}
-		}
-		return res, descOut.Interface()
-	}
-
-	for i := 0; i < descOutRes.Len(); i++ {
-		field, err := findField(a, reflect.Indirect(descOutRes.Index(i)))
+		field, err := findField(deleteID, reflect.Indirect(value.Index(i)))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		res = append(res, &Resource{
-			Type: a.TerraformType,
+		deletableResources = append(deletableResources, &Resource{
+			Type: resType,
 			ID:   field.Elem().String(),
-			Tags: tags(descOutRes.Index(i)),
+			Tags: findTags(value.Index(i)),
 		})
 	}
 
-	return res, descOut.Interface()
+	return deletableResources, rawResources
 }
 
-// invoke is used to generically call any describe function
-// of the aws-go-sdk API, where arg is the describe input to
-// a describe function fn (e.g. DescribeAutoScalingGroupsInput).
-// Invoke returns a generic describe output and awserr.Error.
-func invoke(fn interface{}, arg interface{}) reflect.Value {
-	inputs := []reflect.Value{
-		reflect.ValueOf(arg),
-	}
-
-	outputs := reflect.ValueOf(fn).Call(inputs)
-	return outputs[0]
-}
-
-func findField(a APIDesc, v reflect.Value) (reflect.Value, error) {
-	field := v.FieldByName(a.DeleteID)
+func findField(name string, v reflect.Value) (reflect.Value, error) {
+	field := v.FieldByName(name)
 
 	if !field.IsValid() {
-		return reflect.Value{}, errors.Errorf("Field %s does not exist", a.DeleteID)
+		return reflect.Value{}, errors.Errorf("Field %s does not exist", name)
 	}
 	return field, nil
 }
 
-func findSlice(name string, v reflect.Value) (reflect.Value, error) {
-	if v.Type().Kind() != reflect.Struct {
-		return reflect.Value{}, errors.Errorf("Input not a struct: %s", v)
-	}
-	slice := v.FieldByName(name)
+//
+//func findSlice(name string, v reflect.Value) (reflect.Value, error) {
+//	if v.Type().Kind() != reflect.Struct {
+//		return reflect.Value{}, errors.Errorf("Input not a struct: %s", v)
+//	}
+//	slice := v.FieldByName(name)
+//
+//	if !slice.IsValid() {
+//		return reflect.Value{}, errors.Errorf("Slice %s does not exist", name)
+//	}
+//	return slice, nil
+//}
 
-	if !slice.IsValid() {
-		return reflect.Value{}, errors.Errorf("Slice %s does not exist", name)
-	}
-	return slice, nil
-}
-
-// tags finds tags via reflection in the describe output.
-func tags(res reflect.Value) map[string]string {
+// findTags finds findTags via reflection in the describe output.
+func findTags(res reflect.Value) map[string]string {
 	tags := map[string]string{}
 
 	ts := reflect.Indirect(res).FieldByName("Tags")

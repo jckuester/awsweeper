@@ -1,21 +1,36 @@
 package resource
 
 import (
+	"log"
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"log"
-	"strings"
 )
 
-// here is where the selection of resources happens, i.e.
-// the filter entry for a certain resource type
+// here is where the filtering of resources happens, i.e.
+// the filter entry in the config for a certain resource type
 // is applied to all resources of that type.
-//
+func (f YamlFilter) Apply(resType TerraformResourceType, res Resources, raw interface{}, aws *AWS) []Resources {
+	switch resType {
+	case EfsFileSystem:
+		return f.efsFileSystemFilter(res, raw, aws)
+	case IamUser:
+		return f.iamUserFilter(res, raw, aws)
+	case IamPolicy:
+		return f.iamPolicyFilter(res, raw, aws)
+	case KmsKey:
+		return f.kmsKeysFilter(res, raw, aws)
+	default:
+		return f.defaultFilter(res, raw, aws)
+	}
+}
+
 // For most resource types, this generic method can be used for selection,
 // but some resource types require handling of special cases (see functions below).
-func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+func (f YamlFilter) defaultFilter(res Resources, raw interface{}, c *AWS) []Resources {
 	result := Resources{}
 
 	for _, r := range res {
@@ -26,13 +41,13 @@ func filterGeneric(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	return []Resources{result}
 }
 
-func filterEfsFileSystem(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+func (f YamlFilter) efsFileSystemFilter(res Resources, raw interface{}, c *AWS) []Resources {
 	result := Resources{}
 	resultMt := Resources{}
 
 	for _, r := range res {
 		if f.Matches(r.Type, *raw.(*efs.DescribeFileSystemsOutput).FileSystems[0].Name) {
-			res, err := c.EFSconn.DescribeMountTargets(&efs.DescribeMountTargetsInput{
+			res, err := c.DescribeMountTargets(&efs.DescribeMountTargetsInput{
 				FileSystemId: &r.ID,
 			})
 
@@ -50,7 +65,7 @@ func filterEfsFileSystem(res Resources, raw interface{}, f Filter, c *AWSClient)
 	return []Resources{resultMt, result}
 }
 
-func filterIamUser(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+func (f YamlFilter) iamUserFilter(res Resources, raw interface{}, c *AWS) []Resources {
 	result := Resources{}
 	resultAttPol := Resources{}
 	resultUserPol := Resources{}
@@ -58,7 +73,7 @@ func filterIamUser(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	for _, r := range res {
 		if f.Matches(r.Type, r.ID) {
 			// list inline policies, delete with "aws_iam_user_policy" delete routine
-			ups, err := c.IAMconn.ListUserPolicies(&iam.ListUserPoliciesInput{
+			ups, err := c.ListUserPolicies(&iam.ListUserPoliciesInput{
 				UserName: &r.ID,
 			})
 			if err == nil {
@@ -71,7 +86,7 @@ func filterIamUser(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 			}
 
 			// Lists all managed policies that are attached  to user (inline and others)
-			upols, err := c.IAMconn.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+			upols, err := c.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
 				UserName: &r.ID,
 			})
 			if err == nil {
@@ -93,13 +108,13 @@ func filterIamUser(res Resources, raw interface{}, f Filter, c *AWSClient) []Res
 	return []Resources{resultUserPol, resultAttPol, result}
 }
 
-func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+func (f YamlFilter) iamPolicyFilter(res Resources, raw interface{}, c *AWS) []Resources {
 	result := Resources{}
 	resultAtt := Resources{}
 
 	for i, r := range res {
 		if f.Matches(r.Type, r.ID) {
-			es, err := c.IAMconn.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
+			es, err := c.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
 				PolicyArn: &r.ID,
 			})
 			if err != nil {
@@ -139,12 +154,12 @@ func filterIamPolicy(res Resources, raw interface{}, f Filter, c *AWSClient) []R
 	return []Resources{resultAtt, result}
 }
 
-func filterKmsKeys(res Resources, raw interface{}, f Filter, c *AWSClient) []Resources {
+func (f YamlFilter) kmsKeysFilter(res Resources, raw interface{}, c *AWS) []Resources {
 	result := Resources{}
 
 	for _, r := range res {
 		if f.Matches(r.Type, r.ID) {
-			req, res := c.KMSconn.DescribeKeyRequest(&kms.DescribeKeyInput{
+			req, res := c.DescribeKeyRequest(&kms.DescribeKeyInput{
 				KeyId: aws.String(r.ID),
 			})
 			err := req.Send()
