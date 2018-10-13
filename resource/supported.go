@@ -27,8 +27,7 @@ import (
 	"github.com/go-errors/errors"
 )
 
-// TerraformResourceType identifies a type of resource
-// TerraformResourceType identifies a type of resource
+// TerraformResourceType identifies the type of a resource
 type TerraformResourceType string
 
 const (
@@ -106,20 +105,19 @@ func NewAWS(s *session.Session) *AWS {
 	}
 }
 
-// rawResources is a list of AWS resources.
-type Resources []*Resource
+// DeletableResources is a list of AWS resources.
+type DeletableResources []*DeletableResource
 
-// Resource contains information about
-// a single AWS resource.
-type Resource struct {
+// DeletableResource contains information about a single AWS resource that can be deleted by Terraform.
+type DeletableResource struct {
 	Type  TerraformResourceType
 	ID    string
 	Attrs map[string]string
 	Tags  map[string]string
 }
 
-// rawResources list all resources of a particular type
-func (aws *AWS) rawResources(resType TerraformResourceType) (interface{}, error) {
+// RawResources lists all resources of a particular type
+func (aws *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 	switch resType {
 	case AutoscalingGroup:
 		return aws.autoscalingGroups()

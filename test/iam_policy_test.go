@@ -168,7 +168,7 @@ resource "aws_iam_policy" "foo" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "Resource": "*"
+      "DeletableResource": "*"
     }
   ]
 }
@@ -189,7 +189,7 @@ resource "aws_iam_policy" "bar" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "Resource": "*"
+      "DeletableResource": "*"
     }
   ]
 }
@@ -212,7 +212,7 @@ resource "aws_iam_policy" "foo" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "Resource": "*"
+      "DeletableResource": "*"
     }
   ]
 }
@@ -233,7 +233,7 @@ resource "aws_iam_policy" "bar" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "Resource": "*"
+      "DeletableResource": "*"
     }
   ]
 }

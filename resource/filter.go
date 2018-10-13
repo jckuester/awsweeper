@@ -30,7 +30,7 @@ type yamlEntry struct {
 
 // Filter selects resources for deletion.
 type Filter interface {
-	Apply(resType TerraformResourceType, res Resources, raw interface{}, aws *AWS) []Resources
+	Apply(resType TerraformResourceType, res DeletableResources, raw interface{}, aws *AWS) []DeletableResources
 	//Validate(as []APIDesc) error
 	Matches(resType TerraformResourceType, id string, tags ...map[string]string) bool
 	Types() []string

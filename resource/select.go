@@ -13,7 +13,7 @@ import (
 // here is where the filtering of resources happens, i.e.
 // the filter entry in the config for a certain resource type
 // is applied to all resources of that type.
-func (f YamlFilter) Apply(resType TerraformResourceType, res Resources, raw interface{}, aws *AWS) []Resources {
+func (f YamlFilter) Apply(resType TerraformResourceType, res DeletableResources, raw interface{}, aws *AWS) []DeletableResources {
 	switch resType {
 	case EfsFileSystem:
 		return f.efsFileSystemFilter(res, raw, aws)
@@ -30,20 +30,20 @@ func (f YamlFilter) Apply(resType TerraformResourceType, res Resources, raw inte
 
 // For most resource types, this generic method can be used for selection,
 // but some resource types require handling of special cases (see functions below).
-func (f YamlFilter) defaultFilter(res Resources, raw interface{}, c *AWS) []Resources {
-	result := Resources{}
+func (f YamlFilter) defaultFilter(res DeletableResources, raw interface{}, c *AWS) []DeletableResources {
+	result := DeletableResources{}
 
 	for _, r := range res {
 		if f.Matches(r.Type, r.ID, r.Tags) {
 			result = append(result, r)
 		}
 	}
-	return []Resources{result}
+	return []DeletableResources{result}
 }
 
-func (f YamlFilter) efsFileSystemFilter(res Resources, raw interface{}, c *AWS) []Resources {
-	result := Resources{}
-	resultMt := Resources{}
+func (f YamlFilter) efsFileSystemFilter(res DeletableResources, raw interface{}, c *AWS) []DeletableResources {
+	result := DeletableResources{}
+	resultMt := DeletableResources{}
 
 	for _, r := range res {
 		if f.Matches(r.Type, *raw.(*efs.DescribeFileSystemsOutput).FileSystems[0].Name) {
@@ -53,7 +53,7 @@ func (f YamlFilter) efsFileSystemFilter(res Resources, raw interface{}, c *AWS) 
 
 			if err == nil {
 				for _, r := range res.MountTargets {
-					resultMt = append(resultMt, &Resource{
+					resultMt = append(resultMt, &DeletableResource{
 						Type: "aws_efs_mount_target",
 						ID:   *r.MountTargetId,
 					})
@@ -62,13 +62,13 @@ func (f YamlFilter) efsFileSystemFilter(res Resources, raw interface{}, c *AWS) 
 			result = append(result, r)
 		}
 	}
-	return []Resources{resultMt, result}
+	return []DeletableResources{resultMt, result}
 }
 
-func (f YamlFilter) iamUserFilter(res Resources, raw interface{}, c *AWS) []Resources {
-	result := Resources{}
-	resultAttPol := Resources{}
-	resultUserPol := Resources{}
+func (f YamlFilter) iamUserFilter(res DeletableResources, raw interface{}, c *AWS) []DeletableResources {
+	result := DeletableResources{}
+	resultAttPol := DeletableResources{}
+	resultUserPol := DeletableResources{}
 
 	for _, r := range res {
 		if f.Matches(r.Type, r.ID) {
@@ -78,7 +78,7 @@ func (f YamlFilter) iamUserFilter(res Resources, raw interface{}, c *AWS) []Reso
 			})
 			if err == nil {
 				for _, up := range ups.PolicyNames {
-					resultUserPol = append(resultUserPol, &Resource{
+					resultUserPol = append(resultUserPol, &DeletableResource{
 						Type: "aws_iam_user_policy",
 						ID:   r.ID + ":" + *up,
 					})
@@ -91,7 +91,7 @@ func (f YamlFilter) iamUserFilter(res Resources, raw interface{}, c *AWS) []Reso
 			})
 			if err == nil {
 				for _, upol := range upols.AttachedPolicies {
-					resultAttPol = append(resultAttPol, &Resource{
+					resultAttPol = append(resultAttPol, &DeletableResource{
 						Type: "aws_iam_user_policy_attachment",
 						ID:   *upol.PolicyArn,
 						Attrs: map[string]string{
@@ -105,12 +105,12 @@ func (f YamlFilter) iamUserFilter(res Resources, raw interface{}, c *AWS) []Reso
 			result = append(result, r)
 		}
 	}
-	return []Resources{resultUserPol, resultAttPol, result}
+	return []DeletableResources{resultUserPol, resultAttPol, result}
 }
 
-func (f YamlFilter) iamPolicyFilter(res Resources, raw interface{}, c *AWS) []Resources {
-	result := Resources{}
-	resultAtt := Resources{}
+func (f YamlFilter) iamPolicyFilter(res DeletableResources, raw interface{}, c *AWS) []DeletableResources {
+	result := DeletableResources{}
+	resultAtt := DeletableResources{}
 
 	for i, r := range res {
 		if f.Matches(r.Type, r.ID) {
@@ -135,7 +135,7 @@ func (f YamlFilter) iamPolicyFilter(res Resources, raw interface{}, c *AWS) []Re
 				roles = append(roles, *r.RoleName)
 			}
 
-			resultAtt = append(resultAtt, &Resource{
+			resultAtt = append(resultAtt, &DeletableResource{
 				Type: "aws_iam_policy_attachment",
 				ID:   "none",
 				Attrs: map[string]string{
@@ -151,11 +151,11 @@ func (f YamlFilter) iamPolicyFilter(res Resources, raw interface{}, c *AWS) []Re
 	}
 	// policy attachments are not resources
 	// what happens here, is that policy is detached from groups, users and roles
-	return []Resources{resultAtt, result}
+	return []DeletableResources{resultAtt, result}
 }
 
-func (f YamlFilter) kmsKeysFilter(res Resources, raw interface{}, c *AWS) []Resources {
-	result := Resources{}
+func (f YamlFilter) kmsKeysFilter(res DeletableResources, raw interface{}, c *AWS) []DeletableResources {
+	result := DeletableResources{}
 
 	for _, r := range res {
 		if f.Matches(r.Type, r.ID) {
@@ -165,7 +165,7 @@ func (f YamlFilter) kmsKeysFilter(res Resources, raw interface{}, c *AWS) []Reso
 			err := req.Send()
 			if err == nil {
 				if *res.KeyMetadata.KeyState != "PendingDeletion" {
-					result = append(result, &Resource{
+					result = append(result, &DeletableResource{
 						Type: "aws_kms_key",
 						ID:   r.ID,
 					})
@@ -174,5 +174,5 @@ func (f YamlFilter) kmsKeysFilter(res Resources, raw interface{}, c *AWS) []Reso
 		}
 	}
 	// associated aliases will also be deleted after waiting period (between 7 to 30 days)
-	return []Resources{result}
+	return []DeletableResources{result}
 }

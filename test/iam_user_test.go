@@ -155,7 +155,7 @@ resource "aws_iam_user_policy" "test_user_policy" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "Resource": "*"
+      "DeletableResource": "*"
     }
   ]
 }
@@ -174,7 +174,7 @@ resource "aws_iam_policy" "test_policy" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "Resource": "*"
+      "DeletableResource": "*"
     }
   ]
 }

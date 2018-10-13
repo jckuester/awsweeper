@@ -3,39 +3,34 @@ package resource
 import (
 	"reflect"
 
-	"log"
-
 	"github.com/pkg/errors"
 )
 
-// DeletableResource lists all AWS resources for a given resource type
-// and converts them into a format that can be deleted by the Terraform API.
-func (aws AWS) DeletableResource(resType TerraformResourceType) (Resources, interface{}) {
-	deletableResources := Resources{}
+// DeletableResources converts given raw resources for a given resource type
+// into a format that can be deleted by the Terraform API.
+func (aws AWS) DeletableResources(resType TerraformResourceType, resources interface{}) (DeletableResources, error) {
+	deletableResources := DeletableResources{}
+	reflectResources := reflect.ValueOf(resources)
 
-	rawResources, err := aws.rawResources(resType)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	value := reflect.ValueOf(rawResources)
-
-	for i := 0; i < value.Len(); i++ {
+	for i := 0; i < reflectResources.Len(); i++ {
 		deleteID, err := getDeleteID(resType)
-
-		field, err := findField(deleteID, reflect.Indirect(value.Index(i)))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
-		deletableResources = append(deletableResources, &Resource{
+		field, err := findField(deleteID, reflect.Indirect(reflectResources.Index(i)))
+		if err != nil {
+			return nil, err
+		}
+
+		deletableResources = append(deletableResources, &DeletableResource{
 			Type: resType,
 			ID:   field.Elem().String(),
-			Tags: findTags(value.Index(i)),
+			Tags: findTags(reflectResources.Index(i)),
 		})
 	}
 
-	return deletableResources, rawResources
+	return deletableResources, nil
 }
 
 func findField(name string, v reflect.Value) (reflect.Value, error) {

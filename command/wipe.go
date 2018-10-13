@@ -52,8 +52,17 @@ func (c *Wipe) Run(args []string) int {
 	}
 
 	for _, resType := range c.filter.Types() {
-		res, raw := c.client.DeletableResource(resType)
-		filteredRes := c.filter.Apply(resType, res, raw, c.client)
+		rawResources, err := c.client.RawResources(resType)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		deletableResources, err := c.client.DeletableResources(resType, rawResources)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
 		for _, r := range filteredRes {
 			c.wipe(r)
 		}
@@ -65,7 +74,7 @@ func (c *Wipe) Run(args []string) int {
 // wipe does the actual deletion (in parallel) of a given (filtered) list of AWS resources.
 // It takes advantage of the AWS terraform provider by using its delete functions
 // (so we get retries, detaching of policies from some IAM resources before deletion, and other stuff for free).
-func (c *Wipe) wipe(res resource.Resources) {
+func (c *Wipe) wipe(res resource.DeletableResources) {
 	numWorkerThreads := 10
 
 	if len(res) == 0 {
@@ -82,7 +91,7 @@ func (c *Wipe) wipe(res resource.Resources) {
 		Destroy: true,
 	}
 
-	chResources := make(chan *resource.Resource, numWorkerThreads)
+	chResources := make(chan *resource.DeletableResource, numWorkerThreads)
 
 	var wg sync.WaitGroup
 	wg.Add(len(res))
