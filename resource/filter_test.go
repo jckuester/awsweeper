@@ -33,7 +33,7 @@ var (
 	}
 
 	f = &YamlFilter{
-		cfg: yml,
+		Cfg: yml,
 	}
 )
 
@@ -53,7 +53,7 @@ var (
 //	apiDescs := Supported(mockAWSClient())
 //
 //	f := &YamlFilter{
-//		cfg: YamlCfg{
+//		Cfg: YamlCfg{
 //			securityGroupType:    {},
 //			"not_supported_type": {},
 //		},
@@ -73,7 +73,7 @@ func TestResourceTypes(t *testing.T) {
 
 func TestResourceTypes_emptyCfg(t *testing.T) {
 	rf := &YamlFilter{
-		cfg: YamlCfg{},
+		Cfg: YamlCfg{},
 	}
 
 	resTypes := rf.Types()

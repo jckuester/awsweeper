@@ -12,20 +12,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type AutoScalingGroup struct {
-	Name string
-	Tags map[string]string
-}
+var (
+	testAutoscalingGroupName = "test-auto-scaling-group"
+	testTags                 = map[string]string{
+		"test-tag-key": "test-tag-value",
+	}
+	testAutoscalingGroup = &autoscaling.DescribeAutoScalingGroupsOutput{
+		AutoScalingGroups: []*autoscaling.Group{
+			{
+				AutoScalingGroupName: &testAutoscalingGroupName,
+				Tags:                 convertTags(testTags),
+			},
+		},
+	}
+
+	testLaunchConfigurationName = "test-launch-configuration-name"
+	testLaunchConfiguration     = &autoscaling.DescribeLaunchConfigurationsOutput{
+		LaunchConfigurations: []*autoscaling.LaunchConfiguration{
+			{
+				LaunchConfigurationName: &testLaunchConfigurationName,
+			},
+		},
+	}
+)
 
 func TestAWS_Resources_AutoScalingGroups(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	// given
-	autoscalingGroup := AutoScalingGroup{
-		Name: "test-auto-scaling-group",
-	}
-	awsMock := createAutoScalingGroupAPIMock(mockCtrl, autoscalingGroup)
+	awsMock := createAutoScalingGroupMock(mockCtrl)
 
 	// when
 	resources, err := awsMock.RawResources(resource.AutoscalingGroup)
@@ -34,32 +50,58 @@ func TestAWS_Resources_AutoScalingGroups(t *testing.T) {
 
 	// then
 	assert.Len(t, groups, 1)
-	assert.Equal(t, *groups[0].AutoScalingGroupName, autoscalingGroup.Name)
+	assert.Equal(t, *groups[0].AutoScalingGroupName, testAutoscalingGroupName)
 }
 
-func createAutoScalingGroupAPIMock(mockCtrl *gomock.Controller, autoscalingGroup AutoScalingGroup) *resource.AWS {
+func TestAWS_Resources_LaunchConfigurations(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// given
+	awsMock := createLaunchConfigurationMock(mockCtrl)
+
+	// when
+	resources, err := awsMock.RawResources(resource.LaunchConfiguration)
+	require.NoError(t, err)
+	lc := resources.([]*autoscaling.LaunchConfiguration)
+
+	// then
+	assert.Len(t, lc, 1)
+	assert.Equal(t, *lc[0].LaunchConfigurationName, testLaunchConfigurationName)
+}
+
+func createAutoScalingGroupMock(mockCtrl *gomock.Controller) *resource.AWS {
 	mockObj := mocks.NewMockAutoScalingAPI(mockCtrl)
 	awsMock := &resource.AWS{
 		AutoScalingAPI: mockObj,
 	}
 
-	var tags []*autoscaling.TagDescription
-	for key, value := range autoscalingGroup.Tags {
-		tags = append(tags, &autoscaling.TagDescription{
+	mockObj.EXPECT().DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{}).Return(
+		testAutoscalingGroup, nil)
+
+	return awsMock
+}
+
+func createLaunchConfigurationMock(mockCtrl *gomock.Controller) *resource.AWS {
+	mockObj := mocks.NewMockAutoScalingAPI(mockCtrl)
+	awsMock := &resource.AWS{
+		AutoScalingAPI: mockObj,
+	}
+
+	mockObj.EXPECT().DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{}).Return(
+		testLaunchConfiguration, nil)
+
+	return awsMock
+}
+
+func convertTags(tags map[string]string) []*autoscaling.TagDescription {
+	var tagDescriptions []*autoscaling.TagDescription
+
+	for key, value := range tags {
+		tagDescriptions = append(tagDescriptions, &autoscaling.TagDescription{
 			Key:   aws.String(key),
 			Value: aws.String(value),
 		})
 	}
-
-	mockObj.EXPECT().DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{}).Return(
-		&autoscaling.DescribeAutoScalingGroupsOutput{
-			AutoScalingGroups: []*autoscaling.Group{
-				{
-					AutoScalingGroupName: &autoscalingGroup.Name,
-					Tags:                 tags,
-				},
-			},
-		},
-		nil)
-	return awsMock
+	return tagDescriptions
 }

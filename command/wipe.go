@@ -63,8 +63,8 @@ func (c *Wipe) Run(args []string) int {
 		}
 
 		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
-		for _, r := range filteredRes {
-			c.wipe(r)
+		for _, res := range filteredRes {
+			c.wipe(res)
 		}
 	}
 

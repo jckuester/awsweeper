@@ -40,7 +40,7 @@ type Filter interface {
 // stated in a yaml configuration for deletion.
 type YamlFilter struct {
 	file string
-	cfg  YamlCfg
+	Cfg  YamlCfg
 }
 
 // NewFilter creates a new filter to select resources for deletion
@@ -48,7 +48,7 @@ type YamlFilter struct {
 func NewFilter(yamlFile string) *YamlFilter {
 	return &YamlFilter{
 		file: yamlFile,
-		cfg:  read(yamlFile),
+		Cfg:  read(yamlFile),
 	}
 }
 
@@ -89,9 +89,9 @@ func read(file string) YamlCfg {
 // Types returns all the resource types stated in the yaml config.
 // We use the same identifiers of resource types as the Terraform AWS provider.
 func (f YamlFilter) Types() []TerraformResourceType {
-	resTypes := make([]TerraformResourceType, 0, len(f.cfg))
+	resTypes := make([]TerraformResourceType, 0, len(f.Cfg))
 
-	for k := range f.cfg {
+	for k := range f.Cfg {
 		resTypes = append(resTypes, k)
 	}
 
@@ -101,7 +101,7 @@ func (f YamlFilter) Types() []TerraformResourceType {
 // MatchID checks whether a resource (given by its type and id)
 // matches the filter.
 func (f YamlFilter) matchID(resType TerraformResourceType, id string) (bool, error) {
-	cfgEntry, _ := f.cfg[resType]
+	cfgEntry, _ := f.Cfg[resType]
 
 	if len(cfgEntry.Ids) == 0 {
 		return false, errors.New("no entries set in filter to match IDs")
@@ -123,7 +123,7 @@ func (f YamlFilter) matchID(resType TerraformResourceType, id string) (bool, err
 // matches the filter. The keys must match exactly, whereas
 // the tag value is checked against a regex.
 func (f YamlFilter) matchTags(resType TerraformResourceType, tags map[string]string) (bool, error) {
-	cfgEntry, _ := f.cfg[resType]
+	cfgEntry, _ := f.Cfg[resType]
 
 	if len(cfgEntry.Tags) == 0 {
 		return false, errors.New("No entries set in filter to match findTags")
