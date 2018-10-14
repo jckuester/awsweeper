@@ -17,7 +17,7 @@ import (
 
 func TestAccKmsKey_deleteByTags(t *testing.T) {
 	// TODO implement tag support
-	t.Skip()
+	t.Skip("Costs money even in free tier")
 	var k1, k2 kms.KeyMetadata
 
 	resource.Test(t, resource.TestCase{
@@ -30,10 +30,10 @@ func TestAccKmsKey_deleteByTags(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKmsKeyExists("aws_kms_key.foo", &k1),
 					testAccCheckKmsKeyExists("aws_kms_key.bar", &k2),
-					testMainTags(argsDryRun, testAccKmsKeyAWSweeperTagsConfig),
+					testMainTags(argsDryRun, testAWSweeperTagsConfig(res.KmsKey)),
 					testKmsKeyExists(&k1),
 					testKmsKeyExists(&k2),
-					testMainTags(argsForceDelete, testAccKmsKeyAWSweeperTagsConfig),
+					testMainTags(argsForceDelete, testAWSweeperTagsConfig(res.KmsKey)),
 					testKmsKeyDeleted(&k1),
 					testKmsKeyExists(&k2),
 				),
@@ -43,6 +43,7 @@ func TestAccKmsKey_deleteByTags(t *testing.T) {
 }
 
 func TestAccKmsKey_deleteByIds(t *testing.T) {
+	t.Skip("Costs money even in free tier")
 	var k1, k2 kms.KeyMetadata
 
 	resource.Test(t, resource.TestCase{
@@ -78,7 +79,7 @@ func testAccCheckKmsKeyExists(name string, k *kms.KeyMetadata) resource.TestChec
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.KMSconn
+		conn := client.KMSAPI
 
 		o, err := retryOnAwsCode("NotFoundException", func() (interface{}, error) {
 			return conn.DescribeKey(&kms.DescribeKeyInput{
@@ -99,7 +100,7 @@ func testAccCheckKmsKeyExists(name string, k *kms.KeyMetadata) resource.TestChec
 func testMainKmsKeyIds(args []string, k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccKmsKeyAWSweeperIdsConfig(k)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.KmsKey, k.KeyId)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -109,7 +110,7 @@ func testMainKmsKeyIds(args []string, k *kms.KeyMetadata) resource.TestCheckFunc
 
 func testKmsKeyExists(k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.KMSconn
+		conn := client.KMSAPI
 		_, err := retryOnAwsCode("NotFoundException", func() (interface{}, error) {
 			return conn.DescribeKey(&kms.DescribeKeyInput{
 				KeyId: k.KeyId,
@@ -132,7 +133,7 @@ func testKmsKeyExists(k *kms.KeyMetadata) resource.TestCheckFunc {
 
 func testKmsKeyDeleted(k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.KMSconn
+		conn := client.KMSAPI
 
 		resp, err := conn.DescribeKey(&kms.DescribeKeyInput{
 			KeyId: k.KeyId,
@@ -175,18 +176,3 @@ resource "aws_kms_key" "bar" {
 	}
 }
 `
-
-const testAccKmsKeyAWSweeperTagsConfig = `
-aws_kms_key:
-  tags:
-    foo: bar
-`
-
-func testAccKmsKeyAWSweeperIdsConfig(k *kms.KeyMetadata) string {
-	id := k.KeyId
-	return fmt.Sprintf(`
-aws_kms_key:
-  ids:
-    - %s
-`, *id)
-}

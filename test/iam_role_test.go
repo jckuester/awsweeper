@@ -44,14 +44,14 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %s", name)
+			return fmt.Errorf("not found: %s", name)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.IAMconn
+		conn := client.IAMAPI
 		desc := &iam.GetRoleInput{
 			RoleName: aws.String(rs.Primary.ID),
 		}
@@ -76,7 +76,7 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 func testMainIamRoleIds(args []string, r *iam.Role) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccIamRoleAWSweeperIdsConfig(r)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamRole, r.RoleName)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -86,7 +86,7 @@ func testMainIamRoleIds(args []string, r *iam.Role) resource.TestCheckFunc {
 
 func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMconn
+		conn := client.IAMAPI
 		desc := &iam.GetRoleInput{
 			RoleName: r.RoleName,
 		}
@@ -108,7 +108,7 @@ func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 
 func testIamRoleDeleted(r *iam.Role) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMconn
+		conn := client.IAMAPI
 
 		desc := &iam.GetRoleInput{
 			RoleName: r.RoleName,
@@ -197,12 +197,3 @@ resource "aws_iam_role_policy_attachment" "test_attach" {
     policy_arn = "${aws_iam_policy.test_policy.arn}"
 }
 `
-
-func testAccIamRoleAWSweeperIdsConfig(r *iam.Role) string {
-	id := r.RoleName
-	return fmt.Sprintf(`
-aws_iam_role:
-  ids:
-    - %s
-`, *id)
-}

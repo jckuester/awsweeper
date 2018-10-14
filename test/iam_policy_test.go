@@ -69,14 +69,14 @@ func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckF
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %s", name)
+			return fmt.Errorf("not found: %s", name)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.IAMconn
+		conn := client.IAMAPI
 		desc := &iam.GetPolicyInput{
 			PolicyArn: aws.String(rs.Primary.ID),
 		}
@@ -101,7 +101,7 @@ func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckF
 func testMainIamPolicyIds(args []string, p *iam.Policy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccIamPolicyAWSweeperIdsConfig(p)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamPolicy, p.Arn)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -111,7 +111,7 @@ func testMainIamPolicyIds(args []string, p *iam.Policy) resource.TestCheckFunc {
 
 func testIamPolicyExists(p *iam.Policy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMconn
+		conn := client.IAMAPI
 		desc := &iam.GetPolicyInput{
 			PolicyArn: p.Arn,
 		}
@@ -133,7 +133,7 @@ func testIamPolicyExists(p *iam.Policy) resource.TestCheckFunc {
 
 func testIamPolicyDeleted(p *iam.Policy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMconn
+		conn := client.IAMAPI
 
 		desc := &iam.GetPolicyInput{
 			PolicyArn: p.Arn,
@@ -275,12 +275,3 @@ resource "aws_iam_policy_attachment" "test-attach" {
   policy_arn = "${aws_iam_policy.foo.arn}"
 }
 `
-
-func testAccIamPolicyAWSweeperIdsConfig(p *iam.Policy) string {
-	id := p.Arn
-	return fmt.Sprintf(`
-aws_iam_policy:
-  ids:
-    - %s
-`, *id)
-}

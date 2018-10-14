@@ -44,14 +44,14 @@ func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheck
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No key pair ID is set")
+			return fmt.Errorf("no key pair ID is set")
 		}
 
-		conn := client.EC2conn
+		conn := client.EC2API
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -60,7 +60,7 @@ func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheck
 			return err
 		}
 		if len(resp.KeyPairs) == 0 {
-			return fmt.Errorf("Key pair not found")
+			return fmt.Errorf("key pair not found")
 		}
 
 		*kp = *resp.KeyPairs[0]
@@ -72,7 +72,7 @@ func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheck
 func testMainKeyPairIds(args []string, kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccKeyPairAWSweeperIdsConfig(kp)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.KeyPair, kp.KeyName)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -82,7 +82,7 @@ func testMainKeyPairIds(args []string, kp *ec2.KeyPairInfo) resource.TestCheckFu
 
 func testKeyPairExists(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.EC2API
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{kp.KeyName},
 		}
@@ -91,7 +91,7 @@ func testKeyPairExists(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 			return err
 		}
 		if len(resp.KeyPairs) == 0 {
-			return fmt.Errorf("Key pair has been deleted")
+			return fmt.Errorf("key pair has been deleted")
 		}
 
 		return nil
@@ -100,7 +100,7 @@ func testKeyPairExists(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 
 func testKeyPairDeleted(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.EC2API
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{kp.KeyName},
 		}
@@ -117,7 +117,7 @@ func testKeyPairDeleted(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 		}
 
 		if len(resp.KeyPairs) != 0 {
-			return fmt.Errorf("Key pair hasn't been deleted")
+			return fmt.Errorf("key pair hasn't been deleted")
 
 		}
 
@@ -136,12 +136,3 @@ resource "aws_key_pair" "bar" {
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD3F6tyPEFEzV0LX3X8BsXdMsQz1x2cEikKDEY0aIj41qgxMCP/iteneqXSIFZBp5vizPvaoIR3Um9xK7PGoW8giupGn+EPuxIA4cDM4vzOqOkiMPhz5XK0whEjkVzTo4+S0puvDZuwIsdiW9mxhJc7tgBNL0cYlWSYVkz4G/fslNfRPW5mYAM49f4fhtxPb5ok4Q2Lg9dPKVHO/Bgeu5woMc7RY0p1ej6D4CKFE6lymSDJpW0YHX/wqE9+cfEauh7xZcG0q9t2ta6F6fmX0agvpFyZo8aFbXeUBr7osSCJNgvavWbM/06niWrOvYX2xwWdhXmXSrbX8ZbabVohBK41 email@example.com"
 }
 `
-
-func testAccKeyPairAWSweeperIdsConfig(kp *ec2.KeyPairInfo) string {
-	id := kp.KeyName
-	return fmt.Sprintf(`
-aws_key_pair:
-  ids:
-    - %s
-`, *id)
-}

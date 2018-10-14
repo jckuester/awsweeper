@@ -44,14 +44,14 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %s", name)
+			return fmt.Errorf("not found: %s", name)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.IAMconn
+		conn := client.IAMAPI
 		desc := &iam.GetUserInput{
 			UserName: aws.String(rs.Primary.ID),
 		}
@@ -76,7 +76,7 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 func testMainIamUserIds(args []string, u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccIamUserAWSweeperIdsConfig(u)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamUser, u.UserName)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -86,7 +86,7 @@ func testMainIamUserIds(args []string, u *iam.User) resource.TestCheckFunc {
 
 func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMconn
+		conn := client.IAMAPI
 		desc := &iam.GetUserInput{
 			UserName: u.UserName,
 		}
@@ -108,7 +108,7 @@ func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 
 func testIamUserDeleted(u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMconn
+		conn := client.IAMAPI
 
 		desc := &iam.GetUserInput{
 			UserName: u.UserName,

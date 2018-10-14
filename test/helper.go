@@ -7,6 +7,8 @@ import (
 
 	"time"
 
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cloudetc/awsweeper/command"
@@ -69,6 +71,22 @@ func testMainTags(args []string, config string) resource.TestCheckFunc {
 		command.WrappedMain()
 		return nil
 	}
+}
+
+func testAWSweeperIdsConfig(resType res.TerraformResourceType, id *string) string {
+	return fmt.Sprintf(`
+%s:
+  ids:
+    - %s
+`, resType, *id)
+}
+
+func testAWSweeperTagsConfig(resType res.TerraformResourceType) string {
+	return fmt.Sprintf(`
+%s:
+  tags:
+    foo: bar
+`, resType)
 }
 
 func retryOnAwsCode(code string, f func() (interface{}, error)) (interface{}, error) {

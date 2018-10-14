@@ -28,10 +28,10 @@ func TestAccVpc_deleteByTags(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckVpcExists("aws_vpc.foo", &vpc1),
 					testAccCheckVpcExists("aws_vpc.bar", &vpc2),
-					testMainTags(argsDryRun, testAccVpcAWSweeperTagsConfig),
+					testMainTags(argsDryRun, testAWSweeperTagsConfig(res.Vpc)),
 					testVpcExists(&vpc1),
 					testVpcExists(&vpc2),
-					testMainTags(argsForceDelete, testAccVpcAWSweeperTagsConfig),
+					testMainTags(argsForceDelete, testAWSweeperTagsConfig(res.Vpc)),
 					testVpcDeleted(&vpc1),
 					testVpcExists(&vpc2),
 				),
@@ -69,14 +69,14 @@ func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %s", name)
+			return fmt.Errorf("not found: %s", name)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.EC2conn
+		conn := client.EC2API
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -97,7 +97,7 @@ func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
 func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccVpcAWSweeperIdsConfig(vpc)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Vpc, vpc.VpcId)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -107,7 +107,7 @@ func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
 
 func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.EC2API
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{vpc.VpcId},
 		}
@@ -125,7 +125,7 @@ func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
 
 func testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.EC2API
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{vpc.VpcId},
 		}
@@ -169,18 +169,3 @@ resource "aws_vpc" "bar" {
 	}
 }
 `
-
-const testAccVpcAWSweeperTagsConfig = `
-aws_vpc:
-  tags:
-    foo: bar
-`
-
-func testAccVpcAWSweeperIdsConfig(vpc *ec2.Vpc) string {
-	id := vpc.VpcId
-	return fmt.Sprintf(`
-aws_vpc:
-  ids:
-    - %s
-`, *id)
-}

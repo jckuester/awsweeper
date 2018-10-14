@@ -32,10 +32,10 @@ func TestAccInternetGateways_deleteByTags(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckInternetGatewayExists("aws_internet_gateway.foo", &ig1),
 					testAccCheckInternetGatewayExists("aws_internet_gateway.bar", &ig2),
-					testMainTags(argsDryRun, testAccInternetGatewayAWSweeperTagsConfig),
+					testMainTags(argsDryRun, testAWSweeperTagsConfig(res.InternetGateway)),
 					testInternetGatewayExists(&ig1),
 					testInternetGatewayExists(&ig2),
-					testMainTags(argsForceDelete, testAccInternetGatewayAWSweeperTagsConfig),
+					testMainTags(argsForceDelete, testAWSweeperTagsConfig(res.InternetGateway)),
 					testInternetGatewayDeleted(&ig1),
 				),
 			},
@@ -72,14 +72,14 @@ func testAccCheckInternetGatewayExists(n string, ig *ec2.InternetGateway) resour
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.EC2conn
+		conn := client.EC2API
 		resp, err := conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{aws.String(rs.Primary.ID)},
 		})
@@ -98,7 +98,7 @@ func testAccCheckInternetGatewayExists(n string, ig *ec2.InternetGateway) resour
 
 func testInternetGatewayExists(ig *ec2.InternetGateway) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.EC2API
 		opts := &ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{ig.InternetGatewayId},
 		}
@@ -117,7 +117,7 @@ func testInternetGatewayExists(ig *ec2.InternetGateway) resource.TestCheckFunc {
 
 func testInternetGatewayDeleted(ig *ec2.InternetGateway) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.EC2API
 		desc := &ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{ig.InternetGatewayId},
 		}
@@ -144,7 +144,8 @@ func testInternetGatewayDeleted(ig *ec2.InternetGateway) resource.TestCheckFunc 
 func testMainInternetGatewayIds(args []string, ig *ec2.InternetGateway) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccInternetGatewayAWSweeperIdsConfig(ig)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.InternetGateway, ig.InternetGatewayId)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -197,19 +198,3 @@ resource "aws_vpc" "bar" {
 	}
 }
 `
-
-const testAccInternetGatewayAWSweeperTagsConfig = `
-aws_internet_gateway:
-  tags:
-    foo: bar
-`
-
-func testAccInternetGatewayAWSweeperIdsConfig(ig *ec2.InternetGateway) string {
-	id := ig.InternetGatewayId
-
-	return fmt.Sprintf(`
-aws_internet_gateway:
-  ids:
-    - %s
-`, *id)
-}
