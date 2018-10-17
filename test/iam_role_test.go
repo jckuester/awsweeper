@@ -166,7 +166,7 @@ resource "aws_iam_role_policy" "test_role_policy" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "DeletableResource": "*"
+      "Resource": "*"
     }
   ]
 }
@@ -185,7 +185,7 @@ resource "aws_iam_policy" "test_policy" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "DeletableResource": "*"
+      "Resource": "*"
     }
   ]
 }

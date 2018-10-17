@@ -8,7 +8,7 @@ import (
 
 // DeletableResources converts given raw resources for a given resource type
 // into a format that can be deleted by the Terraform API.
-func (aws AWS) DeletableResources(resType TerraformResourceType, resources interface{}) (DeletableResources, error) {
+func (a AWS) DeletableResources(resType TerraformResourceType, resources interface{}) (DeletableResources, error) {
 	deletableResources := DeletableResources{}
 	reflectResources := reflect.ValueOf(resources)
 

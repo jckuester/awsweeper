@@ -28,13 +28,14 @@ func (f YamlFilter) Apply(resType TerraformResourceType, res DeletableResources,
 	}
 }
 
-// For most resource types, this generic method can be used for selection,
-// but some resource types require handling of special cases (see functions below).
+// For most resource types, this default filter method can be used.
+// However, for some resource types additional information need to be queried from the AWS API. Filtering for those
+// is handled in special functions below.
 func (f YamlFilter) defaultFilter(res DeletableResources, raw interface{}, c *AWS) []DeletableResources {
 	result := DeletableResources{}
 
 	for _, r := range res {
-		if f.Matches(r.Type, r.ID, r.Tags) {
+		if f.matches(r.Type, r.ID, r.Tags) {
 			result = append(result, r)
 		}
 	}
@@ -46,7 +47,7 @@ func (f YamlFilter) efsFileSystemFilter(res DeletableResources, raw interface{},
 	resultMt := DeletableResources{}
 
 	for _, r := range res {
-		if f.Matches(r.Type, *raw.(*efs.DescribeFileSystemsOutput).FileSystems[0].Name) {
+		if f.matches(r.Type, *raw.([]*efs.FileSystemDescription)[0].Name) {
 			res, err := c.DescribeMountTargets(&efs.DescribeMountTargetsInput{
 				FileSystemId: &r.ID,
 			})
@@ -71,7 +72,7 @@ func (f YamlFilter) iamUserFilter(res DeletableResources, raw interface{}, c *AW
 	resultUserPol := DeletableResources{}
 
 	for _, r := range res {
-		if f.Matches(r.Type, r.ID) {
+		if f.matches(r.Type, r.ID) {
 			// list inline policies, delete with "aws_iam_user_policy" delete routine
 			ups, err := c.ListUserPolicies(&iam.ListUserPoliciesInput{
 				UserName: &r.ID,
@@ -113,7 +114,7 @@ func (f YamlFilter) iamPolicyFilter(res DeletableResources, raw interface{}, c *
 	resultAtt := DeletableResources{}
 
 	for i, r := range res {
-		if f.Matches(r.Type, r.ID) {
+		if f.matches(r.Type, r.ID) {
 			es, err := c.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
 				PolicyArn: &r.ID,
 			})
@@ -140,7 +141,7 @@ func (f YamlFilter) iamPolicyFilter(res DeletableResources, raw interface{}, c *
 				ID:   "none",
 				Attrs: map[string]string{
 					"policy_arn": r.ID,
-					"name":       *raw.(*iam.ListPoliciesOutput).Policies[i].PolicyName,
+					"name":       *raw.([]*iam.Policy)[i].PolicyName,
 					"users":      strings.Join(users, "."),
 					"roles":      strings.Join(roles, "."),
 					"groups":     strings.Join(groups, "."),
@@ -158,7 +159,7 @@ func (f YamlFilter) kmsKeysFilter(res DeletableResources, raw interface{}, c *AW
 	result := DeletableResources{}
 
 	for _, r := range res {
-		if f.Matches(r.Type, r.ID) {
+		if f.matches(r.Type, r.ID) {
 			req, res := c.DescribeKeyRequest(&kms.DescribeKeyInput{
 				KeyId: aws.String(r.ID),
 			})

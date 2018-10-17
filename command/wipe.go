@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
+	"github.com/sirupsen/logrus"
 )
 
 // Wipe is currently the only command.
@@ -29,6 +30,11 @@ type Wipe struct {
 func (c *Wipe) Run(args []string) int {
 	if len(args) == 1 {
 		c.filter = resource.NewFilter(args[0])
+
+		err := c.filter.Validate()
+		if err != nil {
+			logrus.WithError(err).Fatal()
+		}
 	} else {
 		fmt.Println(help())
 		return 1

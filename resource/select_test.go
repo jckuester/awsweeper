@@ -4,83 +4,179 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/cloudetc/awsweeper/mocks"
 	"github.com/cloudetc/awsweeper/resource"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	securityGroupType = resource.SecurityGroup
-	iamRoleType       = resource.IamRole
-	instanceType      = resource.Instance
-
-	yml = resource.YamlCfg{
-		iamRoleType: {
-			Ids: []*string{aws.String("^foo.*")},
-		},
-		securityGroupType: {},
-		instanceType: {
-			Tags: map[string]string{
-				"foo": "bar",
-				"bla": "blub",
-			},
-		},
-		resource.AutoscalingGroup: {
-			Ids: []*string{aws.String("^foo.*")},
-			Tags: map[string]string{
-				"foo": "bar",
-			},
-		},
+func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
+	//given
+	f := &resource.YamlFilter{
+		Cfg: resource.YamlCfg{},
 	}
-
-	f = &resource.YamlFilter{
-		Cfg: yml,
-	}
-)
-
-func TestYamlFilter_Apply_DoNotFilter(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	// given
-	mockObj := mocks.NewMockAutoScalingAPI(mockCtrl)
-	awsMock := &resource.AWS{
-		AutoScalingAPI: mockObj,
-	}
-
-	// when
-	deletableResources := []*resource.DeletableResource{
+	res := []*resource.DeletableResource{
 		{
-			Type: resource.AutoscalingGroup,
-			ID:   "do-not-filter",
-		},
-	}
-
-	// when
-	filteredResources := f.Apply(resource.AutoscalingGroup, deletableResources, testAutoscalingGroup, awsMock)
-	assert.Len(t, filteredResources[0], 0)
-}
-
-func TestYamlFilter_Apply(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	// given
-	mockObj := mocks.NewMockAutoScalingAPI(mockCtrl)
-	awsMock := &resource.AWS{
-		AutoScalingAPI: mockObj,
-	}
-
-	// when
-	deletableResources := []*resource.DeletableResource{
-		{
-			Type: resource.AutoscalingGroup,
+			Type: resource.Instance,
 			ID:   "foo",
 		},
 	}
 
 	// when
-	filteredResources := f.Apply(resource.AutoscalingGroup, deletableResources, testAutoscalingGroup, awsMock)
-	assert.Len(t, filteredResources[0], 1)
+	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+
+	// then
+	assert.Len(t, result, len(res))
+	assert.Equal(t, res[0].ID, result[0][0].ID)
+}
+
+func TestYamlFilter_Apply_FilterAll(t *testing.T) {
+	//given
+	f := &resource.YamlFilter{
+		Cfg: resource.YamlCfg{
+			resource.Instance: {},
+		},
+	}
+	res := []*resource.DeletableResource{
+		{
+			Type: resource.Instance,
+			ID:   "foo",
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+
+	// then
+	assert.Len(t, result, len(res))
+	assert.Equal(t, res[0].ID, result[0][0].ID)
+}
+
+func TestYamlFilter_Apply_FilterID(t *testing.T) {
+	//given
+	f := &resource.YamlFilter{
+		Cfg: resource.YamlCfg{
+			resource.Instance: {},
+		},
+	}
+	res := []*resource.DeletableResource{
+		{
+			Type: resource.Instance,
+			ID:   "foo",
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+
+	// then
+	assert.Len(t, result, len(res))
+	assert.Equal(t, res[0].ID, result[0][0].ID)
+}
+
+func TestYamlFilter_Apply_FilterByID(t *testing.T) {
+	//given
+	f := &resource.YamlFilter{
+		Cfg: resource.YamlCfg{
+			resource.Instance: {
+				Ids: []*string{aws.String("^select")},
+			},
+		},
+	}
+
+	// when
+	res := []*resource.DeletableResource{
+		{
+			Type: resource.Instance,
+			ID:   "select-this",
+		},
+		{
+			Type: resource.Instance,
+			ID:   "do-not-select-this",
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	assert.Len(t, result[0], 1)
+	assert.Equal(t, "select-this", result[0][0].ID)
+}
+
+func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
+	//given
+	f := &resource.YamlFilter{
+		Cfg: resource.YamlCfg{
+			resource.Instance: {
+				Tags: map[string]string{
+					"foo": "^bar",
+				}},
+		},
+	}
+
+	// when
+	res := []*resource.DeletableResource{
+		{
+			Type: resource.Instance,
+			ID:   "select-this",
+			Tags: map[string]string{
+				"foo": "bar-bab",
+			},
+		},
+		{
+			Type: resource.Instance,
+			ID:   "do-not-select-this-either",
+			Tags: map[string]string{
+				"foo": "blub",
+			},
+		},
+		{
+			Type: resource.Instance,
+			ID:   "do-not-select-this",
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	assert.Len(t, result[0], 1)
+	assert.Equal(t, "select-this", result[0][0].ID)
+}
+
+func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
+	//given
+	f := &resource.YamlFilter{
+		Cfg: resource.YamlCfg{
+			resource.Instance: {
+				Ids: []*string{aws.String("^foo")},
+				Tags: map[string]string{
+					"foo": "^bar",
+				}},
+		},
+	}
+
+	// when
+	res := []*resource.DeletableResource{
+		{
+			Type: resource.Instance,
+			ID:   "foo",
+			Tags: map[string]string{
+				"foo": "blub",
+			},
+		},
+		{
+			Type: resource.Instance,
+			ID:   "bar",
+			Tags: map[string]string{
+				"foo": "bar",
+			},
+		},
+		{
+			Type: resource.Instance,
+			ID:   "do-not-select-this",
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	assert.Len(t, result[0], 2)
+	assert.Equal(t, "foo", result[0][0].ID)
+	assert.Equal(t, "bar", result[0][1].ID)
+
 }

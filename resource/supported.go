@@ -3,6 +3,7 @@ package resource
 import (
 	"log"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
@@ -31,40 +32,73 @@ import (
 type TerraformResourceType string
 
 const (
+	Ami                 TerraformResourceType = "aws_ami"
 	AutoscalingGroup    TerraformResourceType = "aws_autoscaling_group"
-	LaunchConfiguration TerraformResourceType = "aws_launch_configuration"
-	Instance            TerraformResourceType = "aws_instance"
-	KeyPair             TerraformResourceType = "aws_key_pair"
-	Elb                 TerraformResourceType = "aws_elb"
-	VpcEndpoint         TerraformResourceType = "aws_vpc_endpoint"
-	NatGateway          TerraformResourceType = "aws_nat_gateway"
 	CloudformationStack TerraformResourceType = "aws_cloudformation_stack"
-	Route53Zone         TerraformResourceType = "aws_route53_zone"
-	EfsFileSystem       TerraformResourceType = "aws_efs_file_system"
-	NetworkInterface    TerraformResourceType = "aws_network_interface"
-	Eip                 TerraformResourceType = "aws_eip"
-	InternetGateway     TerraformResourceType = "aws_internet_gateway"
-	Subnet              TerraformResourceType = "aws_subnet"
-	RouteTable          TerraformResourceType = "aws_route_table"
-	SecurityGroup       TerraformResourceType = "aws_security_group"
-	NetworkAcl          TerraformResourceType = "aws_network_acl"
-	Vpc                 TerraformResourceType = "aws_vpc"
-	IamPolicy           TerraformResourceType = "aws_iam_policy"
-	IamGroup            TerraformResourceType = "aws_iam_group"
-	IamUser             TerraformResourceType = "aws_iam_user"
-	IamRole             TerraformResourceType = "aws_iam_role"
-	IamInstanceProfile  TerraformResourceType = "aws_iam_instance_profile"
-	KmsAlias            TerraformResourceType = "aws_kms_alias"
-	KmsKey              TerraformResourceType = "aws_kms_key"
-	S3Bucket            TerraformResourceType = "aws_s3_bucket"
 	EbsSnapshot         TerraformResourceType = "aws_ebs_snapshot"
 	EbsVolume           TerraformResourceType = "aws_ebs_volume"
-	Ami                 TerraformResourceType = "aws_ami"
+	EfsFileSystem       TerraformResourceType = "aws_efs_file_system"
+	Eip                 TerraformResourceType = "aws_eip"
+	Elb                 TerraformResourceType = "aws_elb"
+	IamGroup            TerraformResourceType = "aws_iam_group"
+	IamInstanceProfile  TerraformResourceType = "aws_iam_instance_profile"
+	IamPolicy           TerraformResourceType = "aws_iam_policy"
+	IamRole             TerraformResourceType = "aws_iam_role"
+	IamUser             TerraformResourceType = "aws_iam_user"
+	Instance            TerraformResourceType = "aws_instance"
+	InternetGateway     TerraformResourceType = "aws_internet_gateway"
+	KeyPair             TerraformResourceType = "aws_key_pair"
+	KmsAlias            TerraformResourceType = "aws_kms_alias"
+	KmsKey              TerraformResourceType = "aws_kms_key"
+	LaunchConfiguration TerraformResourceType = "aws_launch_configuration"
+	NatGateway          TerraformResourceType = "aws_nat_gateway"
+	NetworkAcl          TerraformResourceType = "aws_network_acl"
+	NetworkInterface    TerraformResourceType = "aws_network_interface"
+	Route53Zone         TerraformResourceType = "aws_route53_zone"
+	RouteTable          TerraformResourceType = "aws_route_table"
+	S3Bucket            TerraformResourceType = "aws_s3_bucket"
+	SecurityGroup       TerraformResourceType = "aws_security_group"
+	Subnet              TerraformResourceType = "aws_subnet"
+	Vpc                 TerraformResourceType = "aws_vpc"
+	VpcEndpoint         TerraformResourceType = "aws_vpc_endpoint"
 )
 
 var deleteIDs = map[TerraformResourceType]string{
+	Ami:                 "ImageId",
 	AutoscalingGroup:    "AutoScalingGroupName",
+	CloudformationStack: "StackId",
+	EbsSnapshot:         "SnapshotId",
+	EbsVolume:           "VolumeId",
+	EfsFileSystem:       "FileSystemId",
+	Eip:                 "AllocationId",
+	Elb:                 "LoadBalancerName",
+	IamGroup:            "GroupName",
+	IamInstanceProfile:  "InstanceProfileName",
+	IamPolicy:           "Arn",
+	IamRole:             "RoleName",
+	IamUser:             "UserName",
+	Instance:            "InstanceId",
+	InternetGateway:     "InternetGatewayId",
+	KeyPair:             "KeyName",
+	KmsAlias:            "AliasName",
+	KmsKey:              "KeyId",
 	LaunchConfiguration: "LaunchConfigurationName",
+	NatGateway:          "NatGatewayId",
+	NetworkAcl:          "NetworkAclId",
+	NetworkInterface:    "NetworkInterfaceId",
+	Route53Zone:         "Id",
+	RouteTable:          "RouteTableId",
+	S3Bucket:            "Name",
+	SecurityGroup:       "GroupId",
+	Subnet:              "SubnetId",
+	Vpc:                 "VpcId",
+	VpcEndpoint:         "VpcEndpointId",
+}
+
+func SupportedResourceType(resType TerraformResourceType) bool {
+	_, found := deleteIDs[resType]
+
+	return found
 }
 
 func getDeleteID(resType TerraformResourceType) (string, error) {
@@ -117,309 +151,360 @@ type DeletableResource struct {
 }
 
 // RawResources lists all resources of a particular type
-func (aws *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
+func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 	switch resType {
+	case Ami:
+		return a.amis()
 	case AutoscalingGroup:
-		return aws.autoscalingGroups()
+		return a.autoscalingGroups()
+	case CloudformationStack:
+		return a.cloudformationStacks()
+	case EbsSnapshot:
+		return a.ebsSnapshots()
+	case EbsVolume:
+		return a.ebsVolumes()
+	case EfsFileSystem:
+		return a.efsFileSystems()
+	case Eip:
+		return a.eips()
+	case Elb:
+		return a.elbs()
+	case IamGroup:
+		return a.iamGroups()
+	case IamInstanceProfile:
+		return a.iamInstanceProfiles()
+	case IamPolicy:
+		return a.iamPolicies()
+	case IamRole:
+		return a.iamRoles()
+	case IamUser:
+		return a.iamUsers()
+	case Instance:
+		return a.instances()
+	case InternetGateway:
+		return a.internetGateways()
+	case KeyPair:
+		return a.keyPairs()
+	case KmsAlias:
+		return a.KmsAliases()
+	case KmsKey:
+		return a.KmsKeys()
 	case LaunchConfiguration:
-		return aws.launchConfigurations()
+		return a.launchConfigurations()
+	case NatGateway:
+		return a.natGateways()
+	case NetworkAcl:
+		return a.networkAcls()
+	case NetworkInterface:
+		return a.networkInterfaces()
+	case Route53Zone:
+		return a.route53Zones()
+	case RouteTable:
+		return a.routeTables()
+	case S3Bucket:
+		return a.s3Buckets()
+	case SecurityGroup:
+		return a.SecurityGroup()
+	case Subnet:
+		return a.subnets()
+	case Vpc:
+		return a.vpcs()
+	case VpcEndpoint:
+		return a.vpcEndpoints()
 	default:
 		return nil, errors.Errorf("unknown or unsupported resource type: %s", resType)
 	}
 }
 
-//	return []APIDesc{
-//		{
-//			AutoscalingGroup,
-//			"AutoScalingGroupName",
-//			defaultFilter,
-//		},
-//		{
-//			LaunchConfiguration,
-//			"LaunchConfigurationName",
-//			defaultFilter,
-//		},
-//		{
-//			Instance,
-//			[]string{"Reservations", "Instances"},
-//			"InstanceId",
-//			c.EC2conn.DescribeInstances,
-//			&ec2.DescribeInstancesInput{
-//				Filters: []*ec2.Filter{
-//					{
-//						Name: aws.String("instance-state-name"),
-//						Values: []*string{
-//							aws.String("pending"), aws.String("running"),
-//							aws.String("stopping"), aws.String("stopped"),
-//						},
-//					},
-//				},
-//			},
-//			defaultFilter,
-//		},
-//		{
-//			KeyPair,
-//			[]string{"KeyPairs"},
-//			"KeyName",
-//			c.EC2conn.DescribeKeyPairs,
-//			&ec2.DescribeKeyPairsInput{},
-//			defaultFilter,
-//		},
-//		{
-//			Elb,
-//			[]string{"LoadBalancerDescriptions"},
-//			"LoadBalancerName",
-//			c.ELBconn.DescribeLoadBalancers,
-//			&elb.DescribeLoadBalancersInput{},
-//			defaultFilter,
-//		},
-//		{
-//			VpcEndpoint,
-//			[]string{"VpcEndpoints"},
-//			"VpcEndpointId",
-//			c.EC2conn.DescribeVpcEndpoints,
-//			&ec2.DescribeVpcEndpointsInput{},
-//			defaultFilter,
-//		},
-//		{
-//			// TODO support findTags
-//			NatGateway,
-//			[]string{"NatGateways"},
-//			"NatGatewayId",
-//			c.EC2conn.DescribeNatGateways,
-//			&ec2.DescribeNatGatewaysInput{
-//				Filter: []*ec2.Filter{
-//					{
-//						Name: aws.String("state"),
-//						Values: []*string{
-//							aws.String("available"),
-//						},
-//					},
-//				},
-//			},
-//			defaultFilter,
-//		},
-//		{
-//			CloudformationStack,
-//			[]string{"Stacks"},
-//			"StackId",
-//			c.CFconn.DescribeStacks,
-//			&cloudformation.DescribeStacksInput{},
-//			defaultFilter,
-//		},
-//		{
-//			Route53Zone,
-//			[]string{"HostedZones"},
-//			"Id",
-//			c.R53conn.ListHostedZones,
-//			&route53.ListHostedZonesInput{},
-//			defaultFilter,
-//		},
-//		{
-//			EfsFileSystem,
-//			[]string{"FileSystems"},
-//			"FileSystemId",
-//			c.EFSconn.DescribeFileSystems,
-//			&efs.DescribeFileSystemsInput{},
-//			efsFileSystemFilter,
-//		},
-//		// Elastic network interface (ENI) resource
-//		// sort by owner of the network interface?
-//		// support findTags
-//		// attached to subnet
-//		{
-//			NetworkInterface,
-//			[]string{"NetworkInterfaces"},
-//			"NetworkInterfaceId",
-//			c.EC2conn.DescribeNetworkInterfaces,
-//			&ec2.DescribeNetworkInterfacesInput{},
-//			defaultFilter,
-//		},
-//		{
-//			Eip,
-//			[]string{"Addresses"},
-//			"AllocationId",
-//			c.EC2conn.DescribeAddresses,
-//			&ec2.DescribeAddressesInput{},
-//			defaultFilter,
-//		},
-//		{
-//			InternetGateway,
-//			[]string{"InternetGateways"},
-//			"InternetGatewayId",
-//			c.EC2conn.DescribeInternetGateways,
-//			&ec2.DescribeInternetGatewaysInput{},
-//			defaultFilter,
-//		},
-//		{
-//			Subnet,
-//			[]string{"Subnets"},
-//			"SubnetId",
-//			c.EC2conn.DescribeSubnets,
-//			&ec2.DescribeSubnetsInput{},
-//			defaultFilter,
-//		},
-//		{
-//			RouteTable,
-//			[]string{"RouteTables"},
-//			"RouteTableId",
-//			c.EC2conn.DescribeRouteTables,
-//			&ec2.DescribeRouteTablesInput{},
-//			defaultFilter,
-//		},
-//		{
-//			SecurityGroup,
-//			[]string{"SecurityGroups"},
-//			"GroupId",
-//			c.EC2conn.DescribeSecurityGroups,
-//			&ec2.DescribeSecurityGroupsInput{},
-//			defaultFilter,
-//		},
-//		{
-//			NetworkAcl,
-//			[]string{"NetworkAcls"},
-//			"NetworkAclId",
-//			c.EC2conn.DescribeNetworkAcls,
-//			&ec2.DescribeNetworkAclsInput{},
-//			defaultFilter,
-//		},
-//		{
-//			Vpc,
-//			[]string{"Vpcs"},
-//			"VpcId",
-//			c.EC2conn.DescribeVpcs,
-//			&ec2.DescribeVpcsInput{},
-//			defaultFilter,
-//		},
-//		{
-//			IamPolicy,
-//			[]string{"Policies"},
-//			"Arn",
-//			c.IAMconn.ListPolicies,
-//			&iam.ListPoliciesInput{},
-//			iamPolicyFilter,
-//		},
-//		{
-//			IamGroup,
-//			[]string{"Groups"},
-//			"GroupName",
-//			c.IAMconn.ListGroups,
-//			&iam.ListGroupsInput{},
-//			defaultFilter,
-//		},
-//		{
-//			IamUser,
-//			[]string{"Users"},
-//			"UserName",
-//			c.IAMconn.ListUsers,
-//			&iam.ListUsersInput{},
-//			iamUserFilter,
-//		},
-//		{
-//			IamRole,
-//			[]string{"Roles"},
-//			"RoleName",
-//			c.IAMconn.ListRoles,
-//			&iam.ListRolesInput{},
-//			defaultFilter,
-//		},
-//		{
-//			IamInstanceProfile,
-//			[]string{"InstanceProfiles"},
-//			"InstanceProfileName",
-//			c.IAMconn.ListInstanceProfiles,
-//			&iam.ListInstanceProfilesInput{},
-//			defaultFilter,
-//		},
-//		{
-//			KmsAlias,
-//			[]string{"Aliases"},
-//			"AliasName",
-//			c.KMSconn.ListAliases,
-//			&kms.ListAliasesInput{},
-//			defaultFilter,
-//		},
-//		{
-//			KmsKey,
-//			[]string{"Keys"},
-//			"KeyId",
-//			c.KMSconn.ListKeys,
-//			&kms.ListKeysInput{},
-//			kmsKeysFilter,
-//		},
-//		{
-//			S3Bucket,
-//			[]string{"Buckets"},
-//			"Name",
-//			c.S3conn.ListBuckets,
-//			&s3.ListBucketsInput{},
-//			defaultFilter,
-//		},
-//		{
-//			EbsSnapshot,
-//			[]string{"Snapshots"},
-//			"SnapshotId",
-//			c.EC2conn.DescribeSnapshots,
-//			&ec2.DescribeSnapshotsInput{
-//				Filters: []*ec2.Filter{
-//					{
-//						Name: aws.String("owner-id"),
-//						Values: []*string{
-//							accountID(c),
-//						},
-//					},
-//				},
-//			},
-//			defaultFilter,
-//		},
-//		{
-//			EbsVolume,
-//			[]string{"Volumes"},
-//			"VolumeId",
-//			c.EC2conn.DescribeVolumes,
-//			&ec2.DescribeVolumesInput{},
-//			defaultFilter,
-//		},
-//		{
-//			Ami,
-//			[]string{"Images"},
-//			"ImageId",
-//			c.EC2conn.DescribeImages,
-//			&ec2.DescribeImagesInput{
-//				Filters: []*ec2.Filter{
-//					{
-//						Name: aws.String("owner-id"),
-//						Values: []*string{
-//							accountID(c),
-//						},
-//					},
-//				},
-//			},
-//			defaultFilter,
-//		},
-//	}
-//}
+func (a *AWS) instances() (interface{}, error) {
+	output, err := a.DescribeInstances(&ec2.DescribeInstancesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String("instance-state-name"),
+				Values: []*string{
+					aws.String("pending"), aws.String("running"),
+					aws.String("stopping"), aws.String("stopped"),
+				},
+			},
+		},
+	})
 
-func (aws *AWS) autoscalingGroups() (interface{}, error) {
-	output, err := aws.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	var instances []*ec2.Instance
+	for _, r := range output.Reservations {
+		for _, i := range r.Instances {
+			instances = append(instances, i)
+		}
+	}
+
+	return instances, nil
+}
+
+func (a *AWS) keyPairs() (interface{}, error) {
+	output, err := a.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.KeyPairs, nil
+}
+
+func (a *AWS) elbs() (interface{}, error) {
+	output, err := a.ELBAPI.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.LoadBalancerDescriptions, nil
+}
+
+func (a *AWS) vpcEndpoints() (interface{}, error) {
+	output, err := a.DescribeVpcEndpoints(&ec2.DescribeVpcEndpointsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.VpcEndpoints, nil
+}
+
+// TODO support findTags
+func (a *AWS) natGateways() (interface{}, error) {
+	output, err := a.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{
+		Filter: []*ec2.Filter{
+			{
+				Name: aws.String("state"),
+				Values: []*string{
+					aws.String("available"),
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return output.NatGateways, nil
+}
+
+func (a *AWS) cloudformationStacks() (interface{}, error) {
+	output, err := a.DescribeStacks(&cloudformation.DescribeStacksInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Stacks, nil
+}
+
+func (a *AWS) route53Zones() (interface{}, error) {
+	output, err := a.ListHostedZones(&route53.ListHostedZonesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.HostedZones, nil
+}
+
+func (a *AWS) efsFileSystems() (interface{}, error) {
+	output, err := a.DescribeFileSystems(&efs.DescribeFileSystemsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.FileSystems, nil
+}
+
+// Elastic network interface (ENI) resource
+// sort by owner of the network interface?
+// support findTags
+// attached to subnet
+func (a *AWS) networkInterfaces() (interface{}, error) {
+	output, err := a.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.NetworkInterfaces, nil
+}
+
+func (a *AWS) eips() (interface{}, error) {
+	output, err := a.DescribeAddresses(&ec2.DescribeAddressesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Addresses, nil
+}
+
+func (a *AWS) internetGateways() (interface{}, error) {
+	output, err := a.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.InternetGateways, nil
+}
+
+func (a *AWS) subnets() (interface{}, error) {
+	output, err := a.DescribeSubnets(&ec2.DescribeSubnetsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Subnets, nil
+}
+
+func (a *AWS) routeTables() (interface{}, error) {
+	output, err := a.DescribeRouteTables(&ec2.DescribeRouteTablesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.RouteTables, nil
+}
+
+func (a *AWS) SecurityGroup() (interface{}, error) {
+	output, err := a.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.SecurityGroups, nil
+}
+
+func (a *AWS) networkAcls() (interface{}, error) {
+	output, err := a.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.NetworkAcls, nil
+}
+
+func (a *AWS) vpcs() (interface{}, error) {
+	output, err := a.DescribeVpcs(&ec2.DescribeVpcsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Vpcs, nil
+}
+
+func (a *AWS) iamPolicies() (interface{}, error) {
+	output, err := a.ListPolicies(&iam.ListPoliciesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Policies, nil
+}
+
+func (a *AWS) iamGroups() (interface{}, error) {
+	output, err := a.ListGroups(&iam.ListGroupsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Groups, nil
+}
+
+func (a *AWS) iamUsers() (interface{}, error) {
+	output, err := a.ListUsers(&iam.ListUsersInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Users, nil
+}
+
+func (a *AWS) iamRoles() (interface{}, error) {
+	output, err := a.ListRoles(&iam.ListRolesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Roles, nil
+}
+
+func (a *AWS) iamInstanceProfiles() (interface{}, error) {
+	output, err := a.ListInstanceProfiles(&iam.ListInstanceProfilesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.InstanceProfiles, nil
+}
+
+func (a *AWS) KmsAliases() (interface{}, error) {
+	output, err := a.ListAliases(&kms.ListAliasesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Aliases, nil
+}
+
+func (a *AWS) KmsKeys() (interface{}, error) {
+	output, err := a.ListKeys(&kms.ListKeysInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Keys, nil
+}
+
+func (a *AWS) s3Buckets() (interface{}, error) {
+	output, err := a.ListBuckets(&s3.ListBucketsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Buckets, nil
+}
+
+func (a *AWS) ebsSnapshots() (interface{}, error) {
+	output, err := a.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String("owner-id"),
+				Values: []*string{
+					a.callerIdentity(),
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return output.Snapshots, nil
+}
+
+func (a *AWS) ebsVolumes() (interface{}, error) {
+	output, err := a.DescribeVolumes(&ec2.DescribeVolumesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Volumes, nil
+}
+
+func (a *AWS) amis() (interface{}, error) {
+	output, err := a.DescribeImages(&ec2.DescribeImagesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String("owner-id"),
+				Values: []*string{
+					a.callerIdentity(),
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return output.Images, nil
+}
+
+func (a *AWS) autoscalingGroups() (interface{}, error) {
+	output, err := a.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
 	if err != nil {
 		return nil, err
 	}
 	return output.AutoScalingGroups, nil
 }
 
-func (aws *AWS) launchConfigurations() (interface{}, error) {
-	output, err := aws.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
+func (a *AWS) launchConfigurations() (interface{}, error) {
+	output, err := a.DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{})
 	if err != nil {
 		return nil, err
 	}
 	return output.LaunchConfigurations, nil
 }
 
-// accountID returns the account ID of the AWS account
-// for the currently used credentials or AWS profile, resp.
-func (c *AWS) accountID() *string {
-	res, err := c.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+// callerIdentity returns the account ID of the AWS account for the currently used credentials
+func (a *AWS) callerIdentity() *string {
+	res, err := a.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 	if err != nil {
 		log.Fatal(err)
 	}

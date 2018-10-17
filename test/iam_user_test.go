@@ -155,7 +155,7 @@ resource "aws_iam_user_policy" "test_user_policy" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "DeletableResource": "*"
+      "Resource": "*"
     }
   ]
 }
@@ -174,7 +174,7 @@ resource "aws_iam_policy" "test_policy" {
         "ec2:Describe*"
       ],
       "Effect": "Allow",
-      "DeletableResource": "*"
+      "Resource": "*"
     }
   ]
 }
@@ -186,12 +186,3 @@ resource "aws_iam_user_policy_attachment" "test_attach" {
     policy_arn = "${aws_iam_policy.test_policy.arn}"
 }
 `
-
-func testAccIamUserAWSweeperIdsConfig(u *iam.User) string {
-	id := u.UserName
-	return fmt.Sprintf(`
-aws_iam_user:
-  ids:
-    - %s
-`, *id)
-}

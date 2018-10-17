@@ -7,6 +7,8 @@ import (
 
 	"errors"
 
+	"fmt"
+
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
@@ -28,14 +30,6 @@ type yamlEntry struct {
 	Tags map[string]string `yaml:",omitempty"`
 }
 
-// Filter selects resources for deletion.
-type Filter interface {
-	Apply(resType TerraformResourceType, res DeletableResources, raw interface{}, aws *AWS) []DeletableResources
-	//Validate(as []APIDesc) error
-	Matches(resType TerraformResourceType, id string, tags ...map[string]string) bool
-	Types() []string
-}
-
 // YamlFilter selects resources
 // stated in a yaml configuration for deletion.
 type YamlFilter struct {
@@ -43,20 +37,18 @@ type YamlFilter struct {
 	Cfg  YamlCfg
 }
 
-// NewFilter creates a new filter to select resources for deletion
-// based on the path of yaml file.
+// NewFilter creates a new filter based on a config given via a yaml file.
 func NewFilter(yamlFile string) *YamlFilter {
 	return &YamlFilter{
-		file: yamlFile,
-		Cfg:  read(yamlFile),
+		Cfg: read(yamlFile),
 	}
 }
 
 // read reads a filter from a yaml file.
-func read(file string) YamlCfg {
+func read(filename string) YamlCfg {
 	var cfg YamlCfg
 
-	data, err := afero.ReadFile(AppFs, file)
+	data, err := afero.ReadFile(AppFs, filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,25 +61,17 @@ func read(file string) YamlCfg {
 	return cfg
 }
 
-// Validate checks if all resource types appearing in the config
-// of the filter are currently supported.
-//func (f YamlFilter) Validate(as []APIDesc) error {
-//	for _, resType := range f.Types() {
-//		isTerraformType := false
-//		for _, a := range as {
-//			if resType == a.Type {
-//				isTerraformType = true
-//			}
-//		}
-//		if !isTerraformType {
-//			return fmt.Errorf("unsupported resource type '%s' found in '%s'", resType, f.file)
-//		}
-//	}
-//	return nil
-//}
+// Validate checks if all resource types appearing in the config are currently supported.
+func (f YamlFilter) Validate() error {
+	for _, resType := range f.Types() {
+		if !SupportedResourceType(resType) {
+			return fmt.Errorf("unsupported resource type found in yaml config: %s", resType)
+		}
+	}
+	return nil
+}
 
-// Types returns all the resource types stated in the yaml config.
-// We use the same identifiers of resource types as the Terraform AWS provider.
+// Types returns all the resource types in the config.
 func (f YamlFilter) Types() []TerraformResourceType {
 	resTypes := make([]TerraformResourceType, 0, len(f.Cfg))
 
@@ -98,8 +82,7 @@ func (f YamlFilter) Types() []TerraformResourceType {
 	return resTypes
 }
 
-// MatchID checks whether a resource (given by its type and id)
-// matches the filter.
+// MatchID checks whether a resource (given by its type and id) matches the filter.
 func (f YamlFilter) matchID(resType TerraformResourceType, id string) (bool, error) {
 	cfgEntry, _ := f.Cfg[resType]
 
@@ -120,13 +103,12 @@ func (f YamlFilter) matchID(resType TerraformResourceType, id string) (bool, err
 }
 
 // MatchesTags checks whether a resource (given by its type and findTags)
-// matches the filter. The keys must match exactly, whereas
-// the tag value is checked against a regex.
+// matches the filter. The keys must match exactly, whereas the tag value is checked against a regex.
 func (f YamlFilter) matchTags(resType TerraformResourceType, tags map[string]string) (bool, error) {
 	cfgEntry, _ := f.Cfg[resType]
 
 	if len(cfgEntry.Tags) == 0 {
-		return false, errors.New("No entries set in filter to match findTags")
+		return false, errors.New("filter has no tag entry")
 	}
 
 	for cfgTagKey, regex := range cfgEntry.Tags {
@@ -143,9 +125,8 @@ func (f YamlFilter) matchTags(resType TerraformResourceType, tags map[string]str
 	return false, nil
 }
 
-// Matches checks whether a resource (given by its type and findTags) matches
-// the configured filter criteria for findTags and ids.
-func (f YamlFilter) Matches(resType TerraformResourceType, id string, tags ...map[string]string) bool {
+// matches checks whether a resource matches the filter criteria.
+func (f YamlFilter) matches(resType TerraformResourceType, id string, tags ...map[string]string) bool {
 	var matchesTags = false
 	var errTags error
 
