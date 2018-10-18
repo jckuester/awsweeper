@@ -126,17 +126,11 @@ func (f YamlFilter) matchTags(resType TerraformResourceType, tags map[string]str
 }
 
 // matches checks whether a resource matches the filter criteria.
-func (f YamlFilter) matches(resType TerraformResourceType, id string, tags ...map[string]string) bool {
-	var matchesTags = false
-	var errTags error
+func (f YamlFilter) matches(r *DeletableResource) bool {
+	matchesTags, errTags := f.matchTags(r.Type, r.Tags)
+	matchesID, errID := f.matchID(r.Type, r.ID)
 
-	if tags != nil {
-		matchesTags, errTags = f.matchTags(resType, tags[0])
-	}
-	matchesID, errID := f.matchID(resType, id)
-
-	// if the filter has neither an entry to match ids nor findTags,
-	// select all resources of that type
+	// if the filter has neither an entry to match ids nor tags, then select all resources of that type
 	if errID != nil && errTags != nil {
 		return true
 	}

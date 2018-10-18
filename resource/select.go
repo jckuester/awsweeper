@@ -35,7 +35,7 @@ func (f YamlFilter) defaultFilter(res DeletableResources, raw interface{}, c *AW
 	result := DeletableResources{}
 
 	for _, r := range res {
-		if f.matches(r.Type, r.ID, r.Tags) {
+		if f.matches(r) {
 			result = append(result, r)
 		}
 	}
@@ -47,7 +47,7 @@ func (f YamlFilter) efsFileSystemFilter(res DeletableResources, raw interface{},
 	resultMt := DeletableResources{}
 
 	for _, r := range res {
-		if f.matches(r.Type, *raw.([]*efs.FileSystemDescription)[0].Name) {
+		if f.matches(&DeletableResource{Type: r.Type, ID: *raw.([]*efs.FileSystemDescription)[0].Name}) {
 			res, err := c.DescribeMountTargets(&efs.DescribeMountTargetsInput{
 				FileSystemId: &r.ID,
 			})
@@ -72,7 +72,7 @@ func (f YamlFilter) iamUserFilter(res DeletableResources, raw interface{}, c *AW
 	resultUserPol := DeletableResources{}
 
 	for _, r := range res {
-		if f.matches(r.Type, r.ID) {
+		if f.matches(r) {
 			// list inline policies, delete with "aws_iam_user_policy" delete routine
 			ups, err := c.ListUserPolicies(&iam.ListUserPoliciesInput{
 				UserName: &r.ID,
@@ -114,7 +114,7 @@ func (f YamlFilter) iamPolicyFilter(res DeletableResources, raw interface{}, c *
 	resultAtt := DeletableResources{}
 
 	for i, r := range res {
-		if f.matches(r.Type, r.ID) {
+		if f.matches(r) {
 			es, err := c.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
 				PolicyArn: &r.ID,
 			})
@@ -159,7 +159,7 @@ func (f YamlFilter) kmsKeysFilter(res DeletableResources, raw interface{}, c *AW
 	result := DeletableResources{}
 
 	for _, r := range res {
-		if f.matches(r.Type, r.ID) {
+		if f.matches(r) {
 			req, res := c.DescribeKeyRequest(&kms.DescribeKeyInput{
 				KeyId: aws.String(r.ID),
 			})
