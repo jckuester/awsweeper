@@ -5,14 +5,25 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/cloudetc/awsweeper/mocks"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/resource"
+	"github.com/cloudetc/awsweeper/resource/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var (
+	testAmiName = "test-ami"
+	testAmi     = &ec2.DescribeImagesOutput{
+		Images: []*ec2.Image{
+			{
+				ImageId: &testAmiName,
+			},
+		},
+	}
+
 	testAutoscalingGroupName = "test-auto-scaling-group"
 	testTags                 = map[string]string{
 		"test-tag-key": "test-tag-value",
@@ -35,6 +46,23 @@ var (
 		},
 	}
 )
+
+func TestAWS_Resources_Amis(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// given
+	awsMock := createAmiMock(mockCtrl)
+
+	// when
+	resources, err := awsMock.RawResources(resource.Ami)
+	require.NoError(t, err)
+	res := resources.([]*ec2.Image)
+
+	// then
+	assert.Len(t, res, 1)
+	assert.Equal(t, *res[0].ImageId, testAmiName)
+}
 
 func TestAWS_Resources_AutoScalingGroups(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
@@ -68,6 +96,26 @@ func TestAWS_Resources_LaunchConfigurations(t *testing.T) {
 	// then
 	assert.Len(t, lc, 1)
 	assert.Equal(t, *lc[0].LaunchConfigurationName, testLaunchConfigurationName)
+}
+
+func createAmiMock(mockCtrl *gomock.Controller) *resource.AWS {
+	mockObj := mocks.NewMockEC2API(mockCtrl)
+	mockObjSts := mocks.NewMockSTSAPI(mockCtrl)
+
+	awsMock := &resource.AWS{
+		EC2API: mockObj,
+		STSAPI: mockObjSts,
+	}
+
+	mockObj.EXPECT().DescribeImages(gomock.Any()).Return(
+		testAmi, nil)
+
+	mockObjSts.EXPECT().GetCallerIdentity(&sts.GetCallerIdentityInput{}).Return(
+		&sts.GetCallerIdentityOutput{
+			Account: aws.String("123456789"),
+		}, nil)
+
+	return awsMock
 }
 
 func createAutoScalingGroupMock(mockCtrl *gomock.Controller) *resource.AWS {
