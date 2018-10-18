@@ -45,14 +45,14 @@ func testAccCheckLaunchConfigurationExists(n string, lc *autoscaling.LaunchConfi
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No Launch Configuration name is set")
+			return fmt.Errorf("no Launch Configuration name is set")
 		}
 
-		conn := client.ASconn
+		conn := client.AutoScalingAPI
 		DescribeLaunchConfigurationOpts := &autoscaling.DescribeLaunchConfigurationsInput{
 			LaunchConfigurationNames: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -61,7 +61,7 @@ func testAccCheckLaunchConfigurationExists(n string, lc *autoscaling.LaunchConfi
 			return err
 		}
 		if len(resp.LaunchConfigurations) == 0 {
-			return fmt.Errorf("Launch Configuration not found")
+			return fmt.Errorf("launch Configuration not found")
 		}
 
 		*lc = *resp.LaunchConfigurations[0]
@@ -72,7 +72,7 @@ func testAccCheckLaunchConfigurationExists(n string, lc *autoscaling.LaunchConfi
 
 func testLaunchConfigurationDeleted(lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ASconn
+		conn := client.AutoScalingAPI
 		DescribeLaunchConfigurationOpts := &autoscaling.DescribeLaunchConfigurationsInput{
 			LaunchConfigurationNames: []*string{lc.LaunchConfigurationName},
 		}
@@ -89,7 +89,7 @@ func testLaunchConfigurationDeleted(lc *autoscaling.LaunchConfiguration) resourc
 		}
 
 		if len(resp.LaunchConfigurations) != 0 {
-			return fmt.Errorf("Launch Configuration hasn't been deleted")
+			return fmt.Errorf("launch Configuration hasn't been deleted")
 		}
 
 		return nil
@@ -98,7 +98,7 @@ func testLaunchConfigurationDeleted(lc *autoscaling.LaunchConfiguration) resourc
 
 func testLaunchConfigurationExists(lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ASconn
+		conn := client.AutoScalingAPI
 		DescribeLaunchConfigurationOpts := &autoscaling.DescribeLaunchConfigurationsInput{
 			LaunchConfigurationNames: []*string{lc.LaunchConfigurationName},
 		}
@@ -107,7 +107,7 @@ func testLaunchConfigurationExists(lc *autoscaling.LaunchConfiguration) resource
 			return err
 		}
 		if len(resp.LaunchConfigurations) == 0 {
-			return fmt.Errorf("Launch Configuration has been deleted")
+			return fmt.Errorf("launch Configuration has been deleted")
 		}
 
 		return nil
@@ -117,7 +117,8 @@ func testLaunchConfigurationExists(lc *autoscaling.LaunchConfiguration) resource
 func testMainLaunchConfigurationIds(args []string, lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccLaunchConfigurationAWSweeperIdsConfig(lc)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.LaunchConfiguration, lc.LaunchConfigurationName)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -171,13 +172,3 @@ data "aws_ami" "foo" {
 	}
 }
 `
-
-func testAccLaunchConfigurationAWSweeperIdsConfig(lc *autoscaling.LaunchConfiguration) string {
-	name := lc.LaunchConfigurationName
-
-	return fmt.Sprintf(`
-aws_launch_configuration:
-  ids:
-    - %s
-`, *name)
-}

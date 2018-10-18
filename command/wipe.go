@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
+	"github.com/sirupsen/logrus"
 )
 
 // Wipe is currently the only command.
@@ -20,7 +21,7 @@ type Wipe struct {
 	UI          cli.Ui
 	dryRun      bool
 	forceDelete bool
-	client      *resource.AWSClient
+	client      *resource.AWS
 	provider    *terraform.ResourceProvider
 	filter      *resource.YamlFilter
 }
@@ -29,6 +30,11 @@ type Wipe struct {
 func (c *Wipe) Run(args []string) int {
 	if len(args) == 1 {
 		c.filter = resource.NewFilter(args[0])
+
+		err := c.filter.Validate()
+		if err != nil {
+			logrus.WithError(err).Fatal()
+		}
 	} else {
 		fmt.Println(help())
 		return 1
@@ -51,20 +57,20 @@ func (c *Wipe) Run(args []string) int {
 		}
 	}
 
-	err := c.filter.Validate(resource.Supported(c.client))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	for _, resType := range c.filter.Types() {
-		for _, apiDesc := range resource.Supported(c.client) {
-			if resType == apiDesc.TerraformType {
-				res, raw := resource.List(apiDesc)
-				resList := apiDesc.Select(res, raw, c.filter, c.client)
-				for _, res := range resList {
-					c.wipe(res)
-				}
-			}
+		rawResources, err := c.client.RawResources(resType)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		deletableResources, err := c.client.DeletableResources(resType, rawResources)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
+		for _, res := range filteredRes {
+			c.wipe(res)
 		}
 	}
 
@@ -74,7 +80,7 @@ func (c *Wipe) Run(args []string) int {
 // wipe does the actual deletion (in parallel) of a given (filtered) list of AWS resources.
 // It takes advantage of the AWS terraform provider by using its delete functions
 // (so we get retries, detaching of policies from some IAM resources before deletion, and other stuff for free).
-func (c *Wipe) wipe(res resource.Resources) {
+func (c *Wipe) wipe(res resource.DeletableResources) {
 	numWorkerThreads := 10
 
 	if len(res) == 0 {
@@ -84,14 +90,14 @@ func (c *Wipe) wipe(res resource.Resources) {
 	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res[0].Type, len(res))
 
 	ii := &terraform.InstanceInfo{
-		Type: res[0].Type,
+		Type: string(res[0].Type),
 	}
 
 	d := &terraform.InstanceDiff{
 		Destroy: true,
 	}
 
-	chResources := make(chan *resource.Resource, numWorkerThreads)
+	chResources := make(chan *resource.DeletableResource, numWorkerThreads)
 
 	var wg sync.WaitGroup
 	wg.Add(len(res))
@@ -155,7 +161,6 @@ func (c *Wipe) wipe(res resource.Resources) {
 	wg.Wait()
 	fmt.Print("---\n\n")
 }
-
 
 // Help returns help information of this command
 func (c *Wipe) Help() string {

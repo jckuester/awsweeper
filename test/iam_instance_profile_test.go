@@ -44,14 +44,14 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %s", name)
+			return fmt.Errorf("not found: %s", name)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.IAMconn
+		conn := client.IAMAPI
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: aws.String(rs.Primary.ID),
 		}
@@ -76,7 +76,8 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 func testMainIamInstanceProfileIds(args []string, r *iam.InstanceProfile) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccIamInstanceProfileAWSweeperIdsConfig(r)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.IamInstanceProfile, r.InstanceProfileName)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -86,7 +87,7 @@ func testMainIamInstanceProfileIds(args []string, r *iam.InstanceProfile) resour
 
 func testIamInstanceProfileExists(r *iam.InstanceProfile) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMconn
+		conn := client.IAMAPI
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: r.InstanceProfileName,
 		}
@@ -108,7 +109,7 @@ func testIamInstanceProfileExists(r *iam.InstanceProfile) resource.TestCheckFunc
 
 func testIamInstanceProfileDeleted(r *iam.InstanceProfile) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMconn
+		conn := client.IAMAPI
 
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: r.InstanceProfileName,
@@ -157,12 +158,3 @@ data "aws_iam_policy_document" "test-assume-role-policy" {
   }
 }
 `
-
-func testAccIamInstanceProfileAWSweeperIdsConfig(r *iam.InstanceProfile) string {
-	id := r.InstanceProfileName
-	return fmt.Sprintf(`
-aws_iam_instance_profile:
-  ids:
-    - %s
-`, *id)
-}

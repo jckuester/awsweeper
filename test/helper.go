@@ -5,18 +5,12 @@ import (
 	"os"
 	"testing"
 
+	"time"
+
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/efs"
-	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
@@ -24,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
-	"time"
 )
 
 var client = initClient()
@@ -35,23 +28,12 @@ var testAccProvider *schema.Provider
 var argsDryRun = []string{"cmd", "--dry-run", "config.yml"}
 var argsForceDelete = []string{"cmd", "--force", "config.yml"}
 
-func initClient() *res.AWSClient {
+func initClient() *res.AWS {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	return &res.AWSClient{
-		ASconn:  autoscaling.New(sess),
-		CFconn:  cloudformation.New(sess),
-		EC2conn: ec2.New(sess),
-		EFSconn: efs.New(sess),
-		ELBconn: elb.New(sess),
-		IAMconn: iam.New(sess),
-		KMSconn: kms.New(sess),
-		R53conn: route53.New(sess),
-		S3conn:  s3.New(sess),
-		STSconn: sts.New(sess),
-	}
+	return res.NewAWS(sess)
 }
 
 func init() {
@@ -89,6 +71,22 @@ func testMainTags(args []string, config string) resource.TestCheckFunc {
 		command.WrappedMain()
 		return nil
 	}
+}
+
+func testAWSweeperIdsConfig(resType res.TerraformResourceType, id *string) string {
+	return fmt.Sprintf(`
+%s:
+  ids:
+    - %s
+`, resType, *id)
+}
+
+func testAWSweeperTagsConfig(resType res.TerraformResourceType) string {
+	return fmt.Sprintf(`
+%s:
+  tags:
+    foo: bar
+`, resType)
 }
 
 func retryOnAwsCode(code string, f func() (interface{}, error)) (interface{}, error) {

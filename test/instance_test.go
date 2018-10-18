@@ -28,10 +28,10 @@ func TestAccInstance_deleteByTags(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckInstanceExists("aws_instance.foo", &instance1),
 					testAccCheckInstanceExists("aws_instance.bar", &instance2),
-					testMainTags(argsDryRun, testAccInstanceAWSweeperTagsConfig),
+					testMainTags(argsDryRun, testAWSweeperTagsConfig(res.Instance)),
 					testInstanceExists(&instance1),
 					testInstanceExists(&instance2),
-					testMainTags(argsForceDelete, testAccInstanceAWSweeperTagsConfig),
+					testMainTags(argsForceDelete, testAWSweeperTagsConfig(res.Instance)),
 					testInstanceDeleted(&instance1),
 					testInstanceExists(&instance2),
 				),
@@ -69,14 +69,14 @@ func testAccCheckInstanceExists(n string, instance *ec2.Instance) resource.TestC
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No instance ID is set")
+			return fmt.Errorf("no instance ID is set")
 		}
 
-		conn := client.EC2conn
+		conn := client.EC2API
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -85,7 +85,7 @@ func testAccCheckInstanceExists(n string, instance *ec2.Instance) resource.TestC
 			return err
 		}
 		if len(resp.Reservations) == 0 {
-			return fmt.Errorf("Instance not found")
+			return fmt.Errorf("instance not found")
 		}
 
 		*instance = *resp.Reservations[0].Instances[0]
@@ -96,7 +96,7 @@ func testAccCheckInstanceExists(n string, instance *ec2.Instance) resource.TestC
 
 func testInstanceExists(instance *ec2.Instance) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.EC2API
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{instance.InstanceId},
 		}
@@ -105,7 +105,7 @@ func testInstanceExists(instance *ec2.Instance) resource.TestCheckFunc {
 			return err
 		}
 		if len(resp.Reservations) == 0 {
-			return fmt.Errorf("Instance has been deleted")
+			return fmt.Errorf("instance has been deleted")
 		}
 
 		return nil
@@ -114,7 +114,7 @@ func testInstanceExists(instance *ec2.Instance) resource.TestCheckFunc {
 
 func testInstanceDeleted(instance *ec2.Instance) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2conn
+		conn := client.EC2API
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{instance.InstanceId},
 		}
@@ -134,7 +134,7 @@ func testInstanceDeleted(instance *ec2.Instance) resource.TestCheckFunc {
 		for _, r := range resp.Reservations {
 			for _, i := range r.Instances {
 				if i.State != nil && *i.State.Name != "terminated" {
-					return fmt.Errorf("Found unterminated instance: %s", i)
+					return fmt.Errorf("found unterminated instance: %s", i)
 				}
 			}
 		}
@@ -146,7 +146,7 @@ func testInstanceDeleted(instance *ec2.Instance) resource.TestCheckFunc {
 func testMainInstanceIds(args []string, instance *ec2.Instance) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccInstanceAWSweeperIdsConfig(instance)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Instance, instance.InstanceId)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -219,19 +219,3 @@ data "aws_ami" "foo" {
 	}
 }
 `
-
-const testAccInstanceAWSweeperTagsConfig = `
-aws_instance:
-  tags:
-    foo: bar
-`
-
-func testAccInstanceAWSweeperIdsConfig(instance *ec2.Instance) string {
-	id := instance.InstanceId
-
-	return fmt.Sprintf(`
-aws_instance:
-  ids:
-    - %s
-`, *id)
-}

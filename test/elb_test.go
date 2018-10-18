@@ -31,10 +31,10 @@ func TestAccElb_deleteByTags(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAWSELBExists("aws_elb.foo", &lb1),
 					testAccCheckAWSELBExists("aws_elb.bar", &lb2),
-					testMainTags(argsDryRun, testAccELBAWSweeperTagsConfig),
+					testMainTags(argsDryRun, testAWSweeperTagsConfig(res.Elb)),
 					testElbExists(&lb1),
 					testElbExists(&lb2),
-					testMainTags(argsForceDelete, testAccELBAWSweeperTagsConfig),
+					testMainTags(argsForceDelete, testAWSweeperTagsConfig(res.Elb)),
 					testElbDeleted(&lb1),
 					testElbExists(&lb2),
 				),
@@ -72,14 +72,14 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ELB ID is set")
+			return fmt.Errorf("no ELB ID is set")
 		}
 
-		conn := client.ELBconn
+		conn := client.ELBAPI
 
 		describe, err := conn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{aws.String(rs.Primary.ID)},
@@ -101,7 +101,7 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 		if res.VPCId != nil {
 			sgid := rs.Primary.Attributes["source_security_group_id"]
 			if sgid == "" {
-				return fmt.Errorf("Expected to find source_security_group_id for ELB, but was empty")
+				return fmt.Errorf("expected to find source_security_group_id for ELB, but was empty")
 			}
 		}
 
@@ -112,7 +112,8 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 func testMainElbIds(args []string, lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccElbAWSweeperIdsConfig(lb.LoadBalancerName)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.Elb, lb.LoadBalancerName)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -122,7 +123,7 @@ func testMainElbIds(args []string, lb *elb.LoadBalancerDescription) resource.Tes
 
 func testElbExists(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ELBconn
+		conn := client.ELBAPI
 
 		DescribeElbOpts := &elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{lb.LoadBalancerName},
@@ -142,7 +143,7 @@ func testElbExists(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 
 func testElbDeleted(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ELBconn
+		conn := client.ELBAPI
 		DescribeElbOpts := &elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{lb.LoadBalancerName},
 		}
@@ -226,17 +227,3 @@ resource "aws_internet_gateway" "foo" {
   }
 }
 `
-
-const testAccELBAWSweeperTagsConfig = `
-aws_elb:
-  tags:
-    foo: bar
-`
-
-func testAccElbAWSweeperIdsConfig(id *string) string {
-	return fmt.Sprintf(`
-aws_elb:
-  ids:
-    - %s
-`, *id)
-}

@@ -17,7 +17,7 @@ import (
 
 func TestAccRoute53Zone_deleteByTags(t *testing.T) {
 	// TODO tags are a special case for this resource and are not supported yet
-	t.SkipNow()
+	t.Skip("Costs money even in free tier")
 	var zone1, zone2 route53.HostedZone
 
 	resource.Test(t, resource.TestCase{
@@ -30,10 +30,10 @@ func TestAccRoute53Zone_deleteByTags(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRoute53ZoneExists("aws_route53_zone.foo", &zone1),
 					testAccCheckRoute53ZoneExists("aws_route53_zone.bar", &zone2),
-					testMainTags(argsDryRun, testAccRoute53ZoneAWSweeperTagsConfig),
+					testMainTags(argsDryRun, testAWSweeperTagsConfig(res.Route53Zone)),
 					testRoute53ZoneExists(&zone1),
 					testRoute53ZoneExists(&zone2),
-					testMainTags(argsForceDelete, testAccRoute53ZoneAWSweeperTagsConfig),
+					testMainTags(argsForceDelete, testAWSweeperTagsConfig(res.Route53Zone)),
 					testRoute53ZoneDeleted(&zone1),
 					testRoute53ZoneExists(&zone2),
 				),
@@ -43,6 +43,7 @@ func TestAccRoute53Zone_deleteByTags(t *testing.T) {
 }
 
 func TestAccRoute53Zone_deleteByIds(t *testing.T) {
+	t.Skip("Costs money even in free tier")
 	var zone1, zone2 route53.HostedZone
 
 	resource.Test(t, resource.TestCase{
@@ -71,14 +72,14 @@ func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.Tes
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.R53conn
+		conn := client.Route53API
 		desc := &route53.GetHostedZoneInput{
 			Id: aws.String(rs.Primary.ID),
 		}
@@ -103,7 +104,7 @@ func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.Tes
 func testMainRoute53ZoneIds(args []string, z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAccRoute53ZoneAWSweeperIdsConfig(z)), 0644)
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Route53Zone, z.Id)), 0644)
 		os.Args = args
 
 		command.WrappedMain()
@@ -113,7 +114,7 @@ func testMainRoute53ZoneIds(args []string, z *route53.HostedZone) resource.TestC
 
 func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.R53conn
+		conn := client.Route53API
 		desc := &route53.GetHostedZoneInput{
 			Id: z.Id,
 		}
@@ -124,7 +125,7 @@ func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 				return err
 			}
 			if route53err.Code() == "NoSuchHostedZone" {
-				return fmt.Errorf("Route53 Zone has been deleted")
+				return fmt.Errorf("route53 zone has been deleted")
 			}
 			return err
 		}
@@ -135,7 +136,7 @@ func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 
 func testRoute53ZoneDeleted(z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.R53conn
+		conn := client.Route53API
 		desc := &route53.GetHostedZoneInput{
 			Id: z.Id,
 		}
@@ -150,7 +151,7 @@ func testRoute53ZoneDeleted(z *route53.HostedZone) resource.TestCheckFunc {
 			}
 			return err
 		}
-		return fmt.Errorf("Route53 Zone hasn't been deleted")
+		return fmt.Errorf("route53 Zone hasn't been deleted")
 	}
 }
 
@@ -187,18 +188,3 @@ resource "aws_route53_record" "foo" {
   ]
 }
 `
-
-const testAccRoute53ZoneAWSweeperTagsConfig = `
-aws_route53_zone:
-  tags:
-    foo: bar
-`
-
-func testAccRoute53ZoneAWSweeperIdsConfig(z *route53.HostedZone) string {
-	id := z.Id
-	return fmt.Sprintf(`
-aws_route53_zone:
-  ids:
-    - %s
-`, *id)
-}

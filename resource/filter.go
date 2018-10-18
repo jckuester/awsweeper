@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"errors"
+
 	"fmt"
 
 	"github.com/spf13/afero"
@@ -19,44 +20,35 @@ var AppFs = afero.NewOsFs()
 // YamlCfg represents the data structure of a yaml
 // file that is used as a contract to select resources.
 // Each yamlEntry selects the resources of a particular resource type.
-type YamlCfg map[string]yamlEntry
+type YamlCfg map[TerraformResourceType]yamlEntry
 
 // yamlEntry represents an entry in YamlCfg
 // i.e., regexps to select
-// a subset of resources by ids or tags.
+// a subset of resources by ids or findTags.
 type yamlEntry struct {
 	Ids  []*string         `yaml:",omitempty"`
 	Tags map[string]string `yaml:",omitempty"`
-}
-
-// Filter selects resources for deletion.
-type Filter interface {
-	Validate(as []APIDesc) error
-	Matches(resType string, id string, tags ...map[string]string) bool
-	Types() []string
 }
 
 // YamlFilter selects resources
 // stated in a yaml configuration for deletion.
 type YamlFilter struct {
 	file string
-	cfg  YamlCfg
+	Cfg  YamlCfg
 }
 
-// NewFilter creates a new filter to select resources for deletion
-// based on the path of yaml file.
+// NewFilter creates a new filter based on a config given via a yaml file.
 func NewFilter(yamlFile string) *YamlFilter {
 	return &YamlFilter{
-		file: yamlFile,
-		cfg:  read(yamlFile),
+		Cfg: read(yamlFile),
 	}
 }
 
 // read reads a filter from a yaml file.
-func read(file string) YamlCfg {
+func read(filename string) YamlCfg {
 	var cfg YamlCfg
 
-	data, err := afero.ReadFile(AppFs, file)
+	data, err := afero.ReadFile(AppFs, filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,39 +61,30 @@ func read(file string) YamlCfg {
 	return cfg
 }
 
-// Validate checks if all resource types appearing in the config
-// of the filter are currently supported.
-func (f YamlFilter) Validate(as []APIDesc) error {
+// Validate checks if all resource types appearing in the config are currently supported.
+func (f YamlFilter) Validate() error {
 	for _, resType := range f.Types() {
-		isTerraformType := false
-		for _, a := range as {
-			if resType == a.TerraformType {
-				isTerraformType = true
-			}
-		}
-		if !isTerraformType {
-			return fmt.Errorf("unsupported resource type '%s' found in '%s'", resType, f.file)
+		if !SupportedResourceType(resType) {
+			return fmt.Errorf("unsupported resource type found in yaml config: %s", resType)
 		}
 	}
 	return nil
 }
 
-// Types returns all the resource types stated in the yaml config.
-// We use the same identifiers of resource types as the Terraform AWS provider.
-func (f YamlFilter) Types() []string {
-	resTypes := make([]string, 0, len(f.cfg))
+// Types returns all the resource types in the config.
+func (f YamlFilter) Types() []TerraformResourceType {
+	resTypes := make([]TerraformResourceType, 0, len(f.Cfg))
 
-	for k := range f.cfg {
+	for k := range f.Cfg {
 		resTypes = append(resTypes, k)
 	}
 
 	return resTypes
 }
 
-// MatchID checks whether a resource (given by its type and id)
-// matches the filter.
-func (f YamlFilter) matchID(resType string, id string) (bool, error) {
-	cfgEntry, _ := f.cfg[resType]
+// MatchID checks whether a resource (given by its type and id) matches the filter.
+func (f YamlFilter) matchID(resType TerraformResourceType, id string) (bool, error) {
+	cfgEntry, _ := f.Cfg[resType]
 
 	if len(cfgEntry.Ids) == 0 {
 		return false, errors.New("no entries set in filter to match IDs")
@@ -119,14 +102,13 @@ func (f YamlFilter) matchID(resType string, id string) (bool, error) {
 	return false, nil
 }
 
-// MatchesTags checks whether a resource (given by its type and tags)
-// matches the filter. The keys must match exactly, whereas
-// the tag value is checked against a regex.
-func (f YamlFilter) matchTags(resType string, tags map[string]string) (bool, error) {
-	cfgEntry, _ := f.cfg[resType]
+// MatchesTags checks whether a resource (given by its type and findTags)
+// matches the filter. The keys must match exactly, whereas the tag value is checked against a regex.
+func (f YamlFilter) matchTags(resType TerraformResourceType, tags map[string]string) (bool, error) {
+	cfgEntry, _ := f.Cfg[resType]
 
 	if len(cfgEntry.Tags) == 0 {
-		return false, errors.New("No entries set in filter to match tags")
+		return false, errors.New("filter has no tag entry")
 	}
 
 	for cfgTagKey, regex := range cfgEntry.Tags {
@@ -143,9 +125,8 @@ func (f YamlFilter) matchTags(resType string, tags map[string]string) (bool, err
 	return false, nil
 }
 
-// Matches checks whether a resource (given by its type and tags) matches
-// the configured filter criteria for tags and ids.
-func (f YamlFilter) Matches(resType string, id string, tags ...map[string]string) bool {
+// matches checks whether a resource matches the filter criteria.
+func (f YamlFilter) matches(resType TerraformResourceType, id string, tags ...map[string]string) bool {
 	var matchesTags = false
 	var errTags error
 
@@ -154,7 +135,7 @@ func (f YamlFilter) Matches(resType string, id string, tags ...map[string]string
 	}
 	matchesID, errID := f.matchID(resType, id)
 
-	// if the filter has neither an entry to match ids nor tags,
+	// if the filter has neither an entry to match ids nor findTags,
 	// select all resources of that type
 	if errID != nil && errTags != nil {
 		return true
