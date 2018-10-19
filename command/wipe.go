@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/cloudetc/awsweeper/resource"
-
 	"log"
 
+	"github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
 	"github.com/sirupsen/logrus"

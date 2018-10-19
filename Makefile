@@ -1,10 +1,8 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
+PKG_LIST := $(shell go list ./...)
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
 default: build
-
-build:
-	go install
 
 testacc:
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
@@ -21,3 +19,16 @@ vet:
 fmt:
 	gofmt -w $(GOFMT_FILES)
 
+modules:
+	go mod tidy
+
+generate:
+	go generate
+
+build:
+	go build
+
+.PHONY: test
+test: generate
+	go clean -testcache ${PKG_LIST}
+	go test -short --race ${PKG_LIST}
