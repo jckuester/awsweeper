@@ -5,7 +5,7 @@ import (
 
 	"log"
 
-	"errors"
+	"github.com/pkg/errors"
 
 	"fmt"
 
@@ -84,10 +84,13 @@ func (f YamlFilter) Types() []TerraformResourceType {
 
 // MatchID checks whether a resource (given by its type and id) matches the filter.
 func (f YamlFilter) matchID(resType TerraformResourceType, id string) (bool, error) {
-	cfgEntry, _ := f.Cfg[resType]
+	cfgEntry, found := f.Cfg[resType]
+	if !found {
+		return false, nil
+	}
 
 	if len(cfgEntry.Ids) == 0 {
-		return false, errors.New("no entries set in filter to match IDs")
+		return false, errors.New("filter has no IDs specified")
 	}
 
 	for _, regex := range cfgEntry.Ids {
@@ -105,10 +108,13 @@ func (f YamlFilter) matchID(resType TerraformResourceType, id string) (bool, err
 // MatchesTags checks whether a resource (given by its type and findTags)
 // matches the filter. The keys must match exactly, whereas the tag value is checked against a regex.
 func (f YamlFilter) matchTags(resType TerraformResourceType, tags map[string]string) (bool, error) {
-	cfgEntry, _ := f.Cfg[resType]
+	cfgEntry, found := f.Cfg[resType]
+	if !found {
+		return false, nil
+	}
 
 	if len(cfgEntry.Tags) == 0 {
-		return false, errors.New("filter has no tag entry")
+		return false, errors.New("filter has no tags specified")
 	}
 
 	for cfgTagKey, regex := range cfgEntry.Tags {
@@ -130,7 +136,7 @@ func (f YamlFilter) matches(r *DeletableResource) bool {
 	matchesTags, errTags := f.matchTags(r.Type, r.Tags)
 	matchesID, errID := f.matchID(r.Type, r.ID)
 
-	// if the filter has neither an entry to match ids nor tags, then select all resources of that type
+	// if the filter has neither an entry to match IDs nor tags, then select all resources of that type
 	if errID != nil && errTags != nil {
 		return true
 	}

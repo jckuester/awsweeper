@@ -21,11 +21,10 @@ func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	result := f.Apply(resource.Instance, res, testInstance, nil)
 
 	// then
-	assert.Len(t, result, len(res))
-	assert.Equal(t, res[0].ID, result[0][0].ID)
+	assert.Len(t, result[0], 0)
 }
 
 func TestYamlFilter_Apply_FilterAll(t *testing.T) {
@@ -43,7 +42,7 @@ func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	result := f.Apply(resource.Instance, res, testInstance, nil)
 
 	// then
 	assert.Len(t, result, len(res))
@@ -65,7 +64,7 @@ func TestYamlFilter_Apply_FilterID(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	result := f.Apply(resource.Instance, res, testInstance, nil)
 
 	// then
 	assert.Len(t, result, len(res))
@@ -95,7 +94,7 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	result := f.Apply(resource.Instance, res, testInstance, nil)
 	assert.Len(t, result[0], 1)
 	assert.Equal(t, "select-this", result[0][0].ID)
 }
@@ -134,7 +133,7 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	result := f.Apply(resource.Instance, res, testInstance, nil)
 	assert.Len(t, result[0], 1)
 	assert.Equal(t, "select-this", result[0][0].ID)
 }
@@ -174,7 +173,7 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testAutoscalingGroup, nil)
+	result := f.Apply(resource.Instance, res, testInstance, nil)
 	assert.Len(t, result[0], 2)
 	assert.Equal(t, "foo", result[0][0].ID)
 	assert.Equal(t, "bar", result[0][1].ID)
