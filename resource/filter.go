@@ -5,8 +5,6 @@ import (
 
 	"log"
 
-	"github.com/pkg/errors"
-
 	"fmt"
 
 	"github.com/spf13/afero"
@@ -26,7 +24,7 @@ type YamlCfg map[TerraformResourceType]yamlEntry
 // i.e., regexps to select
 // a subset of resources by ids or findTags.
 type yamlEntry struct {
-	Ids  []*string         `yaml:",omitempty"`
+	ID   string            `yaml:",omitempty"`
 	Tags map[string]string `yaml:",omitempty"`
 }
 
@@ -83,63 +81,55 @@ func (f YamlFilter) Types() []TerraformResourceType {
 }
 
 // MatchID checks whether a resource (given by its type and id) matches the filter.
-func (f YamlFilter) matchID(resType TerraformResourceType, id string) (bool, error) {
+func (f YamlFilter) matchID(resType TerraformResourceType, id string) bool {
 	cfgEntry, found := f.Cfg[resType]
 	if !found {
-		return false, nil
+		return false
 	}
 
-	if len(cfgEntry.Ids) == 0 {
-		return false, errors.New("filter has no IDs specified")
+	if cfgEntry.ID == "" {
+		return true
 	}
 
-	for _, regex := range cfgEntry.Ids {
-		if ok, err := regexp.MatchString(*regex, id); ok {
-			if err != nil {
-				log.Fatal(err)
-			}
-			return true, nil
+	if ok, err := regexp.MatchString(cfgEntry.ID, id); ok {
+		if err != nil {
+			log.Fatal(err)
 		}
+		return true
 	}
 
-	return false, nil
+	return false
 }
 
 // MatchesTags checks whether a resource (given by its type and findTags)
 // matches the filter. The keys must match exactly, whereas the tag value is checked against a regex.
-func (f YamlFilter) matchTags(resType TerraformResourceType, tags map[string]string) (bool, error) {
+func (f YamlFilter) matchTags(resType TerraformResourceType, tags map[string]string) bool {
 	cfgEntry, found := f.Cfg[resType]
 	if !found {
-		return false, nil
+		return false
 	}
 
 	if len(cfgEntry.Tags) == 0 {
-		return false, errors.New("filter has no tags specified")
+		return true
 	}
 
 	for cfgTagKey, regex := range cfgEntry.Tags {
 		if tagVal, ok := tags[cfgTagKey]; ok {
-			if res, err := regexp.MatchString(regex, tagVal); res {
+			if matched, err := regexp.MatchString(regex, tagVal); !matched {
 				if err != nil {
 					log.Fatal(err)
 				}
-				return true, nil
+				return false
 			}
+		} else {
+			return false
 		}
 	}
 
-	return false, nil
+	return true
 }
 
 // matches checks whether a resource matches the filter criteria.
 func (f YamlFilter) matches(r *DeletableResource) bool {
-	matchesTags, errTags := f.matchTags(r.Type, r.Tags)
-	matchesID, errID := f.matchID(r.Type, r.ID)
-
-	// if the filter has neither an entry to match IDs nor tags, then select all resources of that type
-	if errID != nil && errTags != nil {
-		return true
-	}
-
-	return matchesID || matchesTags
+	return f.matchTags(r.Type, r.Tags) && f.matchID(r.Type, r.ID)
 }
