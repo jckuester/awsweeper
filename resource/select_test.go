@@ -2,6 +2,9 @@ package resource_test
 
 import (
 	"testing"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/stretchr/testify/require"
 
@@ -11,10 +14,10 @@ import (
 
 func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 	//given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{},
+	f := &resource.Filter{
+		Cfg: resource.Config{},
 	}
-	res := []*resource.DeletableResource{
+	res := []*resource.Resource{
 		{
 			Type: resource.Instance,
 			ID:   "foo",
@@ -30,12 +33,12 @@ func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 
 func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 	//given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{
+	f := &resource.Filter{
+		Cfg: resource.Config{
 			resource.Instance: {},
 		},
 	}
-	res := []*resource.DeletableResource{
+	res := []*resource.Resource{
 		{
 			Type: resource.Instance,
 			ID:   "foo",
@@ -52,8 +55,8 @@ func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 
 func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 	//given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{
+	f := &resource.Filter{
+		Cfg: resource.Config{
 			resource.Instance: {
 				ID: "^select",
 			},
@@ -61,7 +64,7 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 	}
 
 	// when
-	res := []*resource.DeletableResource{
+	res := []*resource.Resource{
 		{
 			Type: resource.Instance,
 			ID:   "select-this",
@@ -80,8 +83,8 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 
 func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 	//given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{
+	f := &resource.Filter{
+		Cfg: resource.Config{
 			resource.Instance: {
 				Tags: map[string]string{
 					"foo": "^bar",
@@ -90,7 +93,7 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 	}
 
 	// when
-	res := []*resource.DeletableResource{
+	res := []*resource.Resource{
 		{
 			Type: resource.Instance,
 			ID:   "select-this",
@@ -119,8 +122,8 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 
 func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 	//given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{
+	f := &resource.Filter{
+		Cfg: resource.Config{
 			resource.Instance: {
 				Tags: map[string]string{
 					"foo": "^bar",
@@ -130,7 +133,7 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 	}
 
 	// when
-	res := []*resource.DeletableResource{
+	res := []*resource.Resource{
 		{
 			Type: resource.Instance,
 			ID:   "select-this",
@@ -156,8 +159,8 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 
 func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 	//given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{
+	f := &resource.Filter{
+		Cfg: resource.Config{
 			resource.Instance: {
 				ID: "^foo",
 				Tags: map[string]string{
@@ -167,7 +170,7 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 	}
 
 	// when
-	res := []*resource.DeletableResource{
+	res := []*resource.Resource{
 		{
 			Type: resource.Instance,
 			ID:   "foo",
@@ -185,6 +188,125 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 		{
 			Type: resource.Instance,
 			ID:   "this-neither",
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testInstance, nil)
+	assert.Len(t, result[0], 1)
+	assert.Equal(t, "foo", result[0][0].ID)
+}
+
+func TestYamlFilter_Apply_Created(t *testing.T) {
+	//given
+	f := &resource.Filter{
+		Cfg: resource.Config{
+			resource.Instance: {
+				Created: &resource.Created{
+					After:  aws.Time(time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)),
+					Before: aws.Time(time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)),
+				},
+			},
+		},
+	}
+
+	// when
+	res := []*resource.Resource{
+		{
+			Type:    resource.Instance,
+			ID:      "foo",
+			Created: aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC)),
+		},
+		{
+			Type:    resource.Instance,
+			ID:      "do-not-select-this1",
+			Created: aws.Time(time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)),
+		},
+		{
+			Type:    resource.Instance,
+			ID:      "do-not-select-this2",
+			Created: aws.Time(time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)),
+		},
+		{
+			Type:    resource.Instance,
+			ID:      "do-not-select-this3",
+			Created: aws.Time(time.Date(2018, 11, 22, 0, 0, 0, 0, time.UTC)),
+		},
+		{
+			Type: resource.Instance,
+			ID:   "do-not-select-this2",
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testInstance, nil)
+	assert.Len(t, result[0], 1)
+	assert.Equal(t, "foo", result[0][0].ID)
+}
+
+func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
+	//given
+	f := &resource.Filter{
+		Cfg: resource.Config{
+			resource.Instance: {
+				Created: &resource.Created{
+					Before: aws.Time(time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)),
+				},
+			},
+		},
+	}
+
+	// when
+	res := []*resource.Resource{
+		{
+			Type:    resource.Instance,
+			ID:      "foo",
+			Created: aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC)),
+		},
+		{
+			Type:    resource.Instance,
+			ID:      "do-not-select-this",
+			Created: aws.Time(time.Date(2018, 11, 22, 0, 0, 0, 0, time.UTC)),
+		},
+		{
+			Type: resource.Instance,
+			ID:   "do-not-select-this2",
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testInstance, nil)
+	assert.Len(t, result[0], 1)
+	assert.Equal(t, "foo", result[0][0].ID)
+}
+
+func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
+	//given
+	f := &resource.Filter{
+		Cfg: resource.Config{
+			resource.Instance: {
+				Created: &resource.Created{
+					After: aws.Time(time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)),
+				},
+			},
+		},
+	}
+
+	// when
+	res := []*resource.Resource{
+		{
+			Type:    resource.Instance,
+			ID:      "foo",
+			Created: aws.Time(time.Date(2018, 11, 22, 5, 0, 0, 0, time.UTC)),
+		},
+		{
+			Type:    resource.Instance,
+			ID:      "do-not-select-this",
+			Created: aws.Time(time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)),
+		},
+		{
+			Type: resource.Instance,
+			ID:   "do-not-select-this2",
 		},
 	}
 

@@ -24,7 +24,7 @@ var (
 		},
 	}
 
-	testInstanceID = "test-ami"
+	testInstanceID = "test-instance"
 	testInstance   = &ec2.DescribeInstancesOutput{
 		Reservations: []*ec2.Reservation{
 			{

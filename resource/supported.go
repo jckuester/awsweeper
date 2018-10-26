@@ -2,6 +2,7 @@ package resource
 
 import (
 	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -63,37 +64,48 @@ const (
 	VpcEndpoint         TerraformResourceType = "aws_vpc_endpoint"
 )
 
-var deleteIDs = map[TerraformResourceType]string{
-	Ami:                 "ImageId",
-	AutoscalingGroup:    "AutoScalingGroupName",
-	CloudformationStack: "StackId",
-	EbsSnapshot:         "SnapshotId",
-	EbsVolume:           "VolumeId",
-	EfsFileSystem:       "FileSystemId",
-	Eip:                 "AllocationId",
-	Elb:                 "LoadBalancerName",
-	IamGroup:            "GroupName",
-	IamInstanceProfile:  "InstanceProfileName",
-	IamPolicy:           "Arn",
-	IamRole:             "RoleName",
-	IamUser:             "UserName",
-	Instance:            "InstanceId",
-	InternetGateway:     "InternetGatewayId",
-	KeyPair:             "KeyName",
-	KmsAlias:            "AliasName",
-	KmsKey:              "KeyId",
-	LaunchConfiguration: "LaunchConfigurationName",
-	NatGateway:          "NatGatewayId",
-	NetworkAcl:          "NetworkAclId",
-	NetworkInterface:    "NetworkInterfaceId",
-	Route53Zone:         "Id",
-	RouteTable:          "RouteTableId",
-	S3Bucket:            "Name",
-	SecurityGroup:       "GroupId",
-	Subnet:              "SubnetId",
-	Vpc:                 "VpcId",
-	VpcEndpoint:         "VpcEndpointId",
-}
+var (
+	deleteIDs = map[TerraformResourceType]string{
+		Ami:                 "ImageId",
+		AutoscalingGroup:    "AutoScalingGroupName",
+		CloudformationStack: "StackId",
+		EbsSnapshot:         "SnapshotId",
+		EbsVolume:           "VolumeId",
+		EfsFileSystem:       "FileSystemId",
+		Eip:                 "AllocationId",
+		Elb:                 "LoadBalancerName",
+		IamGroup:            "GroupName",
+		IamInstanceProfile:  "InstanceProfileName",
+		IamPolicy:           "Arn",
+		IamRole:             "RoleName",
+		IamUser:             "UserName",
+		Instance:            "InstanceId",
+		InternetGateway:     "InternetGatewayId",
+		KeyPair:             "KeyName",
+		KmsAlias:            "AliasName",
+		KmsKey:              "KeyId",
+		LaunchConfiguration: "LaunchConfigurationName",
+		NatGateway:          "NatGatewayId",
+		NetworkAcl:          "NetworkAclId",
+		NetworkInterface:    "NetworkInterfaceId",
+		Route53Zone:         "Id",
+		RouteTable:          "RouteTableId",
+		S3Bucket:            "Name",
+		SecurityGroup:       "GroupId",
+		Subnet:              "SubnetId",
+		Vpc:                 "VpcId",
+		VpcEndpoint:         "VpcEndpointId",
+	}
+
+	tagFieldNames = []string{
+		"Tags",
+		"TagSet",
+	}
+
+	creationTimeFieldNames = []string{
+		"LaunchTime",
+	}
+)
 
 func SupportedResourceType(resType TerraformResourceType) bool {
 	_, found := deleteIDs[resType]
@@ -139,15 +151,16 @@ func NewAWS(s *session.Session) *AWS {
 	}
 }
 
-// DeletableResources is a list of AWS resources.
-type DeletableResources []*DeletableResource
+// Resources is a list of AWS resources.
+type Resources []*Resource
 
-// DeletableResource contains information about a single AWS resource that can be deleted by Terraform.
-type DeletableResource struct {
-	Type  TerraformResourceType
-	ID    string
-	Attrs map[string]string
-	Tags  map[string]string
+// Resource contains information about a single AWS resource that can be deleted by Terraform.
+type Resource struct {
+	Type    TerraformResourceType
+	ID      string
+	Tags    map[string]string
+	Created *time.Time
+	Attrs   map[string]string
 }
 
 // RawResources lists all resources of a particular type
