@@ -106,15 +106,18 @@ func (c *Wipe) wipe(res resource.Resources) {
 			for {
 				r, more := <-chResources
 				if more {
-					printStat := fmt.Sprintf("\tId:\t%s", r.ID)
+					printStat := fmt.Sprintf("\tId:\t\t%s", r.ID)
 					if r.Tags != nil {
 						if len(r.Tags) > 0 {
-							printStat += "\n\tTags:\t"
+							printStat += "\n\tTags:\t\t"
 							for k, v := range r.Tags {
 								printStat += fmt.Sprintf("[%s: %v] ", k, v)
 							}
 						}
 						printStat += "\n"
+					}
+					if r.Created != nil {
+						printStat += fmt.Sprintf("\tCreated:\t%s", r.Created)
 					}
 					fmt.Println(printStat)
 

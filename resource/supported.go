@@ -104,6 +104,8 @@ var (
 
 	creationTimeFieldNames = []string{
 		"LaunchTime",
+		"CreatedTime",
+		"CreationDate",
 	}
 )
 

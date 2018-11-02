@@ -18,10 +18,10 @@ import (
 var AppFs = afero.NewOsFs()
 
 // Config represents the content of a yaml file that is used as a contract to filter resources for deletion.
-type Config map[TerraformResourceType]resTypeConfig
+type Config map[TerraformResourceType][]ResourceTypeFilter
 
-// configEntry represents an entry in Config and selects the resources of a particular resource type.
-type resTypeConfig struct {
+// ResourceTypeFilter represents an entry in Config and selects the resources of a particular resource type.
+type ResourceTypeFilter struct {
 	ID   *string           `yaml:",omitempty"`
 	Tags map[string]string `yaml:",omitempty"`
 	// select resources by creation time
@@ -84,17 +84,12 @@ func (f Filter) Types() []TerraformResourceType {
 }
 
 // MatchID checks whether a resource (given by its type and id) matches the filter.
-func (f Filter) matchID(resType TerraformResourceType, id string) bool {
-	cfgEntry, found := f.Cfg[resType]
-	if !found {
-		return false
-	}
-
-	if cfgEntry.ID == nil {
+func (rtf ResourceTypeFilter) matchID(resType TerraformResourceType, id string) bool {
+	if rtf.ID == nil {
 		return true
 	}
 
-	if ok, err := regexp.MatchString(*cfgEntry.ID, id); ok {
+	if ok, err := regexp.MatchString(*rtf.ID, id); ok {
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -106,17 +101,12 @@ func (f Filter) matchID(resType TerraformResourceType, id string) bool {
 
 // MatchesTags checks whether a resource (given by its type and findTags)
 // matches the filter. The keys must match exactly, whereas the tag value is checked against a regex.
-func (f Filter) matchTags(resType TerraformResourceType, tags map[string]string) bool {
-	cfgEntry, found := f.Cfg[resType]
-	if !found {
-		return false
-	}
-
-	if cfgEntry.Tags == nil {
+func (rtf ResourceTypeFilter) matchTags(resType TerraformResourceType, tags map[string]string) bool {
+	if rtf.Tags == nil {
 		return true
 	}
 
-	for cfgTagKey, regex := range cfgEntry.Tags {
+	for cfgTagKey, regex := range rtf.Tags {
 		if tagVal, ok := tags[cfgTagKey]; ok {
 			if matched, err := regexp.MatchString(regex, tagVal); !matched {
 				if err != nil {
@@ -132,13 +122,8 @@ func (f Filter) matchTags(resType TerraformResourceType, tags map[string]string)
 	return true
 }
 
-func (f Filter) matchCreated(resType TerraformResourceType, creationTime *time.Time) bool {
-	cfgEntry, found := f.Cfg[resType]
-	if !found {
-		return false
-	}
-
-	if cfgEntry.Created == nil {
+func (rtf ResourceTypeFilter) matchCreated(resType TerraformResourceType, creationTime *time.Time) bool {
+	if rtf.Created == nil {
 		return true
 	}
 
@@ -147,13 +132,13 @@ func (f Filter) matchCreated(resType TerraformResourceType, creationTime *time.T
 	}
 
 	createdAfter := true
-	if cfgEntry.Created.After != nil {
-		createdAfter = creationTime.Unix() > cfgEntry.Created.After.Unix()
+	if rtf.Created.After != nil {
+		createdAfter = creationTime.Unix() > rtf.Created.After.Unix()
 	}
 
 	createdBefore := true
-	if cfgEntry.Created.Before != nil {
-		createdBefore = creationTime.Unix() < cfgEntry.Created.Before.Unix()
+	if rtf.Created.Before != nil {
+		createdBefore = creationTime.Unix() < rtf.Created.Before.Unix()
 	}
 
 	return createdAfter && createdBefore
@@ -161,5 +146,19 @@ func (f Filter) matchCreated(resType TerraformResourceType, creationTime *time.T
 
 // matches checks whether a resource matches the filter criteria.
 func (f Filter) matches(r *Resource) bool {
-	return f.matchTags(r.Type, r.Tags) && f.matchID(r.Type, r.ID) && f.matchCreated(r.Type, r.Created)
+	resTypeFilters, found := f.Cfg[r.Type]
+	if !found {
+		return false
+	}
+
+	if len(resTypeFilters) == 0 {
+		return true
+	}
+
+	for _, rtf := range resTypeFilters {
+		if rtf.matchTags(r.Type, r.Tags) && rtf.matchID(r.Type, r.ID) && rtf.matchCreated(r.Type, r.Created) {
+			return true
+		}
+	}
+	return false
 }
