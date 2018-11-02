@@ -114,10 +114,11 @@ func (c *Wipe) wipe(res resource.Resources) {
 								printStat += fmt.Sprintf("[%s: %v] ", k, v)
 							}
 						}
-						printStat += "\n"
 					}
+					printStat += "\n"
 					if r.Created != nil {
 						printStat += fmt.Sprintf("\tCreated:\t%s", r.Created)
+						printStat += "\n"
 					}
 					fmt.Println(printStat)
 
