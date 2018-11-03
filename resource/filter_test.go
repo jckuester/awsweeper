@@ -9,8 +9,8 @@ import (
 
 func TestYamlFilter_Validate(t *testing.T) {
 	// given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{
+	f := &resource.Filter{
+		Cfg: resource.Config{
 			resource.IamRole:       {},
 			resource.SecurityGroup: {},
 			resource.Instance:      {},
@@ -27,8 +27,8 @@ func TestYamlFilter_Validate(t *testing.T) {
 
 func TestYamlFilter_Validate_EmptyConfig(t *testing.T) {
 	// given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{},
+	f := &resource.Filter{
+		Cfg: resource.Config{},
 	}
 
 	// when
@@ -40,8 +40,8 @@ func TestYamlFilter_Validate_EmptyConfig(t *testing.T) {
 
 func TestYamlFilter_Validate_UnsupportedType(t *testing.T) {
 	// given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{
+	f := &resource.Filter{
+		Cfg: resource.Config{
 			resource.Instance:    {},
 			"not_supported_type": {},
 		},
@@ -56,8 +56,8 @@ func TestYamlFilter_Validate_UnsupportedType(t *testing.T) {
 
 func TestYamlFilter_Types(t *testing.T) {
 	// given
-	f := &resource.YamlFilter{
-		Cfg: resource.YamlCfg{
+	f := &resource.Filter{
+		Cfg: resource.Config{
 			resource.Instance: {},
 			resource.Vpc:      {},
 		},

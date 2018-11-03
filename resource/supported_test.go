@@ -24,6 +24,19 @@ var (
 		},
 	}
 
+	testInstanceID = "test-instance"
+	testInstance   = &ec2.DescribeInstancesOutput{
+		Reservations: []*ec2.Reservation{
+			{
+				Instances: []*ec2.Instance{
+					{
+						ImageId: &testInstanceID,
+					},
+				},
+			},
+		},
+	}
+
 	testAutoscalingGroupName = "test-auto-scaling-group"
 	testTags                 = map[string]string{
 		"test-tag-key": "test-tag-value",

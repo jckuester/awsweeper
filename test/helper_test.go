@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform/helper/schema"
+
 	"time"
 
 	"fmt"
@@ -14,7 +16,6 @@ import (
 	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/spf13/afero"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
@@ -76,16 +77,15 @@ func testMainTags(args []string, config string) resource.TestCheckFunc {
 func testAWSweeperIdsConfig(resType res.TerraformResourceType, id *string) string {
 	return fmt.Sprintf(`
 %s:
-  ids:
-    - %s
+  - id: %s
 `, resType, *id)
 }
 
 func testAWSweeperTagsConfig(resType res.TerraformResourceType) string {
 	return fmt.Sprintf(`
 %s:
-  tags:
-    foo: bar
+  - tags:
+      foo: bar
 `, resType)
 }
 

@@ -22,7 +22,7 @@ type Wipe struct {
 	forceDelete bool
 	client      *resource.AWS
 	provider    *terraform.ResourceProvider
-	filter      *resource.YamlFilter
+	filter      *resource.Filter
 }
 
 // Run executes the wipe command.
@@ -62,7 +62,7 @@ func (c *Wipe) Run(args []string) int {
 			log.Fatal(err)
 		}
 
-		deletableResources, err := c.client.DeletableResources(resType, rawResources)
+		deletableResources, err := resource.DeletableResources(resType, rawResources)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -79,7 +79,7 @@ func (c *Wipe) Run(args []string) int {
 // wipe does the actual deletion (in parallel) of a given (filtered) list of AWS resources.
 // It takes advantage of the AWS terraform provider by using its delete functions
 // (so we get retries, detaching of policies from some IAM resources before deletion, and other stuff for free).
-func (c *Wipe) wipe(res resource.DeletableResources) {
+func (c *Wipe) wipe(res resource.Resources) {
 	numWorkerThreads := 10
 
 	if len(res) == 0 {
@@ -96,7 +96,7 @@ func (c *Wipe) wipe(res resource.DeletableResources) {
 		Destroy: true,
 	}
 
-	chResources := make(chan *resource.DeletableResource, numWorkerThreads)
+	chResources := make(chan *resource.Resource, numWorkerThreads)
 
 	var wg sync.WaitGroup
 	wg.Add(len(res))
@@ -106,14 +106,18 @@ func (c *Wipe) wipe(res resource.DeletableResources) {
 			for {
 				r, more := <-chResources
 				if more {
-					printStat := fmt.Sprintf("\tId:\t%s", r.ID)
+					printStat := fmt.Sprintf("\tId:\t\t%s", r.ID)
 					if r.Tags != nil {
 						if len(r.Tags) > 0 {
-							printStat += "\n\tTags:\t"
+							printStat += "\n\tTags:\t\t"
 							for k, v := range r.Tags {
 								printStat += fmt.Sprintf("[%s: %v] ", k, v)
 							}
 						}
+					}
+					printStat += "\n"
+					if r.Created != nil {
+						printStat += fmt.Sprintf("\tCreated:\t%s", r.Created)
 						printStat += "\n"
 					}
 					fmt.Println(printStat)

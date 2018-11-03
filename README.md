@@ -21,12 +21,15 @@
   </a>
 </p>
 
-AWSweeper wipes out all (or parts) of the resources in your AWS account. Resources to be deleted can be filtered by their tags or IDs
-using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared in a yaml file (see [config.yml](example/config.yml)).
+AWSweeper wipes out all (or parts) of the resources in your AWS account. Resources to be deleted can be filtered by their ID, tags or 
+creation date using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared in a yaml file (see [config.yml](example/config.yml)).
 
-AWSweeper [can delete many](#supported-resources), but not all resources yet.
+AWSweeper [can delete many](#supported-resources), but not all resources yet. Your help 
+supporting more resources is very much appreciated ([please read this issue](https://github.com/cloudetc/awsweeper/issues/21)
+ to see how easy it is). Note that AWSweeper is based on the cloud-agnostic Terraform API for deletion - so it's planned to support 
+ deleting Azure and Google Cloud Platform resources soon, too.
 
-We are working on it. Happy erasing!
+Happy erasing!
 
 [![AWSweeper tutorial](img/asciinema-tutorial.gif)](https://asciinema.org/a/149097)
 
@@ -42,20 +45,47 @@ To see options available run `awsweeper --help`.
     
 ## Filter resources for deletion
 
-Resources to be deleted are filtered by a yaml configuration. To learn how, have a look at the following example:
+Resources to be deleted are selected by a yaml configuration. To learn how, have a look at the following example:
 
-    aws_security_group:
     aws_instance:
-      tags:
-        foo: bar
-        bla: blub
+      - id: ^foo.*
+        tags:
+          foo: bar
+          bla: blub
+        created:
+          before: 2018-06-14
+          after: 2018-10-28 12:28:39 +0000 
+      - tags:
+          foo: bar
+         created:
+           before: 2018-06-14
     aws_iam_role:
-      ids:
-      - ^foo.*            
+          
+This config would delete all instances which ID matches `^foo.*` *and* which have tags `foo: bar` *and* `bla: blub`
+*and* which have been created between `2018-10-28 12:28:39 +0000 UTC` and `2018-06-14`. Additionally, it would delete instances
+with tag `foo: bar` and which are older than `2018-06-14`.
 
-There are three ways to filter resources:
+Furthermore, this config would delete all IAM roles, as there is no list of filters provided for this resource type.
 
-1) All resources of a particular type
+The general syntax of the filter config is as follows:
+
+    <resource type>:
+      # filter 1
+      - id: <regex to filter by id>
+        tags:
+          <key>: <regex to filter value>
+          ...
+        created:
+          before: <timestamp> (optional)
+          after: <timestamp> (optional)
+      # filter 2
+       - ...
+    <resource type>:
+      ...
+     
+A more detailed description of the ways to filter resources:
+
+##### 1) All resources of a particular type
 
    [Terraform types](https://www.terraform.io/docs/providers/aws/index.html) are used to identify resources of a particular type
    (e.g., `aws_security_group` selects all resources that are security groups, `aws_iam_role` all roles,
@@ -65,16 +95,17 @@ There are three ways to filter resources:
    all security groups in your account would be deleted. Use the [all.yml](./all.yml), to delete all (currently supported) 
    resources.
 
-2) By tags
+##### 2) By tags
 
    You can narrow down on particular types of resources by the tags they have.
 
    If most of your resources have tags, this is probably the best to filter them 
    for deletion. But be aware: not all resources support tags and can be filtered this way.
    
-   In the example above, all EC2 instances are terminated that have either a tag with key `foo` and value `bar` or key `bla` and value `blub`, or both.
+   In the example above, all EC2 instances are terminated that have a tag with key `foo` and value `bar` as well as
+   `bla` and value `blub`.
    
-3) By IDs
+##### 3) By ID
    
    You can narrow down on particular types of resources by filtering on their IDs.
 
@@ -83,7 +114,11 @@ There are three ways to filter resources:
    all the IDs and tags of your resources are printed. Then, use this information to create the yaml file.
    
    In the example above, all roles which name starts with `foo` are deleted (the ID of roles is their name).
-   
+
+##### 4) By creation date
+
+    You can select resources by filtering on the date they have been created.
+
 ## Test run
 
  Use `awsweeper --dry-run <config.yml>` to only show what
@@ -108,7 +143,7 @@ AWSweeper can currently delete many but not [all of the existing types of AWS re
 - aws_iam_user
 - aws_instance
 - aws_internet_gateway
-- aws_key_pair (***new***)
+- aws_key_pair
 - aws_kms_alias
 - aws_kms_key
 - aws_launch_configuration
@@ -142,5 +177,5 @@ to test the working of AWSweeper for a just single resource, such as `aws_vpc`.
 
 ## Disclaimer
 
-You are using this tool at your own risk! I will not take any responsibility if you delete any critical resources in your
-production environments. Use it for your test accounts only.
+This tool is thoroughly tested. However, you are using this tool at your own risk! I will not take any responsibility if you delete any critical resources in your
+production environments.
