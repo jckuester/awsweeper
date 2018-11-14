@@ -1,0 +1,32 @@
+image: golang:latest
+
+before_script:
+- make setup
+- make modules
+- make generate
+- go version
+
+stages:
+- test
+- build
+- acceptance_test
+
+lint:
+  stage: test
+  script:
+  - make lint
+
+test:
+  stage: test
+  script:
+  - make test
+
+acceptance_test:
+  stage: acceptance_test
+  script:
+  - AWS_REGION=us-west-2 AWS_ACCESS_KEY_ID=${aws_access_key_id} AWS_SECRET_ACCESS_KEY=${aws_secret_key_id} make testacc
+
+build:
+  stage: build
+  script:
+  - make build

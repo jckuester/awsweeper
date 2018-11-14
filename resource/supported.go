@@ -195,7 +195,7 @@ type Resources []*Resource
 // Resource contains information about a single AWS resource that can be deleted by Terraform.
 type Resource struct {
 	Type TerraformResourceType
-	// ID by which the resource can be deleted (in some cases the ID is the resource's name, but not alawys;
+	// ID by which the resource can be deleted (in some cases the ID is the resource's name, but not always;
 	// that's why we need the deleteIDs map)
 	ID      string
 	Tags    map[string]string
