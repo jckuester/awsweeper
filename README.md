@@ -117,7 +117,7 @@ A more detailed description of the ways to filter resources:
 
 ##### 4) By creation date
 
-    You can select resources by filtering on the date they have been created.
+   You can select resources by filtering on the date they have been created.
 
 ## Test run
 

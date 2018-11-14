@@ -2,6 +2,7 @@ package resource
 
 import (
 	"regexp"
+	"sort"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -72,13 +73,17 @@ func (f Filter) Validate() error {
 	return nil
 }
 
-// Types returns all the resource types in the config.
+// Types returns all the resource types in the config in their dependency order.
 func (f Filter) Types() []TerraformResourceType {
 	resTypes := make([]TerraformResourceType, 0, len(f.Cfg))
 
 	for k := range f.Cfg {
 		resTypes = append(resTypes, k)
 	}
+
+	sort.Slice(resTypes, func(i, j int) bool {
+		return DependencyOrder[resTypes[i]] > DependencyOrder[resTypes[j]]
+	})
 
 	return resTypes
 }

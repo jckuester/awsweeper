@@ -97,11 +97,47 @@ var (
 		VpcEndpoint:         "VpcEndpointId",
 	}
 
+	// DependencyOrder is the order in which resource types should be deleted,
+	// since dependent resources need to be deleted before their dependencies
+	// (e.g. aws_subnet before aws_vpc)
+	DependencyOrder = map[TerraformResourceType]int{
+		Ami:                 9720,
+		AutoscalingGroup:    1000,
+		CloudformationStack: 9930,
+		EbsSnapshot:         9740,
+		EbsVolume:           9730,
+		EfsFileSystem:       9910,
+		Eip:                 9890,
+		Elb:                 9960,
+		IamGroup:            9810,
+		IamInstanceProfile:  9780,
+		IamPolicy:           9820,
+		IamRole:             9790,
+		IamUser:             9800,
+		Instance:            9980,
+		InternetGateway:     9880,
+		KeyPair:             9970,
+		KmsAlias:            9770,
+		KmsKey:              9760,
+		LaunchConfiguration: 9990,
+		NatGateway:          9940,
+		NetworkAcl:          9840,
+		NetworkInterface:    9000,
+		Route53Zone:         9920,
+		RouteTable:          9860,
+		S3Bucket:            9750,
+		SecurityGroup:       9850,
+		Subnet:              9870,
+		Vpc:                 9830,
+		VpcEndpoint:         9950,
+	}
+
 	tagFieldNames = []string{
 		"Tags",
 		"TagSet",
 	}
 
+	// creationTimeFieldNames are a list field names that are used to find the creation date of a resource.
 	creationTimeFieldNames = []string{
 		"LaunchTime",
 		"CreatedTime",
@@ -158,7 +194,9 @@ type Resources []*Resource
 
 // Resource contains information about a single AWS resource that can be deleted by Terraform.
 type Resource struct {
-	Type    TerraformResourceType
+	Type TerraformResourceType
+	// ID by which the resource can be deleted (in some cases the ID is the resource's name, but not alawys;
+	// that's why we need the deleteIDs map)
 	ID      string
 	Tags    map[string]string
 	Created *time.Time
