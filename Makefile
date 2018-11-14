@@ -4,6 +4,7 @@ PKG_LIST := $(shell go list ./...)
 .PHONY: setup
 setup:
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s latest
+	go get github.com/golang/mock/gomock
 
 .PHONY: modules
 modules:
