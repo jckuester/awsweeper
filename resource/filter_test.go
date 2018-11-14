@@ -71,3 +71,21 @@ func TestYamlFilter_Types(t *testing.T) {
 	assert.Contains(t, resTypes, resource.Vpc)
 	assert.Contains(t, resTypes, resource.Instance)
 }
+
+func TestYamlFilter_Types_DependencyOrder(t *testing.T) {
+	// given
+	f := &resource.Filter{
+		Cfg: resource.Config{
+			resource.Subnet: {},
+			resource.Vpc:    {},
+		},
+	}
+
+	// when
+	resTypes := f.Types()
+
+	// then
+	assert.Len(t, resTypes, 2)
+	assert.Equal(t, resTypes[0], resource.Subnet)
+	assert.Equal(t, resTypes[1], resource.Vpc)
+}
