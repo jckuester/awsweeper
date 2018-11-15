@@ -29,5 +29,5 @@ testacc:
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
 .PHONY: lint
-lint:
+lint: generate
 	./bin/golangci-lint run

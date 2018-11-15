@@ -1,2 +1,4 @@
 linters:
-  enable-all: true
+  enable-all: false
+  disable:
+    - typecheck
