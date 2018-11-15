@@ -12,6 +12,7 @@ modules:
 
 .PHONY: generate
 generate:
+	mkdir -p resource/mocks
 	go generate
 
 .PHONY: build
