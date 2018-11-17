@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"os"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccAutoscalingGroup_deleteByTags(t *testing.T) {
@@ -53,10 +49,10 @@ func TestAccAutoscalingGroup_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAWSAutoScalingGroupExists("aws_autoscaling_group.foo", &asg1),
 					testAccCheckAWSAutoScalingGroupExists("aws_autoscaling_group.bar", &asg2),
-					testMainAutoscalingGroupIds(argsDryRun, &asg1),
+					testMainIds(argsDryRun, asg1.AutoScalingGroupName),
 					testAutoscalingGroupExists(&asg1),
 					testAutoscalingGroupExists(&asg2),
-					testMainAutoscalingGroupIds(argsForceDelete, &asg1),
+					testMainIds(argsForceDelete, asg1.AutoScalingGroupName),
 					testAutoscalingGroupDeleted(&asg1),
 					testAutoscalingGroupExists(&asg2),
 				),
@@ -139,18 +135,6 @@ func testAutoscalingGroupDeleted(asg *autoscaling.Group) resource.TestCheckFunc 
 			return fmt.Errorf("autoscaling Group hasn't been deleted")
 		}
 
-		return nil
-	}
-}
-
-func testMainAutoscalingGroupIds(args []string, group *autoscaling.Group) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.AutoscalingGroup, group.AutoScalingGroupName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

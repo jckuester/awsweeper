@@ -2,17 +2,13 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/cloudetc/awsweeper/command"
-	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccIamInstanceProfile_deleteByIds(t *testing.T) {
@@ -28,10 +24,10 @@ func TestAccIamInstanceProfile_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIamInstanceProfileExists("aws_iam_instance_profile.foo", &r1),
 					testAccCheckIamInstanceProfileExists("aws_iam_instance_profile.bar", &r2),
-					testMainIamInstanceProfileIds(argsDryRun, &r1),
+					testMainIds(argsDryRun, r1.InstanceProfileName),
 					testIamInstanceProfileExists(&r1),
 					testIamInstanceProfileExists(&r2),
-					testMainIamInstanceProfileIds(argsForceDelete, &r1),
+					testMainIds(argsForceDelete, r1.InstanceProfileName),
 					testIamInstanceProfileDeleted(&r1),
 					testIamInstanceProfileExists(&r2),
 				),
@@ -61,7 +57,7 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM instance profile has been deleted")
 			}
 			return err
@@ -69,18 +65,6 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 
 		*r = *resp.InstanceProfile
 
-		return nil
-	}
-}
-
-func testMainIamInstanceProfileIds(args []string, r *iam.InstanceProfile) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.IamInstanceProfile, r.InstanceProfileName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
@@ -97,7 +81,7 @@ func testIamInstanceProfileExists(r *iam.InstanceProfile) resource.TestCheckFunc
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM instance profile has been deleted")
 			}
 			return err
@@ -120,7 +104,7 @@ func testIamInstanceProfileDeleted(r *iam.InstanceProfile) resource.TestCheckFun
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return nil
 			}
 			return err

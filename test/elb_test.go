@@ -2,17 +2,14 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccElb_deleteByTags(t *testing.T) {
@@ -56,10 +53,10 @@ func TestAccElb_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAWSELBExists("aws_elb.foo", &lb1),
 					testAccCheckAWSELBExists("aws_elb.bar", &lb2),
-					testMainElbIds(argsDryRun, &lb1),
+					testMainIds(argsDryRun, lb1.LoadBalancerName),
 					testElbExists(&lb1),
 					testElbExists(&lb2),
-					testMainElbIds(argsForceDelete, &lb1),
+					testMainIds(argsForceDelete, lb1.LoadBalancerName),
 					testElbDeleted(&lb1),
 					testElbExists(&lb2),
 				),
@@ -105,18 +102,6 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 			}
 		}
 
-		return nil
-	}
-}
-
-func testMainElbIds(args []string, lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.Elb, lb.LoadBalancerName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

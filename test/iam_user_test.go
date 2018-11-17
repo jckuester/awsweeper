@@ -2,17 +2,13 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/cloudetc/awsweeper/command"
-	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccIamUser_deleteByIds(t *testing.T) {
@@ -28,10 +24,10 @@ func TestAccIamUser_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIamUserExists("aws_iam_user.foo", &u1),
 					testAccCheckIamUserExists("aws_iam_user.bar", &u2),
-					testMainIamUserIds(argsDryRun, &u1),
+					testMainIds(argsDryRun, u1.UserName),
 					testIamUserExists(&u1),
 					testIamUserExists(&u2),
-					testMainIamUserIds(argsForceDelete, &u1),
+					testMainIds(argsForceDelete, u1.UserName),
 					testIamUserDeleted(&u1),
 					testIamUserExists(&u2),
 				),
@@ -61,7 +57,7 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM user has been deleted")
 			}
 			return err
@@ -69,17 +65,6 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 
 		*u = *resp.User
 
-		return nil
-	}
-}
-
-func testMainIamUserIds(args []string, u *iam.User) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamUser, u.UserName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
@@ -96,7 +81,7 @@ func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM user has been deleted")
 			}
 			return err
@@ -119,7 +104,7 @@ func testIamUserDeleted(u *iam.User) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return nil
 			}
 			return err

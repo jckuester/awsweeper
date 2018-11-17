@@ -2,17 +2,14 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccInstance_deleteByTags(t *testing.T) {
@@ -53,10 +50,10 @@ func TestAccInstance_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckInstanceExists("aws_instance.foo", &instance1),
 					testAccCheckInstanceExists("aws_instance.bar", &instance2),
-					testMainInstanceIds(argsDryRun, &instance1),
+					testMainIds(argsDryRun, instance1.InstanceId),
 					testInstanceExists(&instance1),
 					testInstanceExists(&instance2),
-					testMainInstanceIds(argsForceDelete, &instance1),
+					testMainIds(argsForceDelete, instance1.InstanceId),
 					testInstanceDeleted(&instance1),
 					testInstanceExists(&instance2),
 				),
@@ -139,17 +136,6 @@ func testInstanceDeleted(instance *ec2.Instance) resource.TestCheckFunc {
 			}
 		}
 
-		return nil
-	}
-}
-
-func testMainInstanceIds(args []string, instance *ec2.Instance) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Instance, instance.InstanceId)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

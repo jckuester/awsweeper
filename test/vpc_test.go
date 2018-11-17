@@ -2,17 +2,14 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccVpc_deleteByTags(t *testing.T) {
@@ -53,10 +50,10 @@ func TestAccVpc_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckVpcExists("aws_vpc.foo", &vpc1),
 					testAccCheckVpcExists("aws_vpc.bar", &vpc2),
-					testMainVpcIds(argsDryRun, &vpc1),
+					testMainIds(argsDryRun, vpc1.VpcId),
 					testVpcExists(&vpc1),
 					testVpcExists(&vpc2),
-					testMainVpcIds(argsForceDelete, &vpc1),
+					testMainIds(argsForceDelete, vpc1.VpcId),
 					testVpcDeleted(&vpc1),
 					testVpcExists(&vpc2),
 				),
@@ -90,17 +87,6 @@ func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
 
 		*vpc = *resp.Vpcs[0]
 
-		return nil
-	}
-}
-
-func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Vpc, vpc.VpcId)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

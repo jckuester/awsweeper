@@ -2,17 +2,13 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/cloudetc/awsweeper/command"
-	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccIamRole_deleteByIds(t *testing.T) {
@@ -28,10 +24,10 @@ func TestAccIamRole_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIamRoleExists("aws_iam_role.foo", &r1),
 					testAccCheckIamRoleExists("aws_iam_role.bar", &r2),
-					testMainIamRoleIds(argsDryRun, &r1),
+					testMainIds(argsDryRun, r1.RoleName),
 					testIamRoleExists(&r1),
 					testIamRoleExists(&r2),
-					testMainIamRoleIds(argsForceDelete, &r1),
+					testMainIds(argsForceDelete, r1.RoleName),
 					testIamRoleDeleted(&r1),
 					testIamRoleExists(&r2),
 				),
@@ -61,7 +57,7 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM role has been deleted")
 			}
 			return err
@@ -69,17 +65,6 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 
 		*r = *resp.Role
 
-		return nil
-	}
-}
-
-func testMainIamRoleIds(args []string, r *iam.Role) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamRole, r.RoleName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
@@ -96,7 +81,7 @@ func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM role has been deleted")
 			}
 			return err
@@ -119,7 +104,7 @@ func testIamRoleDeleted(r *iam.Role) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return nil
 			}
 			return err

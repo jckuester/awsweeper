@@ -2,17 +2,14 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccKmsKey_deleteByTags(t *testing.T) {
@@ -56,10 +53,10 @@ func TestAccKmsKey_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKmsKeyExists("aws_kms_key.foo", &k1),
 					testAccCheckKmsKeyExists("aws_kms_key.bar", &k2),
-					testMainKmsKeyIds(argsDryRun, &k1),
+					testMainIds(argsDryRun, k1.KeyId),
 					testKmsKeyExists(&k1),
 					testKmsKeyExists(&k2),
-					testMainKmsKeyIds(argsForceDelete, &k1),
+					testMainIds(argsForceDelete, k1.KeyId),
 					testKmsKeyDeleted(&k1),
 					testKmsKeyExists(&k2),
 				),
@@ -93,17 +90,6 @@ func testAccCheckKmsKeyExists(name string, k *kms.KeyMetadata) resource.TestChec
 
 		*k = *out.KeyMetadata
 
-		return nil
-	}
-}
-
-func testMainKmsKeyIds(args []string, k *kms.KeyMetadata) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.KmsKey, k.KeyId)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
