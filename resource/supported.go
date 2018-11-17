@@ -53,7 +53,7 @@ const (
 	KmsKey              TerraformResourceType = "aws_kms_key"
 	LaunchConfiguration TerraformResourceType = "aws_launch_configuration"
 	NatGateway          TerraformResourceType = "aws_nat_gateway"
-	NetworkAcl          TerraformResourceType = "aws_network_acl"
+	NetworkACL          TerraformResourceType = "aws_network_acl"
 	NetworkInterface    TerraformResourceType = "aws_network_interface"
 	Route53Zone         TerraformResourceType = "aws_route53_zone"
 	RouteTable          TerraformResourceType = "aws_route_table"
@@ -86,7 +86,7 @@ var (
 		KmsKey:              "KeyId",
 		LaunchConfiguration: "LaunchConfigurationName",
 		NatGateway:          "NatGatewayId",
-		NetworkAcl:          "NetworkAclId",
+		NetworkACL:          "NetworkAclId",
 		NetworkInterface:    "NetworkInterfaceId",
 		Route53Zone:         "Id",
 		RouteTable:          "RouteTableId",
@@ -121,7 +121,7 @@ var (
 		KmsKey:              9760,
 		LaunchConfiguration: 9990,
 		NatGateway:          9940,
-		NetworkAcl:          9840,
+		NetworkACL:          9840,
 		NetworkInterface:    9000,
 		Route53Zone:         9920,
 		RouteTable:          9860,
@@ -246,7 +246,7 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.launchConfigurations()
 	case NatGateway:
 		return a.natGateways()
-	case NetworkAcl:
+	case NetworkACL:
 		return a.networkAcls()
 	case NetworkInterface:
 		return a.networkInterfaces()
@@ -288,9 +288,7 @@ func (a *AWS) instances() (interface{}, error) {
 
 	var instances []*ec2.Instance
 	for _, r := range output.Reservations {
-		for _, i := range r.Instances {
-			instances = append(instances, i)
-		}
+		instances = append(instances, r.Instances...)
 	}
 
 	return instances, nil

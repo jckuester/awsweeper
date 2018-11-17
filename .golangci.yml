@@ -1,4 +1,5 @@
+run:
+  deadline: 5m
+
 linters:
-  enable-all: false
-  disable:
-    - typecheck
+  enable-all: true

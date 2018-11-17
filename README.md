@@ -4,14 +4,11 @@
   <a href="https://github.com/cloudetc/awsweeper/releases/latest">
     <img alt="Release" src="https://img.shields.io/github/release/cloudetc/awsweeper.svg?style=flat-square">
   </a>
-  <a href="https://github.com/cloudetc/awsweeper/master">
-    <img alt="Travis" src="https://img.shields.io/travis/cloudetc/awsweeper/master.svg?style=flat-square">
+  <a href="https://gitlab.com/jckuester/awsweeper/commits/master">
+    <img alt="pipeline status" src="https://gitlab.com/jckuester/awsweeper/badges/master/pipeline.svg" />
   </a>
   <a href="https://goreportcard.com/report/github.com/cloudetc/awsweeper">
     <img alt="Go Report" src="https://goreportcard.com/badge/github.com/cloudetc/awsweeper?style=flat-square" />
-  </a>
-  <a href="https://codecov.io/gh/cloudetc/awsweeper">
-    <img alt="Codecov branch" src="https://codecov.io/gh/cloudetc/awsweeper/branch/master/graph/badge.svg?style=flat-square" />
   </a>
   <a href="https://godoc.org/github.com/cloudetc/awsweeper">
     <img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square" />
