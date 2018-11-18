@@ -2,7 +2,11 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/cloudetc/awsweeper/command"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -50,16 +54,26 @@ func TestAccInstance_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckInstanceExists("aws_instance.foo", &instance1),
 					testAccCheckInstanceExists("aws_instance.bar", &instance2),
-					testMainIds(argsDryRun, instance1.InstanceId),
+					testMainInstanceIds(argsDryRun, &instance1),
 					testInstanceExists(&instance1),
 					testInstanceExists(&instance2),
-					testMainIds(argsForceDelete, instance1.InstanceId),
+					testMainInstanceIds(argsForceDelete, &instance1),
 					testInstanceDeleted(&instance1),
 					testInstanceExists(&instance2),
 				),
 			},
 		},
 	})
+}
+
+func testMainInstanceIds(args []string, instance *ec2.Instance) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Instance, instance.InstanceId)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckInstanceExists(n string, instance *ec2.Instance) resource.TestCheckFunc {

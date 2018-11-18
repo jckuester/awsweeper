@@ -2,7 +2,11 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/cloudetc/awsweeper/command"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -53,16 +57,26 @@ func TestAccRoute53Zone_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRoute53ZoneExists("aws_route53_zone.foo", &zone1),
 					testAccCheckRoute53ZoneExists("aws_route53_zone.bar", &zone2),
-					testMainIds(argsDryRun, zone1.Id),
+					testMainRoute53ZoneIds(argsDryRun, &zone1),
 					testRoute53ZoneExists(&zone1),
 					testRoute53ZoneExists(&zone2),
-					testMainIds(argsForceDelete, zone1.Id),
+					testMainRoute53ZoneIds(argsForceDelete, &zone1),
 					testRoute53ZoneDeleted(&zone1),
 					testRoute53ZoneExists(&zone2),
 				),
 			},
 		},
 	})
+}
+
+func testMainRoute53ZoneIds(args []string, z *route53.HostedZone) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Route53Zone, z.Id)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.TestCheckFunc {

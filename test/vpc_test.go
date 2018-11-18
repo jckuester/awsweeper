@@ -2,11 +2,15 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -50,16 +54,26 @@ func TestAccVpc_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckVpcExists("aws_vpc.foo", &vpc1),
 					testAccCheckVpcExists("aws_vpc.bar", &vpc2),
-					testMainIds(argsDryRun, vpc1.VpcId),
+					testMainVpcIds(argsDryRun, &vpc1),
 					testVpcExists(&vpc1),
 					testVpcExists(&vpc2),
-					testMainIds(argsForceDelete, vpc1.VpcId),
+					testMainVpcIds(argsForceDelete, &vpc1),
 					testVpcDeleted(&vpc1),
 					testVpcExists(&vpc2),
 				),
 			},
 		},
 	})
+}
+
+func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Vpc, vpc.VpcId)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {

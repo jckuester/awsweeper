@@ -2,14 +2,17 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/spf13/afero"
 )
 
 func TestAccInternetGateways_deleteByTags(t *testing.T) {
@@ -52,16 +55,27 @@ func TestAccInternetGateway_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckInternetGatewayExists("aws_internet_gateway.foo", &ig1),
 					testAccCheckInternetGatewayExists("aws_internet_gateway.bar", &ig2),
-					testMainIds(argsDryRun, ig1.InternetGatewayId),
+					testMainInternetGatewayIds(argsDryRun, &ig1),
 					testInternetGatewayExists(&ig1),
 					testInternetGatewayExists(&ig2),
-					testMainIds(argsForceDelete, ig1.InternetGatewayId),
+					testMainInternetGatewayIds(argsForceDelete, &ig1),
 					testInternetGatewayDeleted(&ig1),
 					testInternetGatewayExists(&ig2),
 				),
 			},
 		},
 	})
+}
+
+func testMainInternetGatewayIds(args []string, ig *ec2.InternetGateway) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.InternetGateway, ig.InternetGatewayId)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckInternetGatewayExists(n string, ig *ec2.InternetGateway) resource.TestCheckFunc {

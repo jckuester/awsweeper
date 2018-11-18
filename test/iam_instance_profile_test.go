@@ -2,13 +2,17 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/spf13/afero"
 )
 
 func TestAccIamInstanceProfile_deleteByIds(t *testing.T) {
@@ -24,16 +28,27 @@ func TestAccIamInstanceProfile_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIamInstanceProfileExists("aws_iam_instance_profile.foo", &r1),
 					testAccCheckIamInstanceProfileExists("aws_iam_instance_profile.bar", &r2),
-					testMainIds(argsDryRun, r1.InstanceProfileName),
+					testMainIamInstanceProfileIds(argsDryRun, &r1),
 					testIamInstanceProfileExists(&r1),
 					testIamInstanceProfileExists(&r2),
-					testMainIds(argsForceDelete, r1.InstanceProfileName),
+					testMainIamInstanceProfileIds(argsForceDelete, &r1),
 					testIamInstanceProfileDeleted(&r1),
 					testIamInstanceProfileExists(&r2),
 				),
 			},
 		},
 	})
+}
+
+func testMainIamInstanceProfileIds(args []string, r *iam.InstanceProfile) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.IamInstanceProfile, r.InstanceProfileName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) resource.TestCheckFunc {

@@ -68,22 +68,6 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-func testMainIds(args []string, id *string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		err := afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.AutoscalingGroup, id)), 0644)
-		if err != nil {
-			return err
-		}
-
-		os.Args = args
-
-		command.WrappedMain()
-		return nil
-	}
-}
-
 func testMainTags(args []string, config string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()

@@ -2,13 +2,17 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/spf13/afero"
 )
 
 func TestAccIamUser_deleteByIds(t *testing.T) {
@@ -24,16 +28,26 @@ func TestAccIamUser_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIamUserExists("aws_iam_user.foo", &u1),
 					testAccCheckIamUserExists("aws_iam_user.bar", &u2),
-					testMainIds(argsDryRun, u1.UserName),
+					testMainIamUserIds(argsDryRun, &u1),
 					testIamUserExists(&u1),
 					testIamUserExists(&u2),
-					testMainIds(argsForceDelete, u1.UserName),
+					testMainIamUserIds(argsForceDelete, &u1),
 					testIamUserDeleted(&u1),
 					testIamUserExists(&u2),
 				),
 			},
 		},
 	})
+}
+
+func testMainIamUserIds(args []string, u *iam.User) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamUser, u.UserName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc {

@@ -2,7 +2,11 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/cloudetc/awsweeper/command"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -53,16 +57,31 @@ func TestAccElb_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAWSELBExists("aws_elb.foo", &lb1),
 					testAccCheckAWSELBExists("aws_elb.bar", &lb2),
-					testMainIds(argsDryRun, lb1.LoadBalancerName),
+					testMainElbIds(argsDryRun, &lb1),
 					testElbExists(&lb1),
 					testElbExists(&lb2),
-					testMainIds(argsForceDelete, lb1.LoadBalancerName),
+					testMainElbIds(argsForceDelete, &lb1),
 					testElbDeleted(&lb1),
 					testElbExists(&lb2),
 				),
 			},
 		},
 	})
+}
+
+func testMainElbIds(args []string, lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		err := afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.Elb, lb.LoadBalancerName)), 0644)
+		if err != nil {
+			return err
+		}
+
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resource.TestCheckFunc {

@@ -2,13 +2,17 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/spf13/afero"
 )
 
 func TestAccIamPolicy_deleteByIds(t *testing.T) {
@@ -24,10 +28,10 @@ func TestAccIamPolicy_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIamPolicyExists("aws_iam_policy.foo", &p1),
 					testAccCheckIamPolicyExists("aws_iam_policy.bar", &p2),
-					testMainIds(argsDryRun, p1.Arn),
+					testMainIamPolicyIds(argsDryRun, &p1),
 					testIamPolicyExists(&p1),
 					testIamPolicyExists(&p2),
-					testMainIds(argsForceDelete, p1.Arn),
+					testMainIamPolicyIds(argsForceDelete, &p1),
 					testIamPolicyDeleted(&p1),
 					testIamPolicyExists(&p2),
 				),
@@ -49,16 +53,26 @@ func TestAccIamPolicyAttached_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIamPolicyExists("aws_iam_policy.foo", &p1),
 					testAccCheckIamPolicyExists("aws_iam_policy.bar", &p2),
-					testMainIds(argsDryRun, p1.Arn),
+					testMainIamPolicyIds(argsDryRun, &p1),
 					testIamPolicyExists(&p1),
 					testIamPolicyExists(&p2),
-					testMainIds(argsForceDelete, p1.Arn),
+					testMainIamPolicyIds(argsForceDelete, &p1),
 					testIamPolicyDeleted(&p1),
 					testIamPolicyExists(&p2),
 				),
 			},
 		},
 	})
+}
+
+func testMainIamPolicyIds(args []string, p *iam.Policy) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamPolicy, p.Arn)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckFunc {

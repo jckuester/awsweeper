@@ -2,13 +2,17 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/spf13/afero"
 )
 
 func TestAccKeyPair_deleteByIds(t *testing.T) {
@@ -24,16 +28,26 @@ func TestAccKeyPair_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeyPairExists("aws_key_pair.foo", &kp1),
 					testAccCheckKeyPairExists("aws_key_pair.bar", &kp2),
-					testMainIds(argsDryRun, kp1.KeyName),
+					testMainKeyPairIds(argsDryRun, &kp1),
 					testKeyPairExists(&kp1),
 					testKeyPairExists(&kp2),
-					testMainIds(argsForceDelete, kp1.KeyName),
+					testMainKeyPairIds(argsForceDelete, &kp1),
 					testKeyPairDeleted(&kp1),
 					testKeyPairExists(&kp2),
 				),
 			},
 		},
 	})
+}
+
+func testMainKeyPairIds(args []string, kp *ec2.KeyPairInfo) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.KeyPair, kp.KeyName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheckFunc {

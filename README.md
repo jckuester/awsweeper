@@ -40,9 +40,9 @@ Releases for your platform are [here](https://github.com/cloudetc/awsweeper/rele
 
 To see options available run `awsweeper --help`.
     
-## Filter resources for deletion
+## Filtering
 
-Resources to be deleted are selected by a yaml configuration. To learn how, have a look at the following example:
+Resources to be deleted are filtered by a yaml configuration. To learn how, have a look at the following example:
 
     aws_instance:
       - id: ^foo.*
@@ -76,7 +76,7 @@ The general syntax of the filter config is as follows:
           before: <timestamp> (optional)
           after: <timestamp> (optional)
       # filter 2
-       - ...
+      - ...
     <resource type>:
       ...
      
@@ -116,7 +116,7 @@ A more detailed description of the ways to filter resources:
 
    You can select resources by filtering on the date they have been created.
 
-## Test run
+## Dry-run mode
 
  Use `awsweeper --dry-run <config.yml>` to only show what
 would be deleted. This way, you can fine-tune your yaml configuration until it works the way you want it to. 

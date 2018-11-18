@@ -2,7 +2,12 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -24,16 +29,27 @@ func TestAccLaunchConfiguration_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckLaunchConfigurationExists("aws_launch_configuration.foo", &lc1),
 					testAccCheckLaunchConfigurationExists("aws_launch_configuration.bar", &lc2),
-					testMainIds(argsDryRun, lc1.LaunchConfigurationName),
+					testMainLaunchConfigurationIds(argsDryRun, &lc1),
 					testLaunchConfigurationExists(&lc1),
 					testLaunchConfigurationExists(&lc2),
-					testMainIds(argsForceDelete, lc1.LaunchConfigurationName),
+					testMainLaunchConfigurationIds(argsForceDelete, &lc1),
 					testLaunchConfigurationDeleted(&lc1),
 					testLaunchConfigurationExists(&lc2),
 				),
 			},
 		},
 	})
+}
+
+func testMainLaunchConfigurationIds(args []string, lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.LaunchConfiguration, lc.LaunchConfigurationName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckLaunchConfigurationExists(n string, lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {

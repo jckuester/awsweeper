@@ -2,14 +2,17 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/spf13/afero"
 )
 
 func TestAccSubnet_deleteByTags(t *testing.T) {
@@ -50,16 +53,26 @@ func TestAccSubnet_deleteByIds(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSubnetExists("aws_subnet.foo", &subnet1),
 					testAccCheckSubnetExists("aws_subnet.bar", &subnet2),
-					testMainIds(argsDryRun, subnet1.SubnetId),
+					testMainSubnetIds(argsDryRun, &subnet1),
 					testSubnetExists(&subnet1),
 					testSubnetExists(&subnet2),
-					testMainIds(argsForceDelete, subnet1.SubnetId),
+					testMainSubnetIds(argsForceDelete, &subnet1),
 					testSubnetDeleted(&subnet1),
 					testSubnetExists(&subnet2),
 				),
 			},
 		},
 	})
+}
+
+func testMainSubnetIds(args []string, subnet *ec2.Subnet) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Subnet, subnet.SubnetId)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckSubnetExists(n string, subnet *ec2.Subnet) resource.TestCheckFunc {
