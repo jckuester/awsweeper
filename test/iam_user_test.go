@@ -40,6 +40,16 @@ func TestAccIamUser_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainIamUserIds(args []string, u *iam.User) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamUser, u.UserName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
@@ -61,7 +71,7 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM user has been deleted")
 			}
 			return err
@@ -69,17 +79,6 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 
 		*u = *resp.User
 
-		return nil
-	}
-}
-
-func testMainIamUserIds(args []string, u *iam.User) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamUser, u.UserName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
@@ -96,7 +95,7 @@ func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM user has been deleted")
 			}
 			return err
@@ -119,7 +118,7 @@ func testIamUserDeleted(u *iam.User) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return nil
 			}
 			return err

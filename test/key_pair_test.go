@@ -40,6 +40,16 @@ func TestAccKeyPair_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainKeyPairIds(args []string, kp *ec2.KeyPairInfo) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.KeyPair, kp.KeyName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -65,17 +75,6 @@ func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheck
 
 		*kp = *resp.KeyPairs[0]
 
-		return nil
-	}
-}
-
-func testMainKeyPairIds(args []string, kp *ec2.KeyPairInfo) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.KeyPair, kp.KeyName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

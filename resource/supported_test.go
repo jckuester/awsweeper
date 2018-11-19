@@ -156,7 +156,7 @@ func createLaunchConfigurationMock(mockCtrl *gomock.Controller) *resource.AWS {
 }
 
 func convertTags(tags map[string]string) []*autoscaling.TagDescription {
-	var tagDescriptions []*autoscaling.TagDescription
+	var tagDescriptions = make([]*autoscaling.TagDescription, 0, len(tags))
 
 	for key, value := range tags {
 		tagDescriptions = append(tagDescriptions, &autoscaling.TagDescription{

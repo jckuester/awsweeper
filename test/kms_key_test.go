@@ -68,6 +68,16 @@ func TestAccKmsKey_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainKmsKeyIds(args []string, k *kms.KeyMetadata) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.KmsKey, k.KeyId)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckKmsKeyExists(name string, k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
@@ -93,17 +103,6 @@ func testAccCheckKmsKeyExists(name string, k *kms.KeyMetadata) resource.TestChec
 
 		*k = *out.KeyMetadata
 
-		return nil
-	}
-}
-
-func testMainKmsKeyIds(args []string, k *kms.KeyMetadata) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.KmsKey, k.KeyId)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

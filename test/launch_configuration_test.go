@@ -2,18 +2,18 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
-	"os"
+	"github.com/cloudetc/awsweeper/command"
+	res "github.com/cloudetc/awsweeper/resource"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/cloudetc/awsweeper/command"
-	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccLaunchConfiguration_deleteByIds(t *testing.T) {
@@ -39,6 +39,17 @@ func TestAccLaunchConfiguration_deleteByIds(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testMainLaunchConfigurationIds(args []string, lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.LaunchConfiguration, lc.LaunchConfigurationName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckLaunchConfigurationExists(n string, lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
@@ -110,18 +121,6 @@ func testLaunchConfigurationExists(lc *autoscaling.LaunchConfiguration) resource
 			return fmt.Errorf("launch Configuration has been deleted")
 		}
 
-		return nil
-	}
-}
-
-func testMainLaunchConfigurationIds(args []string, lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.LaunchConfiguration, lc.LaunchConfigurationName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

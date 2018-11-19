@@ -65,6 +65,16 @@ func TestAccIamPolicyAttached_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainIamPolicyIds(args []string, p *iam.Policy) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamPolicy, p.Arn)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
@@ -86,7 +96,7 @@ func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckF
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM policy has been deleted")
 			}
 			return err
@@ -94,17 +104,6 @@ func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckF
 
 		*p = *resp.Policy
 
-		return nil
-	}
-}
-
-func testMainIamPolicyIds(args []string, p *iam.Policy) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamPolicy, p.Arn)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
@@ -121,7 +120,7 @@ func testIamPolicyExists(p *iam.Policy) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM policy has been deleted")
 			}
 			return err
@@ -144,7 +143,7 @@ func testIamPolicyDeleted(p *iam.Policy) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return nil
 			}
 			return err

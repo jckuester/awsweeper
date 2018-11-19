@@ -33,7 +33,10 @@ func WrappedMain() int {
 	log.SetOutput(ioutil.Discard)
 
 	set.Usage = func() { fmt.Println(help()) }
-	set.Parse(os.Args[1:])
+	err := set.Parse(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if *versionFlag {
 		fmt.Println(version)

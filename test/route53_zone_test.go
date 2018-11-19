@@ -5,14 +5,15 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cloudetc/awsweeper/command"
+	"github.com/spf13/afero"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccRoute53Zone_deleteByTags(t *testing.T) {
@@ -68,6 +69,16 @@ func TestAccRoute53Zone_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainRoute53ZoneIds(args []string, z *route53.HostedZone) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Route53Zone, z.Id)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -89,7 +100,7 @@ func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.Tes
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchHostedZone" {
+			if route53err.Code() == NoSuchHostedZone {
 				return nil
 			}
 			return err
@@ -97,17 +108,6 @@ func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.Tes
 
 		*z = *resp.HostedZone
 
-		return nil
-	}
-}
-
-func testMainRoute53ZoneIds(args []string, z *route53.HostedZone) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Route53Zone, z.Id)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
@@ -124,7 +124,7 @@ func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchHostedZone" {
+			if route53err.Code() == NoSuchHostedZone {
 				return fmt.Errorf("route53 zone has been deleted")
 			}
 			return err
@@ -146,7 +146,7 @@ func testRoute53ZoneDeleted(z *route53.HostedZone) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if route53err.Code() == "NoSuchHostedZone" {
+			if route53err.Code() == NoSuchHostedZone {
 				return nil
 			}
 			return err

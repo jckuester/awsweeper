@@ -40,6 +40,16 @@ func TestAccIamRole_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainIamRoleIds(args []string, r *iam.Role) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamRole, r.RoleName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
@@ -61,7 +71,7 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM role has been deleted")
 			}
 			return err
@@ -69,17 +79,6 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 
 		*r = *resp.Role
 
-		return nil
-	}
-}
-
-func testMainIamRoleIds(args []string, r *iam.Role) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.IamRole, r.RoleName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
@@ -96,7 +95,7 @@ func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM role has been deleted")
 			}
 			return err
@@ -119,7 +118,7 @@ func testIamRoleDeleted(r *iam.Role) resource.TestCheckFunc {
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return nil
 			}
 			return err

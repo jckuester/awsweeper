@@ -2,9 +2,8 @@ package test
 
 import (
 	"fmt"
-	"testing"
-
 	"os"
+	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -66,6 +65,17 @@ func TestAccInternetGateway_deleteByIds(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testMainInternetGatewayIds(args []string, ig *ec2.InternetGateway) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.InternetGateway, ig.InternetGatewayId)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckInternetGatewayExists(n string, ig *ec2.InternetGateway) resource.TestCheckFunc {
@@ -137,18 +147,6 @@ func testInternetGatewayDeleted(ig *ec2.InternetGateway) resource.TestCheckFunc 
 			return fmt.Errorf("InternetGateway hasn't been deleted")
 		}
 
-		return nil
-	}
-}
-
-func testMainInternetGatewayIds(args []string, ig *ec2.InternetGateway) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.InternetGateway, ig.InternetGatewayId)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

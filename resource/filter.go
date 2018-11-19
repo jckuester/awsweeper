@@ -19,10 +19,10 @@ import (
 var AppFs = afero.NewOsFs()
 
 // Config represents the content of a yaml file that is used as a contract to filter resources for deletion.
-type Config map[TerraformResourceType][]ResourceTypeFilter
+type Config map[TerraformResourceType][]TypeFilter
 
-// ResourceTypeFilter represents an entry in Config and selects the resources of a particular resource type.
-type ResourceTypeFilter struct {
+// TypeFilter represents an entry in Config and selects the resources of a particular resource type.
+type TypeFilter struct {
 	ID   *string           `yaml:",omitempty"`
 	Tags map[string]string `yaml:",omitempty"`
 	// select resources by creation time
@@ -55,7 +55,7 @@ func read(filename string) Config {
 		logrus.WithError(err).Fatalf("Failed to read config file: %s", filename)
 	}
 
-	err = yaml.UnmarshalStrict([]byte(data), &cfg)
+	err = yaml.UnmarshalStrict(data, &cfg)
 	if err != nil {
 		logrus.WithError(err).Fatalf("Cannot unmarshal config: %s", filename)
 	}
@@ -88,8 +88,8 @@ func (f Filter) Types() []TerraformResourceType {
 	return resTypes
 }
 
-// MatchID checks whether a resource (given by its type and id) matches the filter.
-func (rtf ResourceTypeFilter) matchID(resType TerraformResourceType, id string) bool {
+// MatchID checks whether a resource ID matches the filter.
+func (rtf TypeFilter) matchID(id string) bool {
 	if rtf.ID == nil {
 		return true
 	}
@@ -104,9 +104,9 @@ func (rtf ResourceTypeFilter) matchID(resType TerraformResourceType, id string) 
 	return false
 }
 
-// MatchesTags checks whether a resource (given by its type and findTags)
-// matches the filter. The keys must match exactly, whereas the tag value is checked against a regex.
-func (rtf ResourceTypeFilter) matchTags(resType TerraformResourceType, tags map[string]string) bool {
+// MatchesTags checks whether a resource's tags
+// match the filter. The keys must match exactly, whereas the tag value is checked against a regex.
+func (rtf TypeFilter) matchTags(tags map[string]string) bool {
 	if rtf.Tags == nil {
 		return true
 	}
@@ -127,7 +127,7 @@ func (rtf ResourceTypeFilter) matchTags(resType TerraformResourceType, tags map[
 	return true
 }
 
-func (rtf ResourceTypeFilter) matchCreated(resType TerraformResourceType, creationTime *time.Time) bool {
+func (rtf TypeFilter) matchCreated(creationTime *time.Time) bool {
 	if rtf.Created == nil {
 		return true
 	}
@@ -161,7 +161,7 @@ func (f Filter) matches(r *Resource) bool {
 	}
 
 	for _, rtf := range resTypeFilters {
-		if rtf.matchTags(r.Type, r.Tags) && rtf.matchID(r.Type, r.ID) && rtf.matchCreated(r.Type, r.Created) {
+		if rtf.matchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) {
 			return true
 		}
 	}

@@ -1,2 +1,5 @@
+run:
+  deadline: 5m
+
 linters:
   enable-all: true

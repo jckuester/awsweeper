@@ -40,6 +40,17 @@ func TestAccIamInstanceProfile_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainIamInstanceProfileIds(args []string, r *iam.InstanceProfile) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.IamInstanceProfile, r.InstanceProfileName)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
@@ -61,7 +72,7 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM instance profile has been deleted")
 			}
 			return err
@@ -69,18 +80,6 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 
 		*r = *resp.InstanceProfile
 
-		return nil
-	}
-}
-
-func testMainIamInstanceProfileIds(args []string, r *iam.InstanceProfile) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.IamInstanceProfile, r.InstanceProfileName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }
@@ -97,7 +96,7 @@ func testIamInstanceProfileExists(r *iam.InstanceProfile) resource.TestCheckFunc
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return fmt.Errorf("IAM instance profile has been deleted")
 			}
 			return err
@@ -120,7 +119,7 @@ func testIamInstanceProfileDeleted(r *iam.InstanceProfile) resource.TestCheckFun
 			if !ok {
 				return err
 			}
-			if iamErr.Code() == "NoSuchEntity" {
+			if iamErr.Code() == NoSuchEntity {
 				return nil
 			}
 			return err

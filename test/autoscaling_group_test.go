@@ -2,9 +2,8 @@ package test
 
 import (
 	"fmt"
-	"testing"
-
 	"os"
+	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -63,6 +62,20 @@ func TestAccAutoscalingGroup_deleteByIds(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testMainAutoscalingGroupIds(args []string, group *autoscaling.Group) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		err := afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.AutoscalingGroup, group.AutoScalingGroupName)), 0644)
+		if err != nil {
+			return err
+		}
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
 }
 
 func testAccCheckAWSAutoScalingGroupExists(n string, group *autoscaling.Group) resource.TestCheckFunc {
@@ -139,18 +152,6 @@ func testAutoscalingGroupDeleted(asg *autoscaling.Group) resource.TestCheckFunc 
 			return fmt.Errorf("autoscaling Group hasn't been deleted")
 		}
 
-		return nil
-	}
-}
-
-func testMainAutoscalingGroupIds(args []string, group *autoscaling.Group) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.AutoscalingGroup, group.AutoScalingGroupName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

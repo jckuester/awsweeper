@@ -5,14 +5,15 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cloudetc/awsweeper/command"
+	"github.com/spf13/afero"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/spf13/afero"
 )
 
 func TestAccElb_deleteByTags(t *testing.T) {
@@ -68,6 +69,21 @@ func TestAccElb_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainElbIds(args []string, lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		err := afero.WriteFile(res.AppFs, "config.yml",
+			[]byte(testAWSweeperIdsConfig(res.Elb, lb.LoadBalancerName)), 0644)
+		if err != nil {
+			return err
+		}
+
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -105,18 +121,6 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 			}
 		}
 
-		return nil
-	}
-}
-
-func testMainElbIds(args []string, lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml",
-			[]byte(testAWSweeperIdsConfig(res.Elb, lb.LoadBalancerName)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

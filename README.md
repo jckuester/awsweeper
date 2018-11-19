@@ -4,14 +4,11 @@
   <a href="https://github.com/cloudetc/awsweeper/releases/latest">
     <img alt="Release" src="https://img.shields.io/github/release/cloudetc/awsweeper.svg?style=flat-square">
   </a>
-  <a href="https://github.com/cloudetc/awsweeper/master">
-    <img alt="Travis" src="https://img.shields.io/travis/cloudetc/awsweeper/master.svg?style=flat-square">
+  <a href="https://gitlab.com/jckuester/awsweeper/commits/master">
+    <img alt="pipeline status" src="https://gitlab.com/jckuester/awsweeper/badges/master/pipeline.svg" />
   </a>
   <a href="https://goreportcard.com/report/github.com/cloudetc/awsweeper">
     <img alt="Go Report" src="https://goreportcard.com/badge/github.com/cloudetc/awsweeper?style=flat-square" />
-  </a>
-  <a href="https://codecov.io/gh/cloudetc/awsweeper">
-    <img alt="Codecov branch" src="https://codecov.io/gh/cloudetc/awsweeper/branch/master/graph/badge.svg?style=flat-square" />
   </a>
   <a href="https://godoc.org/github.com/cloudetc/awsweeper">
     <img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square" />
@@ -43,9 +40,9 @@ Releases for your platform are [here](https://github.com/cloudetc/awsweeper/rele
 
 To see options available run `awsweeper --help`.
     
-## Filter resources for deletion
+## Filtering
 
-Resources to be deleted are selected by a yaml configuration. To learn how, have a look at the following example:
+Resources to be deleted are filtered by a yaml configuration. To learn how, have a look at the following example:
 
     aws_instance:
       - id: ^foo.*
@@ -79,7 +76,7 @@ The general syntax of the filter config is as follows:
           before: <timestamp> (optional)
           after: <timestamp> (optional)
       # filter 2
-       - ...
+      - ...
     <resource type>:
       ...
      
@@ -119,7 +116,7 @@ A more detailed description of the ways to filter resources:
 
    You can select resources by filtering on the date they have been created.
 
-## Test run
+## Dry-run mode
 
  Use `awsweeper --dry-run <config.yml>` to only show what
 would be deleted. This way, you can fine-tune your yaml configuration until it works the way you want it to. 

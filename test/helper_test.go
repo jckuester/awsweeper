@@ -21,6 +21,11 @@ import (
 	"github.com/terraform-providers/terraform-provider-aws/aws"
 )
 
+const (
+	NoSuchEntity     = "NoSuchEntity"
+	NoSuchHostedZone = "NoSuchHostedZone"
+)
+
 var client = initClient()
 
 var testAccProviders map[string]terraform.ResourceProvider
@@ -66,7 +71,10 @@ func testAccPreCheck(t *testing.T) {
 func testMainTags(args []string, config string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(config), 0644)
+		err := afero.WriteFile(res.AppFs, "config.yml", []byte(config), 0644)
+		if err != nil {
+			return err
+		}
 		os.Args = args
 
 		command.WrappedMain()

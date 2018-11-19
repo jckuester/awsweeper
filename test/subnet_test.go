@@ -65,6 +65,16 @@ func TestAccSubnet_deleteByIds(t *testing.T) {
 	})
 }
 
+func testMainSubnetIds(args []string, subnet *ec2.Subnet) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		res.AppFs = afero.NewMemMapFs()
+		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Subnet, subnet.SubnetId)), 0644)
+		os.Args = args
+		command.WrappedMain()
+		return nil
+	}
+}
+
 func testAccCheckSubnetExists(n string, subnet *ec2.Subnet) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -134,17 +144,6 @@ func testSubnetDeleted(subnet *ec2.Subnet) resource.TestCheckFunc {
 			return fmt.Errorf("subnet hasn't been deleted")
 		}
 
-		return nil
-	}
-}
-
-func testMainSubnetIds(args []string, subnet *ec2.Subnet) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Subnet, subnet.SubnetId)), 0644)
-		os.Args = args
-
-		command.WrappedMain()
 		return nil
 	}
 }

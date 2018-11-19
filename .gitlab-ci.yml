@@ -11,10 +11,10 @@ stages:
 - build
 - acceptance_test
 
-lint:
-  stage: test
-  script:
-  - make lint
+#lint:
+#  stage: test
+#  script:
+#  - make lint
 
 test:
   stage: test

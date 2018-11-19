@@ -18,20 +18,20 @@ func (f Filter) Apply(resType TerraformResourceType, res Resources, raw interfac
 	case EfsFileSystem:
 		return f.efsFileSystemFilter(res, raw, aws)
 	case IamUser:
-		return f.iamUserFilter(res, raw, aws)
+		return f.iamUserFilter(res, aws)
 	case IamPolicy:
 		return f.iamPolicyFilter(res, raw, aws)
 	case KmsKey:
-		return f.kmsKeysFilter(res, raw, aws)
+		return f.kmsKeysFilter(res, aws)
 	default:
-		return f.defaultFilter(res, raw, aws)
+		return f.defaultFilter(res)
 	}
 }
 
 // For most resource types, this default filter method can be used.
 // However, for some resource types additional information need to be queried from the AWS API. Filtering for those
 // is handled in special functions below.
-func (f Filter) defaultFilter(res Resources, raw interface{}, c *AWS) []Resources {
+func (f Filter) defaultFilter(res Resources) []Resources {
 	result := Resources{}
 
 	for _, r := range res {
@@ -66,7 +66,7 @@ func (f Filter) efsFileSystemFilter(res Resources, raw interface{}, c *AWS) []Re
 	return []Resources{resultMt, result}
 }
 
-func (f Filter) iamUserFilter(res Resources, raw interface{}, c *AWS) []Resources {
+func (f Filter) iamUserFilter(res Resources, c *AWS) []Resources {
 	result := Resources{}
 	resultAttPol := Resources{}
 	resultUserPol := Resources{}
@@ -155,7 +155,7 @@ func (f Filter) iamPolicyFilter(res Resources, raw interface{}, c *AWS) []Resour
 	return []Resources{resultAtt, result}
 }
 
-func (f Filter) kmsKeysFilter(res Resources, raw interface{}, c *AWS) []Resources {
+func (f Filter) kmsKeysFilter(res Resources, c *AWS) []Resources {
 	result := Resources{}
 
 	for _, r := range res {
