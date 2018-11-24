@@ -69,11 +69,41 @@ func (c *Wipe) Run(args []string) int {
 
 		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
 		for _, res := range filteredRes {
-			c.wipe(res)
+			print(res)
+			if !c.dryRun {
+				c.wipe(res)
+			}
 		}
 	}
 
 	return 0
+}
+
+func print(res resource.Resources) {
+	if len(res) == 0 {
+		return
+	}
+
+	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res[0].Type, len(res))
+
+	for _, r := range res {
+		printStat := fmt.Sprintf("\tId:\t\t%s", r.ID)
+		if r.Tags != nil {
+			if len(r.Tags) > 0 {
+				printStat += "\n\tTags:\t\t"
+				for k, v := range r.Tags {
+					printStat += fmt.Sprintf("[%s: %v] ", k, v)
+				}
+			}
+		}
+		printStat += "\n"
+		if r.Created != nil {
+			printStat += fmt.Sprintf("\tCreated:\t%s", r.Created)
+			printStat += "\n"
+		}
+		fmt.Println(printStat)
+	}
+	fmt.Print("---\n\n")
 }
 
 // wipe does the actual deletion (in parallel) of a given (filtered) list of AWS resources.
@@ -85,8 +115,6 @@ func (c *Wipe) wipe(res resource.Resources) {
 	if len(res) == 0 {
 		return
 	}
-
-	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res[0].Type, len(res))
 
 	ii := &terraform.InstanceInfo{
 		Type: string(res[0].Type),
@@ -106,22 +134,6 @@ func (c *Wipe) wipe(res resource.Resources) {
 			for {
 				r, more := <-chResources
 				if more {
-					printStat := fmt.Sprintf("\tId:\t\t%s", r.ID)
-					if r.Tags != nil {
-						if len(r.Tags) > 0 {
-							printStat += "\n\tTags:\t\t"
-							for k, v := range r.Tags {
-								printStat += fmt.Sprintf("[%s: %v] ", k, v)
-							}
-						}
-					}
-					printStat += "\n"
-					if r.Created != nil {
-						printStat += fmt.Sprintf("\tCreated:\t%s", r.Created)
-						printStat += "\n"
-					}
-					fmt.Println(printStat)
-
 					// dirty hack to fix aws_key_pair
 					if r.Attrs == nil {
 						r.Attrs = map[string]string{"public_key": ""}
@@ -141,12 +153,10 @@ func (c *Wipe) wipe(res resource.Resources) {
 					st.Attributes["force_detach_policies"] = "true"
 					st.Attributes["force_destroy"] = "true"
 
-					if !c.dryRun {
-						_, err = (*c.provider).Apply(ii, st, d)
+					_, err = (*c.provider).Apply(ii, st, d)
 
-						if err != nil {
-							fmt.Printf("\t%s\n", err)
-						}
+					if err != nil {
+						fmt.Printf("\t%s\n", err)
 					}
 					wg.Done()
 				} else {
@@ -162,7 +172,6 @@ func (c *Wipe) wipe(res resource.Resources) {
 	close(chResources)
 
 	wg.Wait()
-	fmt.Print("---\n\n")
 }
 
 // Help returns help information of this command
