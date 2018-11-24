@@ -23,6 +23,8 @@ func (f Filter) Apply(resType TerraformResourceType, res Resources, raw interfac
 		return f.iamPolicyFilter(res, raw, aws)
 	case KmsKey:
 		return f.kmsKeysFilter(res, aws)
+	case KmsAlias:
+		return f.kmsKeyAliasFilter(res)
 	default:
 		return f.defaultFilter(res)
 	}
@@ -175,5 +177,16 @@ func (f Filter) kmsKeysFilter(res Resources, c *AWS) []Resources {
 		}
 	}
 	// associated aliases will also be deleted after waiting period (between 7 to 30 days)
+	return []Resources{result}
+}
+
+func (f Filter) kmsKeyAliasFilter(res Resources) []Resources {
+	result := Resources{}
+
+	for _, r := range res {
+		if f.matches(r) && !strings.HasPrefix(r.ID, "alias/aws/") {
+			result = append(result, r)
+		}
+	}
 	return []Resources{result}
 }

@@ -172,7 +172,6 @@ func (c *Wipe) wipe(res resource.Resources) {
 	close(chResources)
 
 	wg.Wait()
-	fmt.Print("---\n\n")
 }
 
 // Help returns help information of this command
