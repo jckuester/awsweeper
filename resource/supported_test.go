@@ -15,11 +15,11 @@ import (
 )
 
 var (
-	testAmiName = "test-ami"
+	testImageId = "test-ami"
 	testAmi     = &ec2.DescribeImagesOutput{
 		Images: []*ec2.Image{
 			{
-				ImageId: &testAmiName,
+				ImageId: &testImageId,
 			},
 		},
 	}
@@ -74,7 +74,7 @@ func TestAWS_Resources_Amis(t *testing.T) {
 
 	// then
 	assert.Len(t, res, 1)
-	assert.Equal(t, *res[0].ImageId, testAmiName)
+	assert.Equal(t, *res[0].ImageId, testImageId)
 }
 
 func TestAWS_Resources_AutoScalingGroups(t *testing.T) {

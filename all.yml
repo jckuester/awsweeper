@@ -1,8 +1,12 @@
+aws_ami:
 aws_autoscaling_group:
 aws_cloudformation_stack:
+aws_ebs_snapshot:
+aws_ebs_volume:
 aws_efs_file_system:
 aws_eip:
 aws_elb:
+aws_iam_group:
 aws_iam_instance_profile:
 aws_iam_policy:
 aws_iam_role:
@@ -18,6 +22,7 @@ aws_network_acl:
 aws_network_interface:
 aws_route53_zone:
 aws_route_table:
+aws_s3_bucket:
 aws_security_group:
 aws_subnet:
 aws_vpc:

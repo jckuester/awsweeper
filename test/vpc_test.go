@@ -143,7 +143,6 @@ func testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
 
 		if len(resp.Vpcs) != 0 {
 			return fmt.Errorf("VPC hasn't been deleted")
-
 		}
 
 		return nil
