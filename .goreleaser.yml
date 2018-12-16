@@ -1,5 +1,8 @@
 builds:
-  - binary: awsweeper
+  - ldflags: -s -w -extldflags "-static"
+    env:
+      - CGO_ENABLED=0
+    binary: awsweeper
     goos:
       - windows
       - darwin
