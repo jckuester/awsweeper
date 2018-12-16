@@ -34,7 +34,18 @@ func DeletableResources(resType TerraformResourceType, resources interface{}) (R
 		var creationTime *time.Time
 		creationTimeField, err := findField(creationTimeFieldNames, reflect.Indirect(reflectResources.Index(i)))
 		if err == nil {
-			creationTime = creationTimeField.Interface().(*time.Time)
+			creationTimeCastTime, ok := creationTimeField.Interface().(*time.Time)
+			if ok {
+				creationTime = creationTimeCastTime
+			} else {
+				creationTimeCastString, ok := creationTimeField.Interface().(*string)
+				if ok {
+					parsedCreationTime, err := time.Parse("2006-01-02T15:04:05.000Z0700", *creationTimeCastString)
+					if err == nil {
+						creationTime = &parsedCreationTime
+					}
+				}
+			}
 		}
 
 		deletableResources = append(deletableResources, &Resource{
