@@ -28,7 +28,7 @@ func WrappedMain() int {
 	forceDeleteFlag := set.Bool("force", false, "Start deleting without asking for confirmation")
 	profile := set.String("profile", "", "Use a specific profile from your credential file")
 	region := set.String("region", "", "The region to use. Overrides config/env settings")
-	maxRetries := set.Int("max-retries", 25, "The maximum number of times an AWS API request is being executed.")
+	maxRetries := set.Int("max-retries", 25, "The maximum number of times an AWS API request is being executed")
 
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
@@ -111,6 +111,8 @@ Options:
   --dry-run		Don't delete anything, just show what would happen
 
   --force		Start deleting without asking for confirmation
+
+  --max-retries	The maximum number of times an AWS API request is being executed
 `
 }
 
