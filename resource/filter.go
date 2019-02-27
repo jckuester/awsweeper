@@ -27,11 +27,17 @@ type TypeFilter struct {
 	Tags map[string]string `yaml:",omitempty"`
 	// select resources by creation time
 	Created *Created `yaml:",omitempty"`
+	Age     *Age     `yaml:",omitempty"`
 }
 
 type Created struct {
 	Before *time.Time `yaml:",omitempty"`
 	After  *time.Time `yaml:",omitempty"`
+}
+
+type Age struct {
+	Before *time.Duration `yaml:",omitempty"`
+	After  *time.Duration `yaml:",omitempty"`
 }
 
 // Filter selects resources based on a given yaml config.
@@ -149,6 +155,29 @@ func (rtf TypeFilter) matchCreated(creationTime *time.Time) bool {
 	return createdAfter && createdBefore
 }
 
+func (rtf TypeFilter) matchAge(creationTime *time.Time) bool {
+	if rtf.Age == nil {
+		return true
+	}
+
+	if creationTime == nil {
+		return false
+	}
+
+	now := time.Now()
+	createdAfter := true
+	if rtf.Age.After != nil {
+		createdAfter = creationTime.Unix() > now.Add(-*rtf.Age.After).Unix()
+	}
+
+	createdBefore := true
+	if rtf.Age.Before != nil {
+		createdBefore = creationTime.Unix() < now.Add(-*rtf.Age.Before).Unix()
+	}
+
+	return createdAfter && createdBefore
+}
+
 // matches checks whether a resource matches the filter criteria.
 func (f Filter) matches(r *Resource) bool {
 	resTypeFilters, found := f.Cfg[r.Type]
@@ -161,7 +190,7 @@ func (f Filter) matches(r *Resource) bool {
 	}
 
 	for _, rtf := range resTypeFilters {
-		if rtf.matchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) {
+		if rtf.matchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) && rtf.matchAge(r.Created) {
 			return true
 		}
 	}

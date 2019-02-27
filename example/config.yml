@@ -18,6 +18,8 @@ aws_iam_user:
 aws_instance:
   - tags:
       Name: foo
+  - age:
+      before: 168h
 aws_internet_gateway:
   - tags:
       Name: foo
