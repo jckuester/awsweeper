@@ -28,6 +28,7 @@ func WrappedMain() int {
 	forceDeleteFlag := set.Bool("force", false, "Start deleting without asking for confirmation")
 	profile := set.String("profile", "", "Use a specific profile from your credential file")
 	region := set.String("region", "", "The region to use. Overrides config/env settings")
+	outputType := set.String("output", "string", "The type of output result (String, JSON or YAML) default: String")
 
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
@@ -85,6 +86,7 @@ func WrappedMain() int {
 				provider:    p,
 				dryRun:      *dryRunFlag,
 				forceDelete: *forceDeleteFlag,
+				outputType:  *outputType,
 			}, nil
 		},
 	}
@@ -110,6 +112,8 @@ Options:
   --dry-run		Don't delete anything, just show what would happen
 
   --force		Start deleting without asking for confirmation
+
+  --output      The type of output result (String, JSON or YAML) default: String
 `
 }
 
