@@ -113,7 +113,7 @@ Options:
 
   --force		Start deleting without asking for confirmation
 
-  --output      The type of output result (String, JSON or YAML) default: String
+  --output		The type of output result (String, JSON or YAML) default: String
 `
 }
 
