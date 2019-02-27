@@ -3,6 +3,7 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"log"
@@ -87,7 +88,7 @@ func print(res resource.Resources, outputType string) {
 		return
 	}
 
-	switch outputType {
+	switch strings.ToLower(outputType) {
 	case "string":
 		printString(res)
 	case "json":
