@@ -43,7 +43,7 @@ func (c *Wipe) Run(args []string) int {
 	}
 
 	if c.dryRun {
-		log.Println("INFO: This is a test run, nothing will be deleted!")
+		logrus.Info("This is a test run, nothing will be deleted!")
 	} else if !c.forceDelete {
 		v, err := c.UI.Ask(
 			"Do you really want to delete resources filtered by '" + args[0] + "'?\n" +
