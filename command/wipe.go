@@ -1,7 +1,9 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"log"
@@ -10,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 // Wipe is currently the only command.
@@ -23,6 +26,7 @@ type Wipe struct {
 	client      *resource.AWS
 	provider    *terraform.ResourceProvider
 	filter      *resource.Filter
+	outputType  string
 }
 
 // Run executes the wipe command.
@@ -40,7 +44,7 @@ func (c *Wipe) Run(args []string) int {
 	}
 
 	if c.dryRun {
-		c.UI.Output("INFO: This is a test run, nothing will be deleted!")
+		logrus.Info("This is a test run, nothing will be deleted!")
 	} else if !c.forceDelete {
 		v, err := c.UI.Ask(
 			"Do you really want to delete resources filtered by '" + args[0] + "'?\n" +
@@ -69,7 +73,7 @@ func (c *Wipe) Run(args []string) int {
 
 		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
 		for _, res := range filteredRes {
-			print(res)
+			print(res, c.outputType)
 			if !c.dryRun {
 				c.wipe(res)
 			}
@@ -79,11 +83,24 @@ func (c *Wipe) Run(args []string) int {
 	return 0
 }
 
-func print(res resource.Resources) {
+func print(res resource.Resources, outputType string) {
 	if len(res) == 0 {
 		return
 	}
 
+	switch strings.ToLower(outputType) {
+	case "string":
+		printString(res)
+	case "json":
+		printJson(res)
+	case "yaml":
+		printYaml(res)
+	default:
+		logrus.WithField("output", outputType).Fatal("Unsupported output type")
+	}
+}
+
+func printString(res resource.Resources) {
 	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res[0].Type, len(res))
 
 	for _, r := range res {
@@ -104,6 +121,24 @@ func print(res resource.Resources) {
 		fmt.Println(printStat)
 	}
 	fmt.Print("---\n\n")
+}
+
+func printJson(res resource.Resources) {
+	b, err := json.Marshal(res)
+	if err != nil {
+		logrus.WithError(err).Fatal()
+	}
+
+	fmt.Print(string(b))
+}
+
+func printYaml(res resource.Resources) {
+	b, err := yaml.Marshal(res)
+	if err != nil {
+		logrus.WithError(err).Fatal()
+	}
+
+	fmt.Print(string(b))
 }
 
 // wipe does the actual deletion (in parallel) of a given (filtered) list of AWS resources.
