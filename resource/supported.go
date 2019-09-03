@@ -142,7 +142,6 @@ var (
 		"LaunchTime",
 		"CreatedTime",
 		"CreationDate",
-		"StartTime",
 	}
 )
 
