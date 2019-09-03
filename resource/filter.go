@@ -26,10 +26,19 @@ type Config map[TerraformResourceType][]TypeFilter
 
 // TypeFilter represents an entry in Config and selects the resources of a particular resource type.
 type TypeFilter struct {
-	ID   *string           `yaml:",omitempty"`
-	Tags map[string]string `yaml:",omitempty"`
+	ID     *StringFilter            `yaml:",omitempty"`
+	Tags   map[string]*StringFilter `yaml:",omitempty"`
 	// select resources by creation time
 	Created *Created `yaml:",omitempty"`
+}
+
+type StringMatcher interface {
+	matches(string) (bool, error)
+}
+
+type StringFilter struct {
+	Pattern string `yaml:",omitempty"`
+	Negate bool
 }
 
 type CreatedTime struct{
@@ -101,7 +110,7 @@ func (rtf TypeFilter) matchID(id string) bool {
 		return true
 	}
 
-	if ok, err := regexp.MatchString(*rtf.ID, id); ok {
+	if ok, err := rtf.ID.matches(id); ok {
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -120,7 +129,7 @@ func (rtf TypeFilter) matchTags(tags map[string]string) bool {
 
 	for cfgTagKey, regex := range rtf.Tags {
 		if tagVal, ok := tags[cfgTagKey]; ok {
-			if matched, err := regexp.MatchString(regex, tagVal); !matched {
+			if matched, err := regex.matches(tagVal); !matched {
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -173,6 +182,27 @@ func (f Filter) matches(r *Resource) bool {
 		}
 	}
 	return false
+}
+
+func (f *StringFilter) matches(s string) (matched bool, err error) {
+	ok, err := regexp.MatchString(f.Pattern, s)
+	if err == nil && f.Negate {
+		ok = !ok
+	}
+	return ok, err
+}
+
+func (f *StringFilter) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var v string
+	if err := unmarshal(&v); err != nil {
+		return err
+	}
+	if strings.HasPrefix(v, "NOT(") && strings.HasSuffix(v, ")") {
+		*f = StringFilter{strings.TrimSuffix(strings.TrimPrefix(v, "NOT("), ")"), true}
+	} else {
+		*f = StringFilter{v, false}
+	}
+	return nil
 }
 
 func (c *CreatedTime) UnmarshalYAML(unmarshal func(interface{}) error) error {

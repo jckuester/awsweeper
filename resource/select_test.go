@@ -59,7 +59,7 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					ID: aws.String("^select"),
+					ID: &resource.StringFilter{Pattern: "^select"},
 				},
 			},
 		},
@@ -90,8 +90,8 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					Tags: map[string]string{
-						"foo": "^bar",
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar"},
 					},
 				},
 			},
@@ -133,9 +133,9 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					Tags: map[string]string{
-						"foo": "^bar",
-						"bla": "^blub",
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar"},
+						"bla": {Pattern: "^blub"},
 					},
 				},
 			},
@@ -174,9 +174,9 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					ID: aws.String("^foo"),
-					Tags: map[string]string{
-						"foo": "^bar",
+					ID: &resource.StringFilter{Pattern: "^foo"},
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar"},
 					},
 				},
 			},
@@ -346,11 +346,11 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					ID: aws.String("^select"),
+					ID: &resource.StringFilter{Pattern: "^select"},
 				},
 				{
-					Tags: map[string]string{
-						"foo": "^bar",
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar"},
 					},
 				},
 			},

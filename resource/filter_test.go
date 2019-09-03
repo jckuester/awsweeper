@@ -1,13 +1,14 @@
 package resource_test
 
 import (
-"github.com/stretchr/testify/require"
-"gopkg.in/yaml.v2"
-"testing"
-"time"
+	"testing"
+	"time"
 
-"github.com/cloudetc/awsweeper/resource"
-"github.com/stretchr/testify/assert"
+	"github.com/cloudetc/awsweeper/resource"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"gopkg.in/yaml.v2"
 )
 
 func TestYamlFilter_Validate(t *testing.T) {
@@ -95,11 +96,11 @@ func TestYamlFilter_Types_DependencyOrder(t *testing.T) {
 
 func Test_ParseFile(t *testing.T) {
 	input := []byte(`aws_instance:
-  - id: ^foo.*
+  - id: NOT(^foo.*)
     created:
       before: 5d
       after: 2018-10-28 12:28:39
-  - id: ^bar.*
+  - id: ^foo.*
     created:
       before: 23h`)
 
@@ -108,11 +109,17 @@ func Test_ParseFile(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg[resource.Instance])
 	require.Len(t, cfg[resource.Instance], 2)
+	require.NotNil(t, cfg[resource.Instance][0].ID)
+	assert.Equal(t, "^foo.*", cfg[resource.Instance][0].ID.Pattern)
+	assert.True(t, cfg[resource.Instance][0].ID.Negate)
+	require.NotNil(t, cfg[resource.Instance][1].ID)
 	require.NotNil(t, cfg[resource.Instance][0].Created.Before)
 	assert.True(t, cfg[resource.Instance][0].Created.Before.Before(time.Now().UTC().AddDate(0, 0, -4)))
 	assert.True(t, cfg[resource.Instance][0].Created.Before.After(time.Now().UTC().AddDate(0, 0, -6)))
 	require.NotNil(t, cfg[resource.Instance][0].Created.After)
 	assert.Equal(t, resource.CreatedTime{Time: time.Date(2018, 10, 28, 12, 28, 39, 0000, time.UTC)}, *cfg[resource.Instance][0].Created.After)
+	assert.Equal(t, "^foo.*", cfg[resource.Instance][1].ID.Pattern)
+	assert.False(t, cfg[resource.Instance][1].ID.Negate)
 	require.NotNil(t, cfg[resource.Instance][1].Created.Before)
 	assert.True(t, cfg[resource.Instance][1].Created.Before.Before(time.Now().UTC().Add(-22 * time.Hour)))
 	assert.True(t, cfg[resource.Instance][1].Created.Before.After(time.Now().UTC().Add(-24 * time.Hour)))
