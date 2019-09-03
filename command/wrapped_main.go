@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
+	aws_sdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/config"
@@ -57,13 +59,31 @@ func WrappedMain() int {
 	}
 	c.Args = append([]string{"wipe"}, set.Args()...)
 
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Profile:           *profile,
-	}))
+	var sess *session.Session
+	if *profile != "" {
+		sess = session.Must(session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+			Profile:           *profile,
+		}))
 
-	if *region == "" {
-		region = sess.Config.Region
+		if *region == "" {
+			region = sess.Config.Region
+		}
+	} else {
+		if *region != "" {
+			sess = session.Must(session.NewSession(&aws_sdk.Config{Region: region}))
+		} else {
+			defaultRegion, ok := os.LookupEnv("AWS_DEFAULT_REGION")
+			if !ok || len(strings.TrimSpace(defaultRegion)) == 0 {
+				defaultRegion, ok = os.LookupEnv("AWS_REGION")
+				if !ok || len(strings.TrimSpace(defaultRegion)) == 0 {
+					fmt.Println("err: Region not specified and the environment variables AWS_DEFAULT_REGION and AWS_REGION could not be found.")
+					return 1
+				}
+			}
+			region = &defaultRegion
+			sess = session.Must(session.NewSession(&aws_sdk.Config{Region: &defaultRegion}))
+		}
 	}
 
 	p := initAwsProvider(*profile, *region, *maxRetries)
@@ -131,8 +151,10 @@ func initAwsProvider(profile string, region string, maxRetries int) *terraform.R
 
 	cfg := map[string]interface{}{
 		"region":      region,
-		"profile":     profile,
 		"max_retries": maxRetries,
+	}
+	if profile != "" {
+		cfg["profile"] = profile
 	}
 
 	rc, err := config.NewRawConfig(cfg)
