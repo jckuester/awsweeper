@@ -26,14 +26,19 @@ type Config map[TerraformResourceType][]TypeFilter
 
 // TypeFilter represents an entry in Config and selects the resources of a particular resource type.
 type TypeFilter struct {
-	ID   *StringFilter            `yaml:",omitempty"`
-	Tags map[string]*StringFilter `yaml:",omitempty"`
+	ID     *StringFilter            `yaml:",omitempty"`
+	Tags   map[string]*StringFilter `yaml:",omitempty"`
 	// select resources by creation time
 	Created *Created `yaml:",omitempty"`
 }
 
-type CreatedTime struct{
-	time.Time `yaml:",omitempty"`
+type StringMatcher interface {
+	matches(string) (bool, error)
+}
+
+type StringFilter struct {
+	Pattern string `yaml:",omitempty"`
+	Negate bool
 }
 
 type CreatedTime struct{
