@@ -389,3 +389,45 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 	assert.Equal(t, "select-this", result[0][0].ID)
 	assert.Equal(t, "select-this-too", result[0][1].ID)
 }
+
+func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
+	//given
+	f := &resource.Filter{
+		Cfg: resource.Config{
+			resource.Instance: {
+				{
+					ID: &resource.StringFilter{Pattern: "^select", Negate: true},
+				},
+				{
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar", Negate: true},
+					},
+				},
+			},
+		},
+	}
+
+	res := []*resource.Resource{
+		{
+			Type: resource.Instance,
+			ID:   "select-this-not",
+			Tags: map[string]string{
+				"foo": "bar-bab",
+			},
+		},
+		{
+			Type: resource.Instance,
+			ID:   "select-this",
+			Tags: map[string]string{
+				"foo": "baz",
+			},
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testInstance, nil)
+
+	// then
+	require.Len(t, result[0], 1)
+	assert.Equal(t, "select-this", result[0][0].ID)
+}
