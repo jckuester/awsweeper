@@ -219,8 +219,8 @@ func TestYamlFilter_Apply_Created(t *testing.T) {
 			resource.Instance: {
 				{
 					Created: &resource.Created{
-						After:  aws.Time(time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)),
-						Before: aws.Time(time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)),
+						After:  &resource.CreatedTime{Time: time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)},
+						Before: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
 					},
 				},
 			},
@@ -269,7 +269,7 @@ func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
 			resource.Instance: {
 				{
 					Created: &resource.Created{
-						Before: aws.Time(time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)),
+						Before: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
 					},
 				},
 			},
@@ -308,7 +308,7 @@ func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
 			resource.Instance: {
 				{
 					Created: &resource.Created{
-						After: aws.Time(time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)),
+						After: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
 					},
 				},
 			},

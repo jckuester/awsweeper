@@ -1,8 +1,11 @@
 package resource
 
 import (
+	"errors"
 	"regexp"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -29,9 +32,13 @@ type TypeFilter struct {
 	Created *Created `yaml:",omitempty"`
 }
 
+type CreatedTime struct{
+	time.Time `yaml:",omitempty"`
+}
+
 type Created struct {
-	Before *time.Time `yaml:",omitempty"`
-	After  *time.Time `yaml:",omitempty"`
+	Before *CreatedTime `yaml:",omitempty"`
+	After  *CreatedTime `yaml:",omitempty"`
 }
 
 // Filter selects resources based on a given yaml config.
@@ -166,4 +173,58 @@ func (f Filter) matches(r *Resource) bool {
 		}
 	}
 	return false
+}
+
+func (c *CreatedTime) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var v interface{}
+	if err := unmarshal(&v); err != nil {
+		return err
+	}
+	switch value := v.(type) {
+	case time.Time:
+		t, _ := v.(time.Time)
+		*c = CreatedTime{t}
+		return nil
+	case string:
+		d, err := time.ParseDuration(value)
+		if err == nil {
+			*c = CreatedTime{time.Now().UTC().Add(- d)}
+			return nil
+		}
+		var t time.Time
+		err = yaml.Unmarshal([]byte("!!timestamp " + value), &t)
+		if err == nil {
+			*c = CreatedTime{t}
+			return nil
+		}
+		if strings.HasSuffix(value, "d") {
+			d, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
+			if err == nil {
+				*c = CreatedTime{time.Now().UTC().AddDate(0, 0, -int(d))}
+				return nil
+			}
+		}
+		if strings.HasSuffix(value, "w") {
+			w, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
+			if err == nil {
+				*c = CreatedTime{time.Now().UTC().AddDate(0, 0, -int(w*7))}
+				return nil
+			}
+		}
+		if strings.HasSuffix(value, "m") {
+			m, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
+			if err == nil {
+				*c = CreatedTime{time.Now().UTC().AddDate(0, -int(m), 0)}
+				return nil
+			}
+		}
+		if strings.HasSuffix(value, "y") {
+			y, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
+			if err == nil {
+				*c = CreatedTime{time.Now().UTC().AddDate(-int(y), 0, 0)}
+				return nil
+			}
+		}
+	}
+	return errors.New("invalid created time")
 }
