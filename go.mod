@@ -13,7 +13,7 @@ require (
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/go-errors/errors v1.0.1
 	github.com/go-test/deep v1.0.1 // indirect
-	github.com/golang/mock v1.1.1
+	github.com/golang/mock v1.3.1
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/hashicorp/errwrap v0.0.0-20141028054710-7554cd9344ce // indirect
 	github.com/hashicorp/go-cleanhttp v0.0.0-20171218145408-d5fe4b57a186 // indirect
@@ -52,7 +52,11 @@ require (
 	github.com/terraform-providers/terraform-provider-tls v1.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.4 // indirect
 	github.com/zclconf/go-cty v0.0.0-20180328152515-d006e4534bc4 // indirect
-	golang.org/x/crypto v0.0.0-20180126023034-0efb9460aaf8 // indirect
+	golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472 // indirect
+	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297 // indirect
+	golang.org/x/sys v0.0.0-20190902133755-9109b7679e13 // indirect
+	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/tools v0.0.0-20190903025054-afe7f8212f0d // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
