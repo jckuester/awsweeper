@@ -26,8 +26,9 @@ type Config map[TerraformResourceType][]TypeFilter
 
 // TypeFilter represents an entry in Config and selects the resources of a particular resource type.
 type TypeFilter struct {
-	ID   *StringFilter            `yaml:",omitempty"`
-	Tags map[string]*StringFilter `yaml:",omitempty"`
+	ID     *StringFilter            `yaml:",omitempty"`
+	Region *StringFilter            `yaml:",omitempty"`
+	Tags   map[string]*StringFilter `yaml:",omitempty"`
 	// select resources by creation time
 	Created *Created `yaml:",omitempty"`
 }
@@ -165,6 +166,21 @@ func (rtf TypeFilter) matchCreated(creationTime *time.Time) bool {
 	return createdAfter && createdBefore
 }
 
+func (rtf TypeFilter) matchRegion(region string) bool {
+	if rtf.Region == nil {
+		return true
+	}
+
+	if ok, err := rtf.Region.matches(region); ok {
+		if err != nil {
+			log.Fatal(err)
+		}
+		return true
+	}
+
+	return false
+}
+
 // matches checks whether a resource matches the filter criteria.
 func (f Filter) matches(r *Resource) bool {
 	resTypeFilters, found := f.Cfg[r.Type]
@@ -177,7 +193,7 @@ func (f Filter) matches(r *Resource) bool {
 	}
 
 	for _, rtf := range resTypeFilters {
-		if rtf.matchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) {
+		if rtf.matchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) && rtf.matchRegion(r.Region) {
 			return true
 		}
 	}

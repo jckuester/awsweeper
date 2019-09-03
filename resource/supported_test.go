@@ -37,6 +37,7 @@ var (
 		},
 	}
 
+	testRegion               = "us-east-1"
 	testAutoscalingGroupName = "test-auto-scaling-group"
 	testTags                 = map[string]string{
 		"test-tag-key": "test-tag-value",

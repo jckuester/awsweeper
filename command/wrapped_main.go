@@ -85,6 +85,7 @@ func WrappedMain() int {
 				},
 				client:      client,
 				provider:    p,
+				region:      *region,
 				dryRun:      *dryRunFlag,
 				forceDelete: *forceDeleteFlag,
 				outputType:  *outputType,

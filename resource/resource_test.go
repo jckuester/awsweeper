@@ -22,12 +22,13 @@ func TestDeletableResources(t *testing.T) {
 	}
 
 	// when
-	res, err := resource.DeletableResources(resource.AutoscalingGroup, rawResources)
+	res, err := resource.DeletableResources(testRegion, resource.AutoscalingGroup, rawResources)
 	require.NoError(t, err)
 
 	// then
 	require.Len(t, res, 1)
 	require.Equal(t, testAutoscalingGroupName, res[0].ID)
+	require.Equal(t, testRegion, res[0].Region)
 	require.Equal(t, testTags, res[0].Tags)
 }
 
@@ -42,7 +43,7 @@ func TestDeletableResources_Created(t *testing.T) {
 	}
 
 	// when
-	res, err := resource.DeletableResources(resource.Instance, rawResources)
+	res, err := resource.DeletableResources(testRegion, resource.Instance, rawResources)
 	require.NoError(t, err)
 
 	// then
@@ -63,7 +64,7 @@ func TestDeletableResources_CreatedFieldIsTypeString(t *testing.T) {
 	}
 
 	// when
-	res, err := resource.DeletableResources(resource.Ami, rawResources)
+	res, err := resource.DeletableResources(testRegion, resource.Ami, rawResources)
 	require.NoError(t, err)
 
 	// then
