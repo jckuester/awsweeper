@@ -96,11 +96,11 @@ func TestYamlFilter_Types_DependencyOrder(t *testing.T) {
 
 func Test_ParseFile(t *testing.T) {
 	input := []byte(`aws_instance:
-  - id: NOT(^foo.*)
+  - id: ^foo.*
     created:
       before: 5d
       after: 2018-10-28 12:28:39
-  - id: ^foo.*
+  - id: ^foo.*`)
     created:
       before: 23h`)
 
