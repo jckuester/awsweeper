@@ -211,7 +211,7 @@ func (c *CreatedTime) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				return nil
 			}
 		}
-		if strings.HasSuffix(value, "m") {
+		if strings.HasSuffix(value, "M") {
 			m, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
 			if err == nil {
 				*c = CreatedTime{time.Now().UTC().AddDate(0, -int(m), 0)}
