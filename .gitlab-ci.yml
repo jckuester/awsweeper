@@ -1,10 +1,10 @@
-image: golang:latest
+image: golang:1.12
 
 before_script:
+- go version
 - make setup
 - make modules
 - make generate
-- go version
 
 stages:
 - test

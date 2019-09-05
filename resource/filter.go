@@ -26,8 +26,8 @@ type Config map[TerraformResourceType][]TypeFilter
 
 // TypeFilter represents an entry in Config and selects the resources of a particular resource type.
 type TypeFilter struct {
-	ID     *StringFilter            `yaml:",omitempty"`
-	Tags   map[string]*StringFilter `yaml:",omitempty"`
+	ID   *StringFilter            `yaml:",omitempty"`
+	Tags map[string]*StringFilter `yaml:",omitempty"`
 	// select resources by creation time
 	Created *Created `yaml:",omitempty"`
 }
@@ -38,10 +38,10 @@ type StringMatcher interface {
 
 type StringFilter struct {
 	Pattern string `yaml:",omitempty"`
-	Negate bool
+	Negate  bool
 }
 
-type CreatedTime struct{
+type CreatedTime struct {
 	time.Time `yaml:",omitempty"`
 }
 
@@ -187,11 +187,11 @@ func (f Filter) matches(r *Resource) bool {
 func (f *StringFilter) matches(s string) (bool, error) {
 	ok, err := regexp.MatchString(f.Pattern, s)
 	if err != nil {
-	  return false, err
+		return false, err
 	}
-	
+
 	if f.Negate {
-	  return !ok, nil
+		return !ok, nil
 	}
 
 	return ok, err
@@ -223,11 +223,11 @@ func (c *CreatedTime) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	case string:
 		d, err := time.ParseDuration(value)
 		if err == nil {
-			*c = CreatedTime{time.Now().UTC().Add(- d)}
+			*c = CreatedTime{time.Now().UTC().Add(-d)}
 			return nil
 		}
 		var t time.Time
-		err = yaml.Unmarshal([]byte("!!timestamp " + value), &t)
+		err = yaml.Unmarshal([]byte("!!timestamp "+value), &t)
 		if err == nil {
 			*c = CreatedTime{t}
 			return nil
