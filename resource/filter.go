@@ -184,7 +184,7 @@ func (f Filter) matches(r *Resource) bool {
 	return false
 }
 
-func (f *StringFilter) matches(s string) (matched bool, err error) {
+func (f *StringFilter) matches(s string) (bool, error) {
 	ok, err := regexp.MatchString(f.Pattern, s)
 	if err != nil {
 	  return false, err

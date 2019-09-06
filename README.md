@@ -51,11 +51,15 @@ Resources to be deleted are filtered by a yaml configuration. To learn how, have
           bla: blub
         created:
           before: 2018-06-14
-          after: 2018-10-28 12:28:39 +0000
+          after: 2018-10-28 12:28:39.0000
       - tags:
           foo: bar
          created:
            before: 2018-06-14
+      - tags:
+          foo: NOT(bar)
+        created:
+          after: 2018-06-14
     aws_iam_role:
 
 This config would delete all instances which ID matches `^foo.*` *and* which have tags `foo: bar` *and* `bla: blub`
@@ -68,9 +72,9 @@ The general syntax of the filter config is as follows:
 
     <resource type>:
       # filter 1
-      - id: <regex to filter by id>
+      - id: <regex to filter by id> | NOT(<regex to filter by id>)
         tags:
-          <key>: <regex to filter value>
+          <key>: <regex to filter value> | NOT(<regex to filter value>)
           ...
         created:
           before: <timestamp> (optional)
@@ -101,6 +105,8 @@ A more detailed description of the ways to filter resources:
 
    In the example above, all EC2 instances are terminated that have a tag with key `foo` and value `bar` as well as
    `bla` and value `blub`.
+   
+   The tag filter can be negated by surrounding the regex with `NOT(...)`
 
 ##### 3) By ID
 
@@ -111,6 +117,8 @@ A more detailed description of the ways to filter resources:
    all the IDs and tags of your resources are printed. Then, use this information to create the yaml file.
 
    In the example above, all roles which name starts with `foo` are deleted (the ID of roles is their name).
+
+   The id filter can be negated by surrounding the regex with `NOT(...)`
 
 ##### 4) By creation date
 
