@@ -186,7 +186,16 @@ func (f Filter) matches(r *Resource) bool {
 
 func (f *StringFilter) matches(s string) (matched bool, err error) {
 	ok, err := regexp.MatchString(f.Pattern, s)
-	if err == nil && f.Negate {
+	if err != nil {
+	  return false, err
+	}
+	
+	if f.Negate {
+	  return !ok, nil
+	}
+	
+	return ok, nil
+	
 		ok = !ok
 	}
 	return ok, err
