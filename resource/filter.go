@@ -193,7 +193,7 @@ func (f *StringFilter) matches(s string) (bool, error) {
 	if f.Negate {
 	  return !ok, nil
 	}
-	
+
 	return ok, err
 }
 

@@ -100,7 +100,7 @@ func Test_ParseFile(t *testing.T) {
     created:
       before: 5d
       after: 2018-10-28 12:28:39
-  - id: ^foo.*`)
+  - id: ^foo.*)
     created:
       before: 23h`)
 
