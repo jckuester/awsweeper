@@ -59,7 +59,7 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					ID: aws.String("^select"),
+					ID: &resource.StringFilter{Pattern: "^select"},
 				},
 			},
 		},
@@ -90,8 +90,8 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					Tags: map[string]string{
-						"foo": "^bar",
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar"},
 					},
 				},
 			},
@@ -133,9 +133,9 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					Tags: map[string]string{
-						"foo": "^bar",
-						"bla": "^blub",
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar"},
+						"bla": {Pattern: "^blub"},
 					},
 				},
 			},
@@ -174,9 +174,9 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					ID: aws.String("^foo"),
-					Tags: map[string]string{
-						"foo": "^bar",
+					ID: &resource.StringFilter{Pattern: "^foo"},
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar"},
 					},
 				},
 			},
@@ -346,11 +346,11 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 		Cfg: resource.Config{
 			resource.Instance: {
 				{
-					ID: aws.String("^select"),
+					ID: &resource.StringFilter{Pattern: "^select"},
 				},
 				{
-					Tags: map[string]string{
-						"foo": "^bar",
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar"},
 					},
 				},
 			},
@@ -388,4 +388,46 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 	require.Len(t, result[0], 2)
 	assert.Equal(t, "select-this", result[0][0].ID)
 	assert.Equal(t, "select-this-too", result[0][1].ID)
+}
+
+func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
+	//given
+	f := &resource.Filter{
+		Cfg: resource.Config{
+			resource.Instance: {
+				{
+					ID: &resource.StringFilter{Pattern: "^select", Negate: true},
+				},
+				{
+					Tags: map[string]*resource.StringFilter{
+						"foo": {Pattern: "^bar", Negate: true},
+					},
+				},
+			},
+		},
+	}
+
+	res := []*resource.Resource{
+		{
+			Type: resource.Instance,
+			ID:   "select-this-not",
+			Tags: map[string]string{
+				"foo": "bar-bab",
+			},
+		},
+		{
+			Type: resource.Instance,
+			ID:   "select-this",
+			Tags: map[string]string{
+				"foo": "baz",
+			},
+		},
+	}
+
+	// when
+	result := f.Apply(resource.Instance, res, testInstance, nil)
+
+	// then
+	require.Len(t, result[0], 1)
+	assert.Equal(t, "select-this", result[0][0].ID)
 }
