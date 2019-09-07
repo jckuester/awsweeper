@@ -118,7 +118,7 @@ func Test_ParseFile(t *testing.T) {
 	require.NotNil(t, cfg[resource.Instance][0].Created.After)
 	assert.Equal(t, resource.CreatedTime{Time: time.Date(2018, 10, 28, 12, 28, 39, 0000, time.UTC)}, *cfg[resource.Instance][0].Created.After)
 	require.NotNil(t, cfg[resource.Instance][1].ID)
-	assert.Equal(t, "^bar.*", cfg[resource.Instance][1].ID.Pattern)
+	assert.Equal(t, "^foo.*", cfg[resource.Instance][1].ID.Pattern)
 	assert.False(t, cfg[resource.Instance][1].ID.Negate)
 	require.NotNil(t, cfg[resource.Instance][1].Created.Before)
 	assert.True(t, cfg[resource.Instance][1].Created.Before.Before(time.Now().UTC().Add(-22 * time.Hour)))
