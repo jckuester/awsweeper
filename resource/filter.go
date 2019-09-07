@@ -194,10 +194,6 @@ func (f *StringFilter) matches(s string) (bool, error) {
 	  return !ok, nil
 	}
 	
-	return ok, nil
-	
-		ok = !ok
-	}
 	return ok, err
 }
 
