@@ -8,7 +8,7 @@ setup:
 
 .PHONY: modules
 modules:
-	go mod tidy
+	go mod download
 
 .PHONY: generate
 generate:
@@ -19,7 +19,7 @@ generate:
 build:
 	go build
 
-.PHONY: generate
+.PHONY: test
 test: generate
 	go clean -testcache ${PKG_LIST}
 	go test --race -cover ${PKG_LIST}

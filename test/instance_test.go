@@ -188,6 +188,7 @@ resource "aws_vpc" "foo" {
 resource "aws_subnet" "foo" {
 	vpc_id = "${aws_vpc.foo.id}"
 	cidr_block = "10.1.0.1/24"
+	availability_zone = "us-west-2a"
 
 	tags {
 		Name = "awsweeper-testacc"
