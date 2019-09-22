@@ -1,8 +1,11 @@
 package resource
 
 import (
+	"errors"
 	"regexp"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -23,15 +26,28 @@ type Config map[TerraformResourceType][]TypeFilter
 
 // TypeFilter represents an entry in Config and selects the resources of a particular resource type.
 type TypeFilter struct {
-	ID   *string           `yaml:",omitempty"`
-	Tags map[string]string `yaml:",omitempty"`
+	ID   *StringFilter            `yaml:",omitempty"`
+	Tags map[string]*StringFilter `yaml:",omitempty"`
 	// select resources by creation time
 	Created *Created `yaml:",omitempty"`
 }
 
+type StringMatcher interface {
+	matches(string) (bool, error)
+}
+
+type StringFilter struct {
+	Pattern string `yaml:",omitempty"`
+	Negate  bool
+}
+
+type CreatedTime struct {
+	time.Time `yaml:",omitempty"`
+}
+
 type Created struct {
-	Before *time.Time `yaml:",omitempty"`
-	After  *time.Time `yaml:",omitempty"`
+	Before *CreatedTime `yaml:",omitempty"`
+	After  *CreatedTime `yaml:",omitempty"`
 }
 
 // Filter selects resources based on a given yaml config.
@@ -94,7 +110,7 @@ func (rtf TypeFilter) matchID(id string) bool {
 		return true
 	}
 
-	if ok, err := regexp.MatchString(*rtf.ID, id); ok {
+	if ok, err := rtf.ID.matches(id); ok {
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -113,7 +129,7 @@ func (rtf TypeFilter) matchTags(tags map[string]string) bool {
 
 	for cfgTagKey, regex := range rtf.Tags {
 		if tagVal, ok := tags[cfgTagKey]; ok {
-			if matched, err := regexp.MatchString(regex, tagVal); !matched {
+			if matched, err := regex.matches(tagVal); !matched {
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -166,4 +182,84 @@ func (f Filter) matches(r *Resource) bool {
 		}
 	}
 	return false
+}
+
+func (f *StringFilter) matches(s string) (bool, error) {
+	ok, err := regexp.MatchString(f.Pattern, s)
+	if err != nil {
+		return false, err
+	}
+
+	if f.Negate {
+		return !ok, nil
+	}
+
+	return ok, err
+}
+
+func (f *StringFilter) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var v string
+	if err := unmarshal(&v); err != nil {
+		return err
+	}
+	if strings.HasPrefix(v, "NOT(") && strings.HasSuffix(v, ")") {
+		*f = StringFilter{strings.TrimSuffix(strings.TrimPrefix(v, "NOT("), ")"), true}
+	} else {
+		*f = StringFilter{v, false}
+	}
+	return nil
+}
+
+func (c *CreatedTime) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var v interface{}
+	if err := unmarshal(&v); err != nil {
+		return err
+	}
+	switch value := v.(type) {
+	case time.Time:
+		t, _ := v.(time.Time)
+		*c = CreatedTime{t}
+		return nil
+	case string:
+		d, err := time.ParseDuration(value)
+		if err == nil {
+			*c = CreatedTime{time.Now().UTC().Add(-d)}
+			return nil
+		}
+		var t time.Time
+		err = yaml.Unmarshal([]byte("!!timestamp "+value), &t)
+		if err == nil {
+			*c = CreatedTime{t}
+			return nil
+		}
+		if strings.HasSuffix(value, "d") {
+			d, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
+			if err == nil {
+				*c = CreatedTime{time.Now().UTC().AddDate(0, 0, -int(d))}
+				return nil
+			}
+		}
+		if strings.HasSuffix(value, "w") {
+			w, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
+			if err == nil {
+				*c = CreatedTime{time.Now().UTC().AddDate(0, 0, -int(w*7))}
+				return nil
+			}
+		}
+		if strings.HasSuffix(value, "M") {
+			m, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
+			if err == nil {
+				*c = CreatedTime{time.Now().UTC().AddDate(0, -int(m), 0)}
+				return nil
+			}
+		}
+		if strings.HasSuffix(value, "y") {
+			y, err := strconv.ParseInt(value[0:len(value)-1], 10, 32)
+			if err == nil {
+				*c = CreatedTime{time.Now().UTC().AddDate(-int(y), 0, 0)}
+				return nil
+			}
+		}
+	}
+	return errors.New("invalid created time")
 }
