@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -173,6 +174,11 @@ type AWS struct {
 	stsiface.STSAPI
 }
 
+type LoadBalancerDescription struct {
+	elb.LoadBalancerDescription
+	Tags []*elb.Tag
+}
+
 // NewAWS creates an AWS instance
 func NewAWS(s *session.Session) *AWS {
 	return &AWS{
@@ -307,7 +313,44 @@ func (a *AWS) elbs() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return output.LoadBalancerDescriptions, nil
+	loadBalancerNames := make([]string, len(output.LoadBalancerDescriptions))
+	loadBalancerNameMap := make(map[string]*elb.LoadBalancerDescription)
+	for i, desc := range output.LoadBalancerDescriptions {
+		loadBalancerNames[i] = *desc.LoadBalancerName
+		loadBalancerNameMap[*(desc.LoadBalancerName)] = desc
+	}
+
+	tagDescriptions, err := a.findElbTags(loadBalancerNames)
+	if err != nil {
+		return nil, err
+	}
+	loadBalancers := make([]*LoadBalancerDescription, len(output.LoadBalancerDescriptions))
+	for i, tagDesc := range tagDescriptions {
+		loadBalancer := loadBalancerNameMap[*(tagDesc.LoadBalancerName)]
+		loadBalancers[i] = &LoadBalancerDescription{*loadBalancer, tagDesc.Tags}
+	}
+	return loadBalancers, nil
+}
+
+func (a *AWS) findElbTags(elbNames []string) ([]*elb.TagDescription, error) {
+	var tagDescriptions []*elb.TagDescription
+	batchSize := 20
+	for i := 0; i < len(elbNames); i += batchSize {
+		end := i + batchSize
+		if end > len(elbNames) {
+			end = len(elbNames)
+		}
+		awsNames := make([]*string, end - i)
+		for i, n := range elbNames[i:end] {
+			awsNames[i] = aws.String(n)
+		}
+		resp, err := a.ELBAPI.DescribeTags(&elb.DescribeTagsInput{ LoadBalancerNames: awsNames })
+		if err != nil {
+			return nil, fmt.Errorf("DescribeTags SDK error: %v", err)
+		}
+		tagDescriptions = append(tagDescriptions, resp.TagDescriptions...)
+	}
+	return tagDescriptions, nil
 }
 
 func (a *AWS) vpcEndpoints() (interface{}, error) {
