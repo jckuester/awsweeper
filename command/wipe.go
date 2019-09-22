@@ -3,6 +3,7 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -107,9 +108,14 @@ func printString(res resource.Resources) {
 		printStat := fmt.Sprintf("\tId:\t\t%s", r.ID)
 		if r.Tags != nil {
 			if len(r.Tags) > 0 {
+				var keys []string
+				for k := range r.Tags {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
 				printStat += "\n\tTags:\t\t"
-				for k, v := range r.Tags {
-					printStat += fmt.Sprintf("[%s: %v] ", k, v)
+				for _, k := range keys {
+					printStat += fmt.Sprintf("[%s: %v] ", k, r.Tags[k])
 				}
 			}
 		}
