@@ -17,9 +17,6 @@ import (
 )
 
 func TestAccElb_deleteByTags(t *testing.T) {
-	t.SkipNow()
-	// TODO tag support
-
 	var lb1, lb2 elb.LoadBalancerDescription
 
 	resource.Test(t, resource.TestCase{
