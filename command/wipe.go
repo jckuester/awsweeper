@@ -3,11 +3,10 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"sync"
-
-	"log"
 
 	"github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/terraform"

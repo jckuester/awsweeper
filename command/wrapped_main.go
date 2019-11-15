@@ -7,11 +7,13 @@ import (
 	"log"
 	"os"
 
+	goAWS "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
+	"github.com/sirupsen/logrus"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
 )
 
@@ -58,15 +60,13 @@ func WrappedMain() int {
 	c.Args = append([]string{"wipe"}, set.Args()...)
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config:            goAWS.Config{Region: region},
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           *profile,
 	}))
+	logrus.Infof("Using region: %s", *sess.Config.Region)
 
-	if *region == "" {
-		region = sess.Config.Region
-	}
-
-	p := initAwsProvider(*profile, *region, *maxRetries)
+	p := initAwsProvider(*profile, *sess.Config.Region, *maxRetries)
 
 	ui := &cli.BasicUi{
 		Reader:      os.Stdin,
