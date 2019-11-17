@@ -43,9 +43,8 @@ func initClient() *res.AWS {
 }
 
 func init() {
-	testAccProvider = aws.Provider().(*schema.Provider)
 	testAccProviders = map[string]terraform.ResourceProvider{
-		"aws": testAccProvider,
+		"aws": aws.Provider().(*schema.Provider),
 	}
 }
 

@@ -4,24 +4,23 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
+	goLog "log"
 	"os"
 
-	goAWS "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/cli"
-	"github.com/sirupsen/logrus"
-	"github.com/terraform-providers/terraform-provider-aws/aws"
+	log "github.com/sirupsen/logrus"
+	terraformProviderAWS "github.com/terraform-providers/terraform-provider-aws/aws"
 )
 
-// WrappedMain is the actual main function
-// that does not exit for acceptance testing purposes
+// WrappedMain is the actual main function that does not exit for acceptance testing purposes
 func WrappedMain() int {
 	app := "awsweeper"
-	version := "0.1.1"
+	version := "v0.4.1"
 
 	set := flag.NewFlagSet(app, 0)
 	versionFlag := set.Bool("version", false, "Show version")
@@ -33,23 +32,28 @@ func WrappedMain() int {
 	maxRetries := set.Int("max-retries", 25, "The maximum number of times an AWS API request is being executed")
 	outputType := set.String("output", "string", "The type of output result (String, JSON or YAML) default: String")
 
-	log.SetFlags(0)
-	log.SetOutput(ioutil.Discard)
+	// discard internal logs of Terraform AWS provider
+	goLog.SetOutput(ioutil.Discard)
 
-	set.Usage = func() { fmt.Println(help()) }
+	set.Usage = func() {
+		fmt.Println(help())
+	}
+
 	err := set.Parse(os.Args[1:])
 	if err != nil {
-		log.Fatal(err)
+		// the Parse function prints already an error + help message, so we don't want to output it here again
+		log.WithError(err).Debug("failed to parse command line arguments")
+		return 1
 	}
 
 	if *versionFlag {
 		fmt.Println(version)
-		os.Exit(0)
+		return 0
 	}
 
 	if *helpFlag {
 		fmt.Println(help())
-		os.Exit(0)
+		return 0
 	}
 
 	c := &cli.CLI{
@@ -60,11 +64,11 @@ func WrappedMain() int {
 	c.Args = append([]string{"wipe"}, set.Args()...)
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config:            goAWS.Config{Region: region},
+		Config:            aws.Config{Region: region},
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           *profile,
 	}))
-	logrus.Infof("Using region: %s", *sess.Config.Region)
+	log.Printf("using region: %s", *sess.Config.Region)
 
 	p := initAwsProvider(*profile, *sess.Config.Region, *maxRetries)
 
@@ -94,29 +98,30 @@ func WrappedMain() int {
 
 	exitStatus, err := c.Run()
 	if err != nil {
-		log.Println(err)
+		log.WithError(err).Fatal("failed to run command")
 	}
 
 	return exitStatus
 }
 
 func help() string {
-	return `Usage: awsweeper [options] <config.yaml>
+	return `
+Usage: awsweeper [options] <config.yaml>
 
-  Delete AWS resources via a yaml configuration.
+Delete AWS resources via a yaml configuration.
 
 Options:
-  --profile		    Use a specific profile from your credential file
+  --profile				Use a specific profile from your credential file
 
-  --region		    The region to use. Overrides config/env settings
+  --region				The region to use. Overrides config/env settings
 
-  --dry-run		    Don't delete anything, just show what would happen
+  --dry-run				Don't delete anything, just show what would happen
 
-  --force         Start deleting without asking for confirmation
+  --force				Start deleting without asking for confirmation
 
-  --max-retries	  The maximum number of times an AWS API request is being executed
+  --max-retries				The maximum number of times an AWS API request is being executed
   
-  --output		    The type of output result (string, json or yaml) default: string
+  --output				The type of output result (string, json or yaml) default: string
 `
 }
 
@@ -127,7 +132,7 @@ func basicHelpFunc(app string) cli.HelpFunc {
 }
 
 func initAwsProvider(profile string, region string, maxRetries int) *terraform.ResourceProvider {
-	p := aws.Provider()
+	p := terraformProviderAWS.Provider()
 
 	cfg := map[string]interface{}{
 		"region":      region,
@@ -137,23 +142,20 @@ func initAwsProvider(profile string, region string, maxRetries int) *terraform.R
 
 	rc, err := config.NewRawConfig(cfg)
 	if err != nil {
-		fmt.Printf("bad: %s\n", err)
-		os.Exit(1)
+		log.WithError(err).Fatalf("failed to create raw Terraform AWS provider config")
 	}
 	conf := terraform.NewResourceConfig(rc)
 
 	warns, errs := p.Validate(conf)
 	if len(warns) > 0 {
-		fmt.Printf("warnings: %s\n", warns)
+		log.Warn(warns)
 	}
 	if len(errs) > 0 {
-		fmt.Printf("errors: %s\n", errs)
-		os.Exit(1)
+		log.Error(errs)
 	}
 
 	if err := p.Configure(conf); err != nil {
-		fmt.Printf("err: %s\n", err)
-		os.Exit(1)
+		log.WithError(err).Fatalf("failed to configure Terraform AWS provider")
 	}
 
 	return &p
