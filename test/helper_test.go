@@ -1,24 +1,21 @@
 package test
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"testing"
-
-	"github.com/hashicorp/terraform/helper/schema"
-
 	"time"
 
-	"fmt"
-
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
-	"github.com/terraform-providers/terraform-provider-aws/aws"
+	terraformProviderAWS "github.com/terraform-providers/terraform-provider-aws/aws"
 )
 
 const (
@@ -26,25 +23,43 @@ const (
 	NoSuchHostedZone = "NoSuchHostedZone"
 )
 
-var client = initClient()
-
+var client *res.AWS
 var testAccProviders map[string]terraform.ResourceProvider
-var testAccProvider *schema.Provider
 
 var argsDryRun = []string{"cmd", "--dry-run", "config.yml"}
 var argsForceDelete = []string{"cmd", "--force", "config.yml"}
 
-func initClient() *res.AWS {
+func init() {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	return res.NewAWS(sess)
+	client = res.NewAWS(sess)
+
+	testAccProviders = map[string]terraform.ResourceProvider{
+		"aws": terraformProviderAWS.Provider(),
+	}
+	err := os.Setenv("AWS_DEFAULT_REGION", *sess.Config.Region)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
-func init() {
-	testAccProviders = map[string]terraform.ResourceProvider{
-		"aws": aws.Provider().(*schema.Provider),
+func initWithRegion(region string) map[string]terraform.ResourceProvider {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config:            aws.Config{Region: aws.String(region)},
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	client = res.NewAWS(sess)
+
+	err := os.Setenv("AWS_DEFAULT_REGION", *sess.Config.Region)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return map[string]terraform.ResourceProvider{
+		"aws": terraformProviderAWS.Provider(),
 	}
 }
 
@@ -60,10 +75,6 @@ func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 		log.Println("[INFO] Test: Using us-west-2 as test region")
 		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
-	}
-	err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
-	if err != nil {
-		t.Fatal(err)
 	}
 }
 
