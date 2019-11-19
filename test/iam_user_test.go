@@ -20,7 +20,7 @@ func TestAccIamUser_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccIamUserConfig,
@@ -61,7 +61,7 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 		desc := &iam.GetUserInput{
 			UserName: aws.String(rs.Primary.ID),
 		}
@@ -85,7 +85,7 @@ func testAccCheckIamUserExists(name string, u *iam.User) resource.TestCheckFunc 
 
 func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 		desc := &iam.GetUserInput{
 			UserName: u.UserName,
 		}
@@ -107,7 +107,7 @@ func testIamUserExists(u *iam.User) resource.TestCheckFunc {
 
 func testIamUserDeleted(u *iam.User) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 
 		desc := &iam.GetUserInput{
 			UserName: u.UserName,

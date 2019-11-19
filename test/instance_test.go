@@ -21,7 +21,7 @@ func TestAccInstance_deleteByTags(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccInstanceConfig,
@@ -46,7 +46,7 @@ func TestAccInstance_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccInstanceConfig,
@@ -87,7 +87,7 @@ func testAccCheckInstanceExists(n string, instance *ec2.Instance) resource.TestC
 			return fmt.Errorf("no instance ID is set")
 		}
 
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -107,7 +107,7 @@ func testAccCheckInstanceExists(n string, instance *ec2.Instance) resource.TestC
 
 func testInstanceExists(instance *ec2.Instance) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{instance.InstanceId},
 		}
@@ -125,7 +125,7 @@ func testInstanceExists(instance *ec2.Instance) resource.TestCheckFunc {
 
 func testInstanceDeleted(instance *ec2.Instance) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		DescribeInstanceOpts := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{instance.InstanceId},
 		}

@@ -20,7 +20,7 @@ func TestAccKeyPair_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccKeyPairConfig,
@@ -61,7 +61,7 @@ func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheck
 			return fmt.Errorf("no key pair ID is set")
 		}
 
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -81,7 +81,7 @@ func testAccCheckKeyPairExists(n string, kp *ec2.KeyPairInfo) resource.TestCheck
 
 func testKeyPairExists(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{kp.KeyName},
 		}
@@ -99,7 +99,7 @@ func testKeyPairExists(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 
 func testKeyPairDeleted(kp *ec2.KeyPairInfo) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		opts := &ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{kp.KeyName},
 		}

@@ -20,7 +20,7 @@ func TestAccSubnet_deleteByTags(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccSubnetConfig,
@@ -45,7 +45,7 @@ func TestAccSubnet_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccSubnetConfig,
@@ -86,7 +86,7 @@ func testAccCheckSubnetExists(n string, subnet *ec2.Subnet) resource.TestCheckFu
 			return fmt.Errorf("no subnet ID is set")
 		}
 
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		DescribeSubnetOpts := &ec2.DescribeSubnetsInput{
 			SubnetIds: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -106,7 +106,7 @@ func testAccCheckSubnetExists(n string, subnet *ec2.Subnet) resource.TestCheckFu
 
 func testSubnetExists(subnet *ec2.Subnet) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		DescribeSubnetOpts := &ec2.DescribeSubnetsInput{
 			SubnetIds: []*string{subnet.SubnetId},
 		}
@@ -124,7 +124,7 @@ func testSubnetExists(subnet *ec2.Subnet) resource.TestCheckFunc {
 
 func testSubnetDeleted(subnet *ec2.Subnet) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		DescribeSubnetOpts := &ec2.DescribeSubnetsInput{
 			SubnetIds: []*string{subnet.SubnetId},
 		}

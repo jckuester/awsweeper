@@ -23,7 +23,7 @@ func TestAccInternetGateways_deleteByTags(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccInternetGatewayConfig,
@@ -47,7 +47,7 @@ func TestAccInternetGateway_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccInternetGatewayConfig,
@@ -89,7 +89,7 @@ func testAccCheckInternetGatewayExists(n string, ig *ec2.InternetGateway) resour
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		resp, err := conn.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{aws.String(rs.Primary.ID)},
 		})
@@ -108,7 +108,7 @@ func testAccCheckInternetGatewayExists(n string, ig *ec2.InternetGateway) resour
 
 func testInternetGatewayExists(ig *ec2.InternetGateway) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		opts := &ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{ig.InternetGatewayId},
 		}
@@ -127,7 +127,7 @@ func testInternetGatewayExists(ig *ec2.InternetGateway) resource.TestCheckFunc {
 
 func testInternetGatewayDeleted(ig *ec2.InternetGateway) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		desc := &ec2.DescribeInternetGatewaysInput{
 			InternetGatewayIds: []*string{ig.InternetGatewayId},
 		}

@@ -19,22 +19,23 @@ import (
 func TestAccVpc_deleteByTags(t *testing.T) {
 	var vpc1, vpc2 ec2.Vpc
 
+	awsClient, tfAwsProvider := initTests(aws.String("us-west-2"))
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: tfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccVpcConfig,
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckVpcExists("aws_vpc.foo", &vpc1),
-					testAccCheckVpcExists("aws_vpc.bar", &vpc2),
+					awsClient.testAccCheckVpcExists("aws_vpc.foo", &vpc1),
+					awsClient.testAccCheckVpcExists("aws_vpc.bar", &vpc2),
 					testMainTags(argsDryRun, testAWSweeperTagsConfig(res.Vpc)),
-					testVpcExists(&vpc1),
-					testVpcExists(&vpc2),
+					awsClient.testVpcExists(&vpc1),
+					awsClient.testVpcExists(&vpc2),
 					testMainTags(argsForceDelete, testAWSweeperTagsConfig(res.Vpc)),
-					testVpcDeleted(&vpc1),
-					testVpcExists(&vpc2),
+					awsClient.testVpcDeleted(&vpc1),
+					awsClient.testVpcExists(&vpc2),
 				),
 			},
 		},
@@ -44,22 +45,23 @@ func TestAccVpc_deleteByTags(t *testing.T) {
 func TestAccVpc_deleteByIds(t *testing.T) {
 	var vpc1, vpc2 ec2.Vpc
 
+	awsClient, tfAwsProvider := initTests(aws.String("us-west-2"))
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: tfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccVpcConfig,
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckVpcExists("aws_vpc.foo", &vpc1),
-					testAccCheckVpcExists("aws_vpc.bar", &vpc2),
+					awsClient.testAccCheckVpcExists("aws_vpc.foo", &vpc1),
+					awsClient.testAccCheckVpcExists("aws_vpc.bar", &vpc2),
 					testMainVpcIds(argsDryRun, &vpc1),
-					testVpcExists(&vpc1),
-					testVpcExists(&vpc2),
+					awsClient.testVpcExists(&vpc1),
+					awsClient.testVpcExists(&vpc2),
 					testMainVpcIds(argsForceDelete, &vpc1),
-					testVpcDeleted(&vpc1),
-					testVpcExists(&vpc2),
+					awsClient.testVpcDeleted(&vpc1),
+					awsClient.testVpcExists(&vpc2),
 				),
 			},
 		},
@@ -76,7 +78,7 @@ func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
 	}
 }
 
-func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
+func (a AWS) testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
@@ -87,11 +89,10 @@ func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.EC2API
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{aws.String(rs.Primary.ID)},
 		}
-		resp, err := conn.DescribeVpcs(desc)
+		resp, err := a.DescribeVpcs(desc)
 		if err != nil {
 			return err
 		}
@@ -105,13 +106,12 @@ func testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
 	}
 }
 
-func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
+func (a AWS) testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{vpc.VpcId},
 		}
-		resp, err := conn.DescribeVpcs(desc)
+		resp, err := a.DescribeVpcs(desc)
 		if err != nil {
 			return err
 		}
@@ -123,13 +123,12 @@ func testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
 	}
 }
 
-func testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
+func (a AWS) testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
 		desc := &ec2.DescribeVpcsInput{
 			VpcIds: []*string{vpc.VpcId},
 		}
-		resp, err := conn.DescribeVpcs(desc)
+		resp, err := a.DescribeVpcs(desc)
 		if err != nil {
 			ec2err, ok := err.(awserr.Error)
 			if !ok {

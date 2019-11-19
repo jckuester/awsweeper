@@ -21,7 +21,7 @@ func TestAccLaunchConfiguration_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccLaunchConfigurationConfig,
@@ -63,7 +63,7 @@ func testAccCheckLaunchConfigurationExists(n string, lc *autoscaling.LaunchConfi
 			return fmt.Errorf("no Launch Configuration name is set")
 		}
 
-		conn := client.AutoScalingAPI
+		conn := sharedAwsClient.AutoScalingAPI
 		DescribeLaunchConfigurationOpts := &autoscaling.DescribeLaunchConfigurationsInput{
 			LaunchConfigurationNames: []*string{aws.String(rs.Primary.ID)},
 		}
@@ -83,7 +83,7 @@ func testAccCheckLaunchConfigurationExists(n string, lc *autoscaling.LaunchConfi
 
 func testLaunchConfigurationDeleted(lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.AutoScalingAPI
+		conn := sharedAwsClient.AutoScalingAPI
 		DescribeLaunchConfigurationOpts := &autoscaling.DescribeLaunchConfigurationsInput{
 			LaunchConfigurationNames: []*string{lc.LaunchConfigurationName},
 		}
@@ -109,7 +109,7 @@ func testLaunchConfigurationDeleted(lc *autoscaling.LaunchConfiguration) resourc
 
 func testLaunchConfigurationExists(lc *autoscaling.LaunchConfiguration) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.AutoScalingAPI
+		conn := sharedAwsClient.AutoScalingAPI
 		DescribeLaunchConfigurationOpts := &autoscaling.DescribeLaunchConfigurationsInput{
 			LaunchConfigurationNames: []*string{lc.LaunchConfigurationName},
 		}
