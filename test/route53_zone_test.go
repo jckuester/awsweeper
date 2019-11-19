@@ -23,7 +23,7 @@ func TestAccRoute53Zone_deleteByTags(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccRoute53ZoneConfig,
@@ -49,7 +49,7 @@ func TestAccRoute53Zone_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccRoute53ZoneConfig,
@@ -90,7 +90,7 @@ func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.Tes
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.Route53API
+		conn := sharedAwsClient.Route53API
 		desc := &route53.GetHostedZoneInput{
 			Id: aws.String(rs.Primary.ID),
 		}
@@ -114,7 +114,7 @@ func testAccCheckRoute53ZoneExists(n string, z *route53.HostedZone) resource.Tes
 
 func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.Route53API
+		conn := sharedAwsClient.Route53API
 		desc := &route53.GetHostedZoneInput{
 			Id: z.Id,
 		}
@@ -136,7 +136,7 @@ func testRoute53ZoneExists(z *route53.HostedZone) resource.TestCheckFunc {
 
 func testRoute53ZoneDeleted(z *route53.HostedZone) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.Route53API
+		conn := sharedAwsClient.Route53API
 		desc := &route53.GetHostedZoneInput{
 			Id: z.Id,
 		}

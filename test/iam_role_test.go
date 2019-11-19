@@ -20,7 +20,7 @@ func TestAccIamRole_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccIamRoleConfig,
@@ -61,7 +61,7 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 		desc := &iam.GetRoleInput{
 			RoleName: aws.String(rs.Primary.ID),
 		}
@@ -85,7 +85,7 @@ func testAccCheckIamRoleExists(name string, r *iam.Role) resource.TestCheckFunc 
 
 func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 		desc := &iam.GetRoleInput{
 			RoleName: r.RoleName,
 		}
@@ -107,7 +107,7 @@ func testIamRoleExists(r *iam.Role) resource.TestCheckFunc {
 
 func testIamRoleDeleted(r *iam.Role) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 
 		desc := &iam.GetRoleInput{
 			RoleName: r.RoleName,

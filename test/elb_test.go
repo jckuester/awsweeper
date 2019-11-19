@@ -24,7 +24,7 @@ func TestAccElb_deleteByTags(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccElbConfig,
@@ -49,7 +49,7 @@ func TestAccElb_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccElbConfig,
@@ -95,7 +95,7 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 			return fmt.Errorf("no ELB ID is set")
 		}
 
-		conn := client.ELBAPI
+		conn := sharedAwsClient.ELBAPI
 
 		describe, err := conn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{aws.String(rs.Primary.ID)},
@@ -127,7 +127,7 @@ func testAccCheckAWSELBExists(n string, res *elb.LoadBalancerDescription) resour
 
 func testElbExists(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ELBAPI
+		conn := sharedAwsClient.ELBAPI
 
 		DescribeElbOpts := &elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{lb.LoadBalancerName},
@@ -147,7 +147,7 @@ func testElbExists(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 
 func testElbDeleted(lb *elb.LoadBalancerDescription) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.ELBAPI
+		conn := sharedAwsClient.ELBAPI
 		DescribeElbOpts := &elb.DescribeLoadBalancersInput{
 			LoadBalancerNames: []*string{lb.LoadBalancerName},
 		}

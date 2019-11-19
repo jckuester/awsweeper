@@ -6,6 +6,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/efs/efsiface"
+	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/aws/aws-sdk-go/service/elb/elbiface"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/route53/route53iface"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -23,44 +44,73 @@ const (
 	NoSuchHostedZone = "NoSuchHostedZone"
 )
 
-var client *res.AWS
-var testAccProviders map[string]terraform.ResourceProvider
+// sharedAwsClient is an AWS client instance that is shared amongst all acceptance tests
+var sharedAwsClient AWS
+
+// sharedTfAwsProvider is a Terraform AWS provider that is shared amongst all acceptance tests
+var sharedTfAwsProvider map[string]terraform.ResourceProvider
 
 var argsDryRun = []string{"cmd", "--dry-run", "config.yml"}
 var argsForceDelete = []string{"cmd", "--force", "config.yml"}
 
-func init() {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+type AWS struct {
+	ec2iface.EC2API
+	autoscalingiface.AutoScalingAPI
+	elbiface.ELBAPI
+	route53iface.Route53API
+	cloudformationiface.CloudFormationAPI
+	efsiface.EFSAPI
+	iamiface.IAMAPI
+	kmsiface.KMSAPI
+	s3iface.S3API
+	stsiface.STSAPI
+}
 
-	client = res.NewAWS(sess)
-
-	testAccProviders = map[string]terraform.ResourceProvider{
-		"aws": terraformProviderAWS.Provider(),
-	}
-	err := os.Setenv("AWS_DEFAULT_REGION", *sess.Config.Region)
-	if err != nil {
-		log.Fatal(err)
+func NewAWS(s *session.Session) AWS {
+	return AWS{
+		AutoScalingAPI:    autoscaling.New(s),
+		CloudFormationAPI: cloudformation.New(s),
+		EC2API:            ec2.New(s),
+		EFSAPI:            efs.New(s),
+		ELBAPI:            elb.New(s),
+		IAMAPI:            iam.New(s),
+		KMSAPI:            kms.New(s),
+		Route53API:        route53.New(s),
+		S3API:             s3.New(s),
+		STSAPI:            sts.New(s),
 	}
 }
 
-func initWithRegion(region string) map[string]terraform.ResourceProvider {
+func init() {
+	awsClient, tfAwsProvider := initTests(nil)
+
+	sharedAwsClient = awsClient
+	sharedTfAwsProvider = tfAwsProvider
+}
+
+func initTests(region *string) (AWS, map[string]terraform.ResourceProvider) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config:            aws.Config{Region: aws.String(region)},
+		Config:            aws.Config{Region: region},
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	client = res.NewAWS(sess)
+	awsClient := NewAWS(sess)
+
+	tfProvider := map[string]terraform.ResourceProvider{
+		"aws": terraformProviderAWS.Provider(),
+	}
 
 	err := os.Setenv("AWS_DEFAULT_REGION", *sess.Config.Region)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return map[string]terraform.ResourceProvider{
-		"aws": terraformProviderAWS.Provider(),
+	err = os.Setenv("AWS_REGION", *sess.Config.Region)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	return awsClient, tfProvider
 }
 
 func testAccPreCheck(t *testing.T) {

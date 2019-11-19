@@ -22,7 +22,7 @@ func TestAccKmsKey_deleteByTags(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccKmsKeyConfig,
@@ -48,7 +48,7 @@ func TestAccKmsKey_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccKmsKeyConfig,
@@ -89,7 +89,7 @@ func testAccCheckKmsKeyExists(name string, k *kms.KeyMetadata) resource.TestChec
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.KMSAPI
+		conn := sharedAwsClient.KMSAPI
 
 		o, err := retryOnAwsCode("NotFoundException", func() (interface{}, error) {
 			return conn.DescribeKey(&kms.DescribeKeyInput{
@@ -109,7 +109,7 @@ func testAccCheckKmsKeyExists(name string, k *kms.KeyMetadata) resource.TestChec
 
 func testKmsKeyExists(k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.KMSAPI
+		conn := sharedAwsClient.KMSAPI
 		_, err := retryOnAwsCode("NotFoundException", func() (interface{}, error) {
 			return conn.DescribeKey(&kms.DescribeKeyInput{
 				KeyId: k.KeyId,
@@ -132,7 +132,7 @@ func testKmsKeyExists(k *kms.KeyMetadata) resource.TestCheckFunc {
 
 func testKmsKeyDeleted(k *kms.KeyMetadata) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.KMSAPI
+		conn := sharedAwsClient.KMSAPI
 
 		resp, err := conn.DescribeKey(&kms.DescribeKeyInput{
 			KeyId: k.KeyId,

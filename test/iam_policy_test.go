@@ -20,7 +20,7 @@ func TestAccIamPolicy_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccIamPolicyConfig,
@@ -45,7 +45,7 @@ func TestAccIamPolicyAttached_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccIamPolicyAttachedConfig,
@@ -86,7 +86,7 @@ func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckF
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 		desc := &iam.GetPolicyInput{
 			PolicyArn: aws.String(rs.Primary.ID),
 		}
@@ -110,7 +110,7 @@ func testAccCheckIamPolicyExists(name string, p *iam.Policy) resource.TestCheckF
 
 func testIamPolicyExists(p *iam.Policy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 		desc := &iam.GetPolicyInput{
 			PolicyArn: p.Arn,
 		}
@@ -132,7 +132,7 @@ func testIamPolicyExists(p *iam.Policy) resource.TestCheckFunc {
 
 func testIamPolicyDeleted(p *iam.Policy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 
 		desc := &iam.GetPolicyInput{
 			PolicyArn: p.Arn,

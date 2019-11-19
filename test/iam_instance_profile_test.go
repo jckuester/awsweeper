@@ -20,7 +20,7 @@ func TestAccIamInstanceProfile_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccIamInstanceProfileConfig,
@@ -62,7 +62,7 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 			return fmt.Errorf("no ID is set")
 		}
 
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: aws.String(rs.Primary.ID),
 		}
@@ -86,7 +86,7 @@ func testAccCheckIamInstanceProfileExists(name string, r *iam.InstanceProfile) r
 
 func testIamInstanceProfileExists(r *iam.InstanceProfile) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: r.InstanceProfileName,
 		}
@@ -108,7 +108,7 @@ func testIamInstanceProfileExists(r *iam.InstanceProfile) resource.TestCheckFunc
 
 func testIamInstanceProfileDeleted(r *iam.InstanceProfile) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.IAMAPI
+		conn := sharedAwsClient.IAMAPI
 
 		desc := &iam.GetInstanceProfileInput{
 			InstanceProfileName: r.InstanceProfileName,

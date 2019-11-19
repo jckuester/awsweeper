@@ -24,7 +24,7 @@ func TestAccAmi_deleteByIds(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccAmiConfig(rName),
@@ -68,7 +68,7 @@ func testAccCheckAmiExists(n string, ami *ec2.Image) resource.TestCheckFunc {
 			return fmt.Errorf("No AMI ID is set")
 		}
 
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 
 		var resp *ec2.DescribeImagesOutput
 		err := resource.Retry(1*time.Minute, func() *resource.RetryError {
@@ -103,7 +103,7 @@ func testAccCheckAmiExists(n string, ami *ec2.Image) resource.TestCheckFunc {
 
 func testAmiExists(image *ec2.Image) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		opts := &ec2.DescribeImagesInput{
 			ImageIds: []*string{image.ImageId},
 		}
@@ -121,7 +121,7 @@ func testAmiExists(image *ec2.Image) resource.TestCheckFunc {
 
 func testAmiDeleted(image *ec2.Image) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.EC2API
+		conn := sharedAwsClient.EC2API
 		opts := &ec2.DescribeImagesInput{
 			ImageIds: []*string{image.ImageId},
 		}

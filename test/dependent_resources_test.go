@@ -3,6 +3,7 @@ package test
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/terraform/helper/resource"
 )
@@ -11,18 +12,19 @@ func TestAcc_deleteDependentResourcesFirst(t *testing.T) {
 	var vpc ec2.Vpc
 	var subnet ec2.Subnet
 
+	awsClient, tfAwsProvider := initTests(aws.String("us-west-2"))
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: tfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccDependentResources,
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckVpcExists("aws_vpc.foo", &vpc),
+					awsClient.testAccCheckVpcExists("aws_vpc.foo", &vpc),
 					testAccCheckSubnetExists("aws_subnet.bar", &subnet),
 					testMainTags(argsForceDelete, testAccAwsweeperConfig),
-					testVpcDeleted(&vpc),
+					awsClient.testVpcDeleted(&vpc),
 					testSubnetDeleted(&subnet),
 				),
 			},

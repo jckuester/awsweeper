@@ -20,7 +20,7 @@ func TestAccAutoscalingGroup_deleteByTags(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccAutoscalingGroupConfig,
@@ -44,7 +44,7 @@ func TestAccAutoscalingGroup_deleteByIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		Providers: sharedTfAwsProvider,
 		Steps: []resource.TestStep{
 			{
 				Config:             testAccAutoscalingGroupConfig,
@@ -89,7 +89,7 @@ func testAccCheckAWSAutoScalingGroupExists(n string, group *autoscaling.Group) r
 			return fmt.Errorf("no AutoScaling Group ID is set")
 		}
 
-		conn := client.AutoScalingAPI
+		conn := sharedAwsClient.AutoScalingAPI
 
 		describeGroups, err := conn.DescribeAutoScalingGroups(
 			&autoscaling.DescribeAutoScalingGroupsInput{
@@ -113,7 +113,7 @@ func testAccCheckAWSAutoScalingGroupExists(n string, group *autoscaling.Group) r
 
 func testAutoscalingGroupExists(asg *autoscaling.Group) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.AutoScalingAPI
+		conn := sharedAwsClient.AutoScalingAPI
 		DescribeAutoscalingGroupOpts := &autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: []*string{asg.AutoScalingGroupName},
 		}
@@ -132,7 +132,7 @@ func testAutoscalingGroupExists(asg *autoscaling.Group) resource.TestCheckFunc {
 
 func testAutoscalingGroupDeleted(asg *autoscaling.Group) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn := client.AutoScalingAPI
+		conn := sharedAwsClient.AutoScalingAPI
 		DescribeAutoscalingGroupOpts := &autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: []*string{asg.AutoScalingGroupName},
 		}

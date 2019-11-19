@@ -68,7 +68,7 @@ func WrappedMain() int {
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           *profile,
 	}))
-	log.Printf("using region: %s", *sess.Config.Region)
+	log.Infof("using region: %s", *sess.Config.Region)
 
 	p := initAwsProvider(*profile, *sess.Config.Region, *maxRetries)
 
