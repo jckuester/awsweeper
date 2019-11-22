@@ -205,6 +205,7 @@ type Resource struct {
 	// ID by which the resource can be deleted (in some cases the ID is the resource's name, but not always;
 	// that's why we need the deleteIDs map)
 	ID      string
+	Region  string
 	Tags    map[string]string
 	Created *time.Time
 	Attrs   map[string]string

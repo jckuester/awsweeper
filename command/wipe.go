@@ -23,6 +23,7 @@ type Wipe struct {
 	UI          cli.Ui
 	dryRun      bool
 	forceDelete bool
+	region      string
 	client      *resource.AWS
 	provider    *terraform.ResourceProvider
 	filter      *resource.Filter
@@ -66,7 +67,7 @@ func (c *Wipe) Run(args []string) int {
 			log.Fatal(err)
 		}
 
-		deletableResources, err := resource.DeletableResources(resType, rawResources)
+		deletableResources, err := resource.DeletableResources(c.region, resType, rawResources)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,6 +106,7 @@ func printString(res resource.Resources) {
 
 	for _, r := range res {
 		printStat := fmt.Sprintf("\tId:\t\t%s", r.ID)
+		printStat += fmt.Sprintf("\n\tRegion:\t\t%s", r.Region)
 		if r.Tags != nil {
 			if len(r.Tags) > 0 {
 				var keys []string
