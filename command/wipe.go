@@ -29,6 +29,28 @@ type Wipe struct {
 	outputType  string
 }
 
+func Info(c *Wipe, v string) {
+	for _, resType := range c.filter.Types() {
+		rawResources, err := c.client.RawResources(resType)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		deletableResources, err := resource.DeletableResources(resType, rawResources)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
+		for _, res := range filteredRes {
+			print(res, c.outputType)
+			if !c.dryRun && v == "yes" {
+				c.wipe(res)
+			}
+		}
+	}
+}
+
 // Run executes the wipe command.
 func (c *Wipe) Run(args []string) int {
 	if len(args) == 1 {
@@ -42,6 +64,8 @@ func (c *Wipe) Run(args []string) int {
 		fmt.Println(help())
 		return 1
 	}
+
+	Info(c, "print")
 
 	if c.dryRun {
 		logrus.Info("This is a test run, nothing will be deleted!")
@@ -58,26 +82,7 @@ func (c *Wipe) Run(args []string) int {
 		if v != "yes" {
 			return 0
 		}
-	}
-
-	for _, resType := range c.filter.Types() {
-		rawResources, err := c.client.RawResources(resType)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		deletableResources, err := resource.DeletableResources(resType, rawResources)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
-		for _, res := range filteredRes {
-			print(res, c.outputType)
-			if !c.dryRun {
-				c.wipe(res)
-			}
-		}
+		Info(c, v)
 	}
 
 	return 0
