@@ -108,6 +108,19 @@ A more detailed description of the ways to filter resources:
    
    The tag filter can be negated by surrounding the regex with `NOT(...)`
 
+   Resources not matching tag can be removed with Untagged: true
+
+    aws_instance:
+      - id: ^foo.*
+        tags:
+          Persist: true
+        created:
+          before: 1w
+        untagged: true
+
+  This allows for removing of all resources not matching tags to be deleted. In the above example all aws instances without the `Persist: true` tag that are older than 1 week will be deleted. *NOTE: Does not work with resources currently not supporting tags.*
+
+
 ##### 3) By ID
 
    You can narrow down on particular types of resources by filtering on their IDs.

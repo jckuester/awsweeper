@@ -29,7 +29,8 @@ type TypeFilter struct {
 	ID   *StringFilter            `yaml:",omitempty"`
 	Tags map[string]*StringFilter `yaml:",omitempty"`
 	// select resources by creation time
-	Created *Created `yaml:",omitempty"`
+	Created  *Created `yaml:",omitempty"`
+	Untagged bool     `yaml:",omitempty"`
 }
 
 type StringMatcher interface {
@@ -135,6 +136,8 @@ func (rtf TypeFilter) matchTags(tags map[string]string) bool {
 				}
 				return false
 			}
+		} else if rtf.Untagged {
+			return true
 		} else {
 			return false
 		}
