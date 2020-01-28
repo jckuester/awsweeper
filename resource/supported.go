@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
@@ -39,6 +41,7 @@ const (
 	CloudformationStack TerraformResourceType = "aws_cloudformation_stack"
 	EbsSnapshot         TerraformResourceType = "aws_ebs_snapshot"
 	EbsVolume           TerraformResourceType = "aws_ebs_volume"
+	EcsCluster          TerraformResourceType = "aws_ecs_cluster"
 	EfsFileSystem       TerraformResourceType = "aws_efs_file_system"
 	Eip                 TerraformResourceType = "aws_eip"
 	Elb                 TerraformResourceType = "aws_elb"
@@ -72,6 +75,7 @@ var (
 		CloudformationStack: "StackId",
 		EbsSnapshot:         "SnapshotId",
 		EbsVolume:           "VolumeId",
+		EcsCluster:          "ClusterArn",
 		EfsFileSystem:       "FileSystemId",
 		Eip:                 "AllocationId",
 		Elb:                 "LoadBalancerName",
@@ -131,6 +135,7 @@ var (
 		KmsAlias:            9610,
 		KmsKey:              9600,
 		NetworkInterface:    9000,
+		EcsCluster:          8980,
 	}
 
 	tagFieldNames = []string{
@@ -164,6 +169,7 @@ func getDeleteID(resType TerraformResourceType) (string, error) {
 // AWS wraps the AWS API
 type AWS struct {
 	ec2iface.EC2API
+	ecsiface.ECSAPI
 	autoscalingiface.AutoScalingAPI
 	elbiface.ELBAPI
 	route53iface.Route53API
@@ -186,6 +192,7 @@ func NewAWS(s *session.Session) *AWS {
 		AutoScalingAPI:    autoscaling.New(s),
 		CloudFormationAPI: cloudformation.New(s),
 		EC2API:            ec2.New(s),
+		ECSAPI:            ecs.New(s),
 		EFSAPI:            efs.New(s),
 		ELBAPI:            elb.New(s),
 		IAMAPI:            iam.New(s),
@@ -223,6 +230,8 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.ebsSnapshots()
 	case EbsVolume:
 		return a.ebsVolumes()
+	case EcsCluster:
+		return a.ecsClusters()
 	case EfsFileSystem:
 		return a.efsFileSystems()
 	case Eip:
@@ -341,11 +350,11 @@ func (a *AWS) findElbTags(elbNames []string) ([]*elb.TagDescription, error) {
 		if end > len(elbNames) {
 			end = len(elbNames)
 		}
-		awsNames := make([]*string, end - i)
+		awsNames := make([]*string, end-i)
 		for i, n := range elbNames[i:end] {
 			awsNames[i] = aws.String(n)
 		}
-		resp, err := a.ELBAPI.DescribeTags(&elb.DescribeTagsInput{ LoadBalancerNames: awsNames })
+		resp, err := a.ELBAPI.DescribeTags(&elb.DescribeTagsInput{LoadBalancerNames: awsNames})
 		if err != nil {
 			return nil, fmt.Errorf("DescribeTags SDK error: %v", err)
 		}
@@ -561,6 +570,14 @@ func (a *AWS) ebsVolumes() (interface{}, error) {
 		return nil, err
 	}
 	return output.Volumes, nil
+}
+
+func (a *AWS) ecsClusters() (interface{}, error) {
+	output, err := a.ListClusters(&ecs.ListClustersInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output, nil
 }
 
 func (a *AWS) amis() (interface{}, error) {

@@ -14,7 +14,6 @@ import (
 func DeletableResources(resType TerraformResourceType, resources interface{}) (Resources, error) {
 	deletableResources := Resources{}
 	reflectResources := reflect.ValueOf(resources)
-
 	for i := 0; i < reflectResources.Len(); i++ {
 		deleteID, err := getDeleteID(resType)
 		if err != nil {
