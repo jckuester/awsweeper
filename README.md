@@ -111,9 +111,8 @@ A more detailed description of the ways to filter resources:
    Resources not matching tag can be removed with Untagged: true
 
     aws_instance:
-      - id: ^foo.*
-        tags:
-          Persist: true
+      - tags:
+          Persist: NOT(true)
         created:
           before: 1w
         untagged: true
