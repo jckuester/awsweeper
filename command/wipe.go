@@ -3,13 +3,15 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
-	"sync"
+
+	"github.com/apex/log"
+	apexCliHandler "github.com/apex/log/handlers/cli"
 
 	"github.com/cloudetc/awsweeper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/jckuester/terradozer/pkg/provider"
+	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
 	"github.com/mitchellh/cli"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -24,31 +26,38 @@ type Wipe struct {
 	dryRun      bool
 	forceDelete bool
 	client      *resource.AWS
-	provider    *terraform.ResourceProvider
+	provider    *provider.TerraformProvider
 	filter      *resource.Filter
 	outputType  string
 }
 
-func Info(c *Wipe, v string) {
+func list(c *Wipe) []terradozerRes.DestroyableResource {
+	var destroyableRes []terradozerRes.DestroyableResource
+
 	for _, resType := range c.filter.Types() {
 		rawResources, err := c.client.RawResources(resType)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(err.Error())
 		}
 
 		deletableResources, err := resource.DeletableResources(resType, rawResources)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(err.Error())
 		}
 
 		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
 		for _, res := range filteredRes {
 			print(res, c.outputType)
-			if !c.dryRun && v == "yes" {
-				c.wipe(res)
+		}
+
+		for _, resFiltered := range filteredRes {
+			for _, r := range resFiltered {
+				destroyableRes = append(destroyableRes, terradozerRes.New(string(r.Type), r.ID, c.provider))
 			}
 		}
 	}
+
+	return destroyableRes
 }
 
 // Run executes the wipe command.
@@ -65,10 +74,11 @@ func (c *Wipe) Run(args []string) int {
 		return 1
 	}
 
-	Info(c, "print")
+	logrus.Info("Showing resources that would be deleted (dry run)")
+	resources := list(c)
 
 	if c.dryRun {
-		logrus.Info("This is a test run, nothing will be deleted!")
+		return 0
 	} else if !c.forceDelete {
 		v, err := c.UI.Ask(
 			"Do you really want to delete resources filtered by '" + args[0] + "'?\n" +
@@ -82,7 +92,10 @@ func (c *Wipe) Run(args []string) int {
 		if v != "yes" {
 			return 0
 		}
-		Info(c, v)
+
+		log.SetHandler(apexCliHandler.Default)
+
+		terradozerRes.DestroyResources(resources, false, 10)
 	}
 
 	return 0
@@ -149,74 +162,6 @@ func printYaml(res resource.Resources) {
 	}
 
 	fmt.Print(string(b))
-}
-
-// wipe does the actual deletion (in parallel) of a given (filtered) list of AWS resources.
-// It takes advantage of the AWS terraform provider by using its delete functions
-// (so we get retries, detaching of policies from some IAM resources before deletion, and other stuff for free).
-func (c *Wipe) wipe(res resource.Resources) {
-	numWorkerThreads := 10
-
-	if len(res) == 0 {
-		return
-	}
-
-	ii := &terraform.InstanceInfo{
-		Type: string(res[0].Type),
-	}
-
-	d := &terraform.InstanceDiff{
-		Destroy: true,
-	}
-
-	chResources := make(chan *resource.Resource, numWorkerThreads)
-
-	var wg sync.WaitGroup
-	wg.Add(len(res))
-
-	for j := 1; j <= numWorkerThreads; j++ {
-		go func() {
-			for {
-				r, more := <-chResources
-				if more {
-					// dirty hack to fix aws_key_pair
-					if r.Attrs == nil {
-						r.Attrs = map[string]string{"public_key": ""}
-					}
-
-					s := &terraform.InstanceState{
-						ID:         r.ID,
-						Attributes: r.Attrs,
-					}
-
-					st, err := (*c.provider).Refresh(ii, s)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					// doesn't hurt to always add some force attributes
-					st.Attributes["force_detach_policies"] = "true"
-					st.Attributes["force_destroy"] = "true"
-
-					_, err = (*c.provider).Apply(ii, st, d)
-
-					if err != nil {
-						fmt.Printf("\t%s\n", err)
-					}
-					wg.Done()
-				} else {
-					return
-				}
-			}
-		}()
-	}
-
-	for _, r := range res {
-		chResources <- r
-	}
-	close(chResources)
-
-	wg.Wait()
 }
 
 // Help returns help information of this command

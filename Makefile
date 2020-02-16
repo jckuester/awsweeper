@@ -22,7 +22,7 @@ build:
 .PHONY: test
 test: generate
 	go clean -testcache ${PKG_LIST}
-	go test --race -cover ${PKG_LIST}
+	go test -v -failfast -race -cover ${PKG_LIST}
 
 .PHONY: testacc
 testacc:
