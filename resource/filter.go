@@ -2,6 +2,9 @@ package resource
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"log"
 	"regexp"
 	"sort"
 	"strconv"
@@ -9,17 +12,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
-	"log"
-
-	"fmt"
-
-	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
-
-// AppFs is an abstraction of the file system to allow mocking in tests.
-var AppFs = afero.NewOsFs()
 
 // Config represents the content of a yaml file that is used as a contract to filter resources for deletion.
 type Config map[TerraformResourceType][]TypeFilter
@@ -66,7 +60,7 @@ func NewFilter(yamlFile string) *Filter {
 func read(filename string) Config {
 	var cfg Config
 
-	data, err := afero.ReadFile(AppFs, filename)
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		logrus.WithError(err).Fatalf("Failed to read config file: %s", filename)
 	}

@@ -147,23 +147,3 @@ func (a AWS) testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
 		return nil
 	}
 }
-
-const testAccVpcConfig = `
-resource "aws_vpc" "foo" {
-	cidr_block = "10.1.0.0/16"
-
-	tags {
-		foo = "bar"
-		Name = "awsweeper-testacc"
-	}
-}
-
-resource "aws_vpc" "bar" {
-	cidr_block = "10.2.0.0/16"
-
-	tags {
-		bar = "baz"
-		Name = "awsweeper-testacc"
-	}
-}
-`
