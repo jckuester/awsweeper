@@ -5,145 +5,90 @@ import (
 	"os"
 	"testing"
 
-	"github.com/spf13/afero"
+	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/cloudetc/awsweeper/command"
 	res "github.com/cloudetc/awsweeper/resource"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
 )
 
-func TestAccVpc_deleteByTags(t *testing.T) {
-	var vpc1, vpc2 ec2.Vpc
+func TestAcc_Vpc(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping acceptance test.")
+	}
 
-	awsClient, tfAwsProvider := initTests(aws.String("us-west-2"))
-
-	resource.Test(t, resource.TestCase{
-		Providers: tfAwsProvider,
-		Steps: []resource.TestStep{
-			{
-				Config:             testAccVpcConfig,
-				ExpectNonEmptyPlan: true,
-				Check: resource.ComposeTestCheckFunc(
-					awsClient.testAccCheckVpcExists("aws_vpc.foo", &vpc1),
-					awsClient.testAccCheckVpcExists("aws_vpc.bar", &vpc2),
-					testMainTags(argsDryRun, testAWSweeperTagsConfig(res.Vpc)),
-					awsClient.testVpcExists(&vpc1),
-					awsClient.testVpcExists(&vpc2),
-					testMainTags(argsForceDelete, testAWSweeperTagsConfig(res.Vpc)),
-					awsClient.testVpcDeleted(&vpc1),
-					awsClient.testVpcExists(&vpc2),
-				),
-			},
+	tests := []struct {
+		name           string
+		configTemplate string
+	}{
+		{
+			name:           "delete by ID",
+			configTemplate: configTemplateID,
 		},
-	})
-}
-
-func TestAccVpc_deleteByIds(t *testing.T) {
-	var vpc1, vpc2 ec2.Vpc
-
-	awsClient, tfAwsProvider := initTests(aws.String("us-west-2"))
-
-	resource.Test(t, resource.TestCase{
-		Providers: tfAwsProvider,
-		Steps: []resource.TestStep{
-			{
-				Config:             testAccVpcConfig,
-				ExpectNonEmptyPlan: true,
-				Check: resource.ComposeTestCheckFunc(
-					awsClient.testAccCheckVpcExists("aws_vpc.foo", &vpc1),
-					awsClient.testAccCheckVpcExists("aws_vpc.bar", &vpc2),
-					testMainVpcIds(argsDryRun, &vpc1),
-					awsClient.testVpcExists(&vpc1),
-					awsClient.testVpcExists(&vpc2),
-					testMainVpcIds(argsForceDelete, &vpc1),
-					awsClient.testVpcDeleted(&vpc1),
-					awsClient.testVpcExists(&vpc2),
-				),
-			},
+		{
+			name:           "delete by tag",
+			configTemplate: configTemplateTag,
 		},
-	})
-}
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			env := InitEnv(t)
 
-func testMainVpcIds(args []string, vpc *ec2.Vpc) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res.AppFs = afero.NewMemMapFs()
-		afero.WriteFile(res.AppFs, "config.yml", []byte(testAWSweeperIdsConfig(res.Vpc, vpc.VpcId)), 0644)
-		os.Args = args
-		command.WrappedMain()
-		return nil
+			terraformDir := "./test-fixtures/vpc"
+
+			terraformOptions := getTerraformOptions(terraformDir, env)
+
+			defer terraform.Destroy(t, terraformOptions)
+
+			terraform.InitAndApply(t, terraformOptions)
+
+			vpcID := terraform.Output(t, terraformOptions, "id")
+			assertVpcExists(t, vpcID)
+
+			writeConfig(t, tc.configTemplate, terraformDir, res.Vpc, vpcID)
+			defer os.Remove(terraformDir + "/config.yml")
+
+			logBuffer, err := runBinary(t, terraformDir, "yes\n")
+			require.NoError(t, err)
+
+			assertVpcDeleted(t, vpcID)
+
+			fmt.Println(logBuffer)
+		})
 	}
 }
 
-func (a AWS) testAccCheckVpcExists(name string, vpc *ec2.Vpc) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[name]
+func assertVpcExists(t *testing.T, id string) {
+	assert.True(t, vpcExists(t, id))
+}
+
+func assertVpcDeleted(t *testing.T, id string) {
+	assert.False(t, vpcExists(t, id))
+}
+
+func vpcExists(t *testing.T, id string) bool {
+	conn := sharedAwsClient.EC2API
+
+	desc := &ec2.DescribeVpcsInput{
+		VpcIds: []*string{&id},
+	}
+	resp, err := conn.DescribeVpcs(desc)
+	if err != nil {
+		ec2err, ok := err.(awserr.Error)
 		if !ok {
-			return fmt.Errorf("not found: %s", name)
+			t.Fatal()
 		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("no ID is set")
+		if ec2err.Code() == "InvalidVpcID.NotFound" {
+			return false
 		}
-
-		desc := &ec2.DescribeVpcsInput{
-			VpcIds: []*string{aws.String(rs.Primary.ID)},
-		}
-		resp, err := a.DescribeVpcs(desc)
-		if err != nil {
-			return err
-		}
-		if len(resp.Vpcs) == 0 {
-			return fmt.Errorf("VPC not found")
-		}
-
-		*vpc = *resp.Vpcs[0]
-
-		return nil
+		t.Fatal()
 	}
-}
 
-func (a AWS) testVpcExists(vpc *ec2.Vpc) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		desc := &ec2.DescribeVpcsInput{
-			VpcIds: []*string{vpc.VpcId},
-		}
-		resp, err := a.DescribeVpcs(desc)
-		if err != nil {
-			return err
-		}
-		if len(resp.Vpcs) == 0 {
-			return fmt.Errorf("VPC has been deleted")
-		}
-
-		return nil
+	if len(resp.Vpcs) == 0 {
+		return false
 	}
-}
 
-func (a AWS) testVpcDeleted(vpc *ec2.Vpc) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		desc := &ec2.DescribeVpcsInput{
-			VpcIds: []*string{vpc.VpcId},
-		}
-		resp, err := a.DescribeVpcs(desc)
-		if err != nil {
-			ec2err, ok := err.(awserr.Error)
-			if !ok {
-				return err
-			}
-			if ec2err.Code() == "InvalidVpcID.NotFound" {
-				return nil
-			}
-			return err
-		}
-
-		if len(resp.Vpcs) != 0 {
-			return fmt.Errorf("VPC hasn't been deleted")
-		}
-
-		return nil
-	}
+	return true
 }

@@ -136,8 +136,8 @@ func runBinary(t *testing.T, terraformDir, userInput string, flags ...string) (*
 	require.NoError(t, err)
 
 	args := []string{terraformDir + "/config.yml"}
-	for _, f := range flags {
-		args = append(args, f)
+	if flags != nil {
+		args = append(flags, args...)
 	}
 
 	logBuffer := &bytes.Buffer{}
