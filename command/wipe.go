@@ -3,17 +3,18 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
-	"github.com/apex/log"
-	apexCliHandler "github.com/apex/log/handlers/cli"
+	"github.com/sirupsen/logrus"
 
+	"github.com/apex/log"
+	"github.com/cloudetc/awsweeper/internal"
 	"github.com/cloudetc/awsweeper/resource"
 	"github.com/jckuester/terradozer/pkg/provider"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
 	"github.com/mitchellh/cli"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -67,35 +68,33 @@ func (c *Wipe) Run(args []string) int {
 
 		err := c.filter.Validate()
 		if err != nil {
-			logrus.WithError(err).Fatal()
+			log.WithError(err).Fatal("failed to validate filter config")
 		}
 	} else {
 		fmt.Println(help())
 		return 1
 	}
 
-	logrus.Info("Showing resources that would be deleted (dry run)")
+	internal.LogTitle("showing resources that would be deleted (dry run)")
 	resources := list(c)
 
-	if c.dryRun {
+	if len(resources) == 0 {
+		internal.LogTitle("all resources have already been deleted")
 		return 0
-	} else if !c.forceDelete {
-		v, err := c.UI.Ask(
-			"Do you really want to delete resources filtered by '" + args[0] + "'?\n" +
-				"Only 'yes' will be accepted to approve.\n\n" +
-				"Enter a value: ")
+	}
 
-		if err != nil {
-			fmt.Println("Error asking for approval: {{err}}", err)
-			return 1
-		}
-		if v != "yes" {
+	internal.LogTitle(fmt.Sprintf("total number of resources that would be deleted: %d", len(resources)))
+
+	if !c.dryRun {
+		if !internal.UserConfirmedDeletion(os.Stdin, c.forceDelete) {
 			return 0
 		}
 
-		log.SetHandler(apexCliHandler.Default)
+		internal.LogTitle("Starting to delete resources")
 
-		terradozerRes.DestroyResources(resources, false, 10)
+		numDeletedResources := terradozerRes.DestroyResources(resources, false, 10)
+
+		internal.LogTitle(fmt.Sprintf("total number of deleted resources: %d", numDeletedResources))
 	}
 
 	return 0

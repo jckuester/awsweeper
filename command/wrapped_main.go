@@ -7,13 +7,14 @@ import (
 	goLog "log"
 	"os"
 
-	"github.com/jckuester/terradozer/pkg/provider"
+	apexCliHandler "github.com/apex/log/handlers/cli"
 
+	"github.com/apex/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cloudetc/awsweeper/resource"
+	"github.com/jckuester/terradozer/pkg/provider"
 	"github.com/mitchellh/cli"
-	log "github.com/sirupsen/logrus"
 )
 
 // WrappedMain is the actual main function that does not exit for acceptance testing purposes
@@ -67,13 +68,16 @@ func WrappedMain() int {
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           *profile,
 	}))
-	log.Infof("using region: %s", *sess.Config.Region)
 
 	provider, err := provider.Init("aws")
 	if err != nil {
 		log.WithError(err).Error("failed to initialize Terraform AWS Providers")
 		return 1
 	}
+
+	log.SetHandler(apexCliHandler.Default)
+
+	log.Infof("using region: %s", *sess.Config.Region)
 
 	ui := &cli.BasicUi{
 		Reader:      os.Stdin,

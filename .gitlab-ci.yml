@@ -9,7 +9,6 @@ before_script:
 stages:
 - test
 - build
-- acceptance_test
 
 #lint:
 #  stage: test
@@ -19,12 +18,7 @@ stages:
 test:
   stage: test
   script:
-  - make test
-
-acceptance_test:
-  stage: acceptance_test
-  script:
-  - AWS_REGION=us-west-2 AWS_ACCESS_KEY_ID=${aws_access_key_id} AWS_SECRET_ACCESS_KEY=${aws_secret_key_id} make testacc
+  - AWS_REGION=us-west-2 AWS_ACCESS_KEY_ID=${aws_access_key_id} AWS_SECRET_ACCESS_KEY=${aws_secret_key_id} make test-all
 
 build:
   stage: build

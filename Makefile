@@ -20,13 +20,14 @@ build:
 	go build
 
 .PHONY: test
-test: generate
+test: ## Run unit tests
 	go clean -testcache ${PKG_LIST}
-	go test -v -failfast -race -cover ${PKG_LIST}
+	go test -v -p 1 -short -race ${PKG_LIST}
 
-.PHONY: testacc
-testacc:
-	TF_ACC=1 go test $(TEST) -cover -v $(TESTARGS) -timeout 120m
+.PHONY: test-all
+test-all: ## Run tests (including acceptance and integration tests)
+	go clean -testcache ${PKG_LIST}
+	./bin/go-acc ${PKG_LIST} -- -v -p 1 -race -failfast -timeout 30m
 
 .PHONY: lint
 lint: generate
