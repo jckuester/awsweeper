@@ -79,7 +79,7 @@ func (c *Wipe) Run(args []string) int {
 	resources := list(c)
 
 	if len(resources) == 0 {
-		internal.LogTitle("all resources have already been deleted")
+		internal.LogTitle("no resources found to delete")
 		return 0
 	}
 
@@ -118,10 +118,10 @@ func print(res resource.Resources, outputType string) {
 }
 
 func printString(res resource.Resources) {
-	fmt.Printf("\n---\nType: %s\nFound: %d\n\n", res[0].Type, len(res))
+	fmt.Printf("\n\t---\n\tType: %s\n\tFound: %d\n\n", res[0].Type, len(res))
 
 	for _, r := range res {
-		printStat := fmt.Sprintf("\tId:\t\t%s", r.ID)
+		printStat := fmt.Sprintf("\t\tId:\t\t%s", r.ID)
 		if r.Tags != nil {
 			if len(r.Tags) > 0 {
 				var keys []string
@@ -129,7 +129,7 @@ func printString(res resource.Resources) {
 					keys = append(keys, k)
 				}
 				sort.Strings(keys)
-				printStat += "\n\tTags:\t\t"
+				printStat += "\n\t\tTags:\t\t"
 				for _, k := range keys {
 					printStat += fmt.Sprintf("[%s: %v] ", k, r.Tags[k])
 				}
@@ -142,7 +142,7 @@ func printString(res resource.Resources) {
 		}
 		fmt.Println(printStat)
 	}
-	fmt.Print("---\n\n")
+	fmt.Print("\t---\n\n")
 }
 
 func printJson(res resource.Resources) {

@@ -63,19 +63,32 @@ func WrappedMain() int {
 	}
 	c.Args = append([]string{"wipe"}, set.Args()...)
 
+	if *profile != "" {
+		err := os.Setenv("AWS_PROFILE", *profile)
+		if err != nil {
+			log.WithError(err).Error("failed to set AWS profile")
+		}
+	}
+	if *region != "" {
+		err := os.Setenv("AWS_DEFAULT_REGION", *region)
+		if err != nil {
+			log.WithError(err).Error("failed to set AWS region")
+		}
+	}
+
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config:            aws.Config{Region: region},
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           *profile,
 	}))
 
+	log.SetHandler(apexCliHandler.Default)
+
 	provider, err := provider.Init("aws")
 	if err != nil {
 		log.WithError(err).Error("failed to initialize Terraform AWS Providers")
 		return 1
 	}
-
-	log.SetHandler(apexCliHandler.Default)
 
 	log.Infof("using region: %s", *sess.Config.Region)
 
