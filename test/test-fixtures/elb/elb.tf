@@ -25,7 +25,7 @@ resource "aws_elb" "test" {
   }
 
   tags = {
-    foo = var.name
+    awsweeper = "test-acc"
   }
 }
 

@@ -13,50 +13,62 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAcc_Elb(t *testing.T) {
+func TestAcc_Elb_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
 
-	tests := []struct {
-		name           string
-		configTemplate string
-	}{
-		{
-			name:           "delete by ID",
-			configTemplate: configTemplateID,
-		},
-		{
-			name:           "delete by tag",
-			configTemplate: configTemplateTag,
-		},
+	env := InitEnv(t)
+
+	terraformDir := "./test-fixtures/elb"
+
+	terraformOptions := getTerraformOptions(terraformDir, env)
+
+	defer terraform.Destroy(t, terraformOptions)
+
+	terraform.InitAndApply(t, terraformOptions)
+
+	elbID := terraform.Output(t, terraformOptions, "id")
+	assertElbExists(t, elbID)
+
+	writeConfigID(t, terraformDir, res.Elb, elbID)
+	defer os.Remove(terraformDir + "/config.yml")
+
+	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	require.NoError(t, err)
+
+	assertElbDeleted(t, elbID)
+
+	fmt.Println(logBuffer)
+}
+
+func TestAcc_Elb_DeleteByTag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping acceptance test.")
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			env := InitEnv(t)
 
-			terraformDir := "./test-fixtures/elb"
+	env := InitEnv(t)
 
-			terraformOptions := getTerraformOptions(terraformDir, env)
+	terraformDir := "./test-fixtures/elb"
 
-			defer terraform.Destroy(t, terraformOptions)
+	terraformOptions := getTerraformOptions(terraformDir, env)
 
-			terraform.InitAndApply(t, terraformOptions)
+	defer terraform.Destroy(t, terraformOptions)
 
-			elbID := terraform.Output(t, terraformOptions, "id")
-			assertElbExists(t, elbID)
+	terraform.InitAndApply(t, terraformOptions)
 
-			writeConfig(t, tc.configTemplate, terraformDir, res.Elb, elbID)
-			defer os.Remove(terraformDir + "/config.yml")
+	elbID := terraform.Output(t, terraformOptions, "id")
+	assertElbExists(t, elbID)
 
-			logBuffer, err := runBinary(t, terraformDir, "yes\n")
-			require.NoError(t, err)
+	writeConfigTag(t, terraformDir, res.Elb)
+	defer os.Remove(terraformDir + "/config.yml")
 
-			assertElbDeleted(t, elbID)
+	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	require.NoError(t, err)
 
-			fmt.Println(logBuffer)
-		})
-	}
+	assertElbDeleted(t, elbID)
+
+	fmt.Println(logBuffer)
 }
 
 func assertElbExists(t *testing.T, id string) {

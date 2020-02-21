@@ -14,50 +14,62 @@ import (
 	res "github.com/cloudetc/awsweeper/resource"
 )
 
-func TestAcc_Vpc(t *testing.T) {
+func TestAcc_Vpc_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
 
-	tests := []struct {
-		name           string
-		configTemplate string
-	}{
-		{
-			name:           "delete by ID",
-			configTemplate: configTemplateID,
-		},
-		{
-			name:           "delete by tag",
-			configTemplate: configTemplateTag,
-		},
+	env := InitEnv(t)
+
+	terraformDir := "./test-fixtures/vpc"
+
+	terraformOptions := getTerraformOptions(terraformDir, env)
+
+	defer terraform.Destroy(t, terraformOptions)
+
+	terraform.InitAndApply(t, terraformOptions)
+
+	vpcID := terraform.Output(t, terraformOptions, "id")
+	assertVpcExists(t, vpcID)
+
+	writeConfigID(t, terraformDir, res.Vpc, vpcID)
+	defer os.Remove(terraformDir + "/config.yml")
+
+	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	require.NoError(t, err)
+
+	assertVpcDeleted(t, vpcID)
+
+	fmt.Println(logBuffer)
+}
+
+func TestAcc_Vpc_DeleteByTag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping acceptance test.")
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			env := InitEnv(t)
 
-			terraformDir := "./test-fixtures/vpc"
+	env := InitEnv(t)
 
-			terraformOptions := getTerraformOptions(terraformDir, env)
+	terraformDir := "./test-fixtures/vpc"
 
-			defer terraform.Destroy(t, terraformOptions)
+	terraformOptions := getTerraformOptions(terraformDir, env)
 
-			terraform.InitAndApply(t, terraformOptions)
+	defer terraform.Destroy(t, terraformOptions)
 
-			vpcID := terraform.Output(t, terraformOptions, "id")
-			assertVpcExists(t, vpcID)
+	terraform.InitAndApply(t, terraformOptions)
 
-			writeConfig(t, tc.configTemplate, terraformDir, res.Vpc, vpcID)
-			defer os.Remove(terraformDir + "/config.yml")
+	vpcID := terraform.Output(t, terraformOptions, "id")
+	assertVpcExists(t, vpcID)
 
-			logBuffer, err := runBinary(t, terraformDir, "yes\n")
-			require.NoError(t, err)
+	writeConfigTag(t, terraformDir, res.Vpc)
+	defer os.Remove(terraformDir + "/config.yml")
 
-			assertVpcDeleted(t, vpcID)
+	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	require.NoError(t, err)
 
-			fmt.Println(logBuffer)
-		})
-	}
+	assertVpcDeleted(t, vpcID)
+
+	fmt.Println(logBuffer)
 }
 
 func assertVpcExists(t *testing.T, id string) {

@@ -43,7 +43,6 @@ func TestAcc_DryRun(t *testing.T) {
 				"SHOWING RESOURCES THAT WOULD BE DELETED (DRY RUN)",
 				"TOTAL NUMBER OF RESOURCES THAT WOULD BE DELETED: 1",
 				"STARTING TO DELETE RESOURCES",
-				"resource deleted",
 				"TOTAL NUMBER OF DELETED RESOURCES: 1",
 			},
 			expectResourceIsDeleted: true,
@@ -64,10 +63,10 @@ func TestAcc_DryRun(t *testing.T) {
 			vpcID := terraform.Output(t, terraformOptions, "id")
 			aws.GetVpcById(t, vpcID, env.AWSRegion)
 
-			writeConfig(t, configTemplateID, terraformDir, res.Vpc, vpcID)
+			writeConfigID(t, terraformDir, res.Vpc, vpcID)
 			defer os.Remove(terraformDir + "/config.yml")
 
-			logBuffer, err := runBinary(t, terraformDir, "YES                                                                                                           \n", tc.flags...)
+			logBuffer, err := runBinary(t, terraformDir, "YES\n", tc.flags...)
 			require.NoError(t, err)
 
 			if tc.expectResourceIsDeleted {

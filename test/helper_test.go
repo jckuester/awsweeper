@@ -53,14 +53,7 @@ const (
 )
 
 var (
-	sharedAwsClient  AWS
-	configTemplateID = `%s:
-  - id: %s
-`
-	configTemplateTag = `%s:
-  - tags:
-      foo: %s
-`
+	sharedAwsClient AWS
 )
 
 type AWS struct {
@@ -152,8 +145,23 @@ func runBinary(t *testing.T, terraformDir, userInput string, flags ...string) (*
 	return logBuffer, err
 }
 
-func writeConfig(t *testing.T, configTemplate string, terraformDir string, resType res.TerraformResourceType, id string) {
-	config := fmt.Sprintf(configTemplate, resType, id)
+func writeConfigID(t *testing.T, terraformDir string, resType res.TerraformResourceType, id string) {
+	config := fmt.Sprintf(`%s:
+  - id: %s
+`, resType, id)
+
+	err := ioutil.WriteFile(terraformDir+"/config.yml",
+		[]byte(config), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeConfigTag(t *testing.T, terraformDir string, resType res.TerraformResourceType) {
+	config := fmt.Sprintf(`%s:
+  - tags:
+      awsweeper: test-acc
+`, resType)
 
 	err := ioutil.WriteFile(terraformDir+"/config.yml",
 		[]byte(config), 0644)
