@@ -7,8 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/apex/log"
 	"github.com/cloudetc/awsweeper/internal"
 	"github.com/cloudetc/awsweeper/resource"
@@ -38,12 +36,12 @@ func list(c *Wipe) []terradozerRes.DestroyableResource {
 	for _, resType := range c.filter.Types() {
 		rawResources, err := c.client.RawResources(resType)
 		if err != nil {
-			log.Fatal(err.Error())
+			log.WithError(err).Fatal("failed to get raw resources")
 		}
 
 		deletableResources, err := resource.DeletableResources(resType, rawResources)
 		if err != nil {
-			log.Fatal(err.Error())
+			log.WithError(err).Fatal("failed to convert raw resources into deletable resources")
 		}
 
 		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
@@ -113,7 +111,7 @@ func print(res resource.Resources, outputType string) {
 	case "yaml":
 		printYaml(res)
 	default:
-		logrus.WithField("output", outputType).Fatal("Unsupported output type")
+		log.WithField("output", outputType).Fatal("Unsupported output type")
 	}
 }
 
@@ -148,7 +146,7 @@ func printString(res resource.Resources) {
 func printJson(res resource.Resources) {
 	b, err := json.Marshal(res)
 	if err != nil {
-		logrus.WithError(err).Fatal()
+		log.WithError(err).Fatal("failed to marshal resources into JSON")
 	}
 
 	fmt.Print(string(b))
@@ -157,7 +155,7 @@ func printJson(res resource.Resources) {
 func printYaml(res resource.Resources) {
 	b, err := yaml.Marshal(res)
 	if err != nil {
-		logrus.WithError(err).Fatal()
+		log.WithError(err).Fatal("failed to marshal resources into YAML")
 	}
 
 	fmt.Print(string(b))

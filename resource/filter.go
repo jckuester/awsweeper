@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/apex/log"
 	"gopkg.in/yaml.v2"
 )
 
@@ -62,12 +61,12 @@ func read(filename string) Config {
 
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		logrus.WithError(err).Fatalf("Failed to read config file: %s", filename)
+		log.WithError(err).Fatalf("failed to read config file: %s", filename)
 	}
 
 	err = yaml.UnmarshalStrict(data, &cfg)
 	if err != nil {
-		logrus.WithError(err).Fatalf("Cannot unmarshal config: %s", filename)
+		log.WithError(err).Fatalf("failed to unmarshal config: %s", filename)
 	}
 
 	return cfg
@@ -106,7 +105,7 @@ func (rtf TypeFilter) matchID(id string) bool {
 
 	if ok, err := rtf.ID.matches(id); ok {
 		if err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal("failed to match ID")
 		}
 		return true
 	}
@@ -125,7 +124,7 @@ func (rtf TypeFilter) matchTags(tags map[string]string) bool {
 		if tagVal, ok := tags[cfgTagKey]; ok {
 			if matched, err := regex.matches(tagVal); !matched {
 				if err != nil {
-					log.Fatal(err)
+					log.WithError(err).Fatal("failed to match tags")
 				}
 				return false
 			}
