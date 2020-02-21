@@ -341,11 +341,11 @@ func (a *AWS) findElbTags(elbNames []string) ([]*elb.TagDescription, error) {
 		if end > len(elbNames) {
 			end = len(elbNames)
 		}
-		awsNames := make([]*string, end - i)
+		awsNames := make([]*string, end-i)
 		for i, n := range elbNames[i:end] {
 			awsNames[i] = aws.String(n)
 		}
-		resp, err := a.ELBAPI.DescribeTags(&elb.DescribeTagsInput{ LoadBalancerNames: awsNames })
+		resp, err := a.ELBAPI.DescribeTags(&elb.DescribeTagsInput{LoadBalancerNames: awsNames})
 		if err != nil {
 			return nil, fmt.Errorf("DescribeTags SDK error: %v", err)
 		}
