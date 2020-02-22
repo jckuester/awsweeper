@@ -92,7 +92,7 @@ var (
 		NatGateway:          "NatGatewayId",
 		NetworkACL:          "NetworkAclId",
 		NetworkInterface:    "NetworkInterfaceId",
-		RdsInstance:         "DBInstanceIdentifier"
+		RdsInstance:         "DBInstanceIdentifier",
 		Route53Zone:         "Id",
 		RouteTable:          "RouteTableId",
 		S3Bucket:            "Name",
@@ -123,7 +123,7 @@ var (
 		SecurityGroup:       9850,
 		NetworkACL:          9840,
 		Vpc:                 9830,
-		RdsInstance:         9825;
+		RdsInstance:         9825,
 		IamPolicy:           9820,
 		IamGroup:            9810,
 		IamUser:             9800,
