@@ -459,7 +459,7 @@ func (a *AWS) routeTables() (interface{}, error) {
 }
 
 func (a *AWS) rdsInstances() (interface{}, error) {
-	output, err := a.DescribeDatabaseInstances(&ec2.DescribeDatabaseInstancesInput{})
+	output, err := a.DescribeDatabaseInstances(&rds.DescribeDatabaseInstancesInput{})
 	if err != nil {
 		return nil, err
 	}
