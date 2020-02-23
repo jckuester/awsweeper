@@ -1,11 +1,29 @@
 builds:
-  - ldflags: -s -w -extldflags "-static"
-    env:
-      - CGO_ENABLED=0
-    binary: awsweeper
+  - binary: terradozer
     goos:
-      - windows
       - darwin
+      - windows
       - linux
+      - freebsd
+      - arm64
+      - arm
     goarch:
       - amd64
+      - 386
+    goarm:
+      - 6
+      - 7
+    env:
+      - CGO_ENABLED=0
+    ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}}
+
+archives:
+  - format: tar.gz
+    wrap_in_directory: true
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: '{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    files:
+      - LICENSE.md
+      - README.md

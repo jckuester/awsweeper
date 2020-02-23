@@ -4,8 +4,8 @@
   <a href="https://github.com/cloudetc/awsweeper/releases/latest">
     <img alt="Release" src="https://img.shields.io/github/release/cloudetc/awsweeper.svg?style=flat-square">
   </a>
-  <a href="https://gitlab.com/jckuester/awsweeper/commits/master">
-    <img alt="pipeline status" src="https://gitlab.com/jckuester/awsweeper/badges/master/pipeline.svg" />
+  <a href="https://travis-ci.org/cloudetc/awsweeper">
+    <img alt="pipeline status" src="https://img.shields.io/travis/cloudetc/awsweeper/master.svg" />
   </a>
   <a href="https://goreportcard.com/report/github.com/cloudetc/awsweeper">
     <img alt="Go Report" src="https://goreportcard.com/badge/github.com/cloudetc/awsweeper?style=flat-square" />
@@ -30,9 +30,17 @@ Happy erasing!
 
 [![AWSweeper tutorial](img/asciinema-tutorial.gif)](https://asciinema.org/a/149097)
 
-## Download
+## Installation
 
-Releases for your platform are [here](https://github.com/cloudetc/awsweeper/releases).
+It's recommended to install a specific version of awsweeper available on the
+[releases page](https://github.com/cloudetc/awsweeper/releases).
+
+Here is the recommended way to install awsweeper v0.5.0:
+
+```bash
+# install it into ./bin/
+curl -sSfL https://raw.githubusercontent.com/cloudetc/awsweeper/master/install.sh | sh -s v0.5.0
+```
 
 ## Usage
 

@@ -26,7 +26,7 @@ after_success:
 deploy:
   - provider: script
     skip_cleanup: true
-    script: ./goreleaser
+    script: curl -sL https://git.io/goreleaser | bash
     on:
       tags: true
 notifications:
