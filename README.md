@@ -173,6 +173,7 @@ AWSweeper can currently delete many but not [all of the existing types of AWS re
 - aws_nat_gateway
 - aws_network_acl
 - aws_network_interface
+- aws_rds_instance
 - aws_route53_zone
 - aws_route_table
 - aws_s3_bucket
