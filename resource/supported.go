@@ -21,6 +21,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -56,6 +58,7 @@ const (
 	NatGateway          TerraformResourceType = "aws_nat_gateway"
 	NetworkACL          TerraformResourceType = "aws_network_acl"
 	NetworkInterface    TerraformResourceType = "aws_network_interface"
+	RdsInstance         TerraformResourceType = "aws_db_instance"
 	Route53Zone         TerraformResourceType = "aws_route53_zone"
 	RouteTable          TerraformResourceType = "aws_route_table"
 	S3Bucket            TerraformResourceType = "aws_s3_bucket"
@@ -89,6 +92,7 @@ var (
 		NatGateway:          "NatGatewayId",
 		NetworkACL:          "NetworkAclId",
 		NetworkInterface:    "NetworkInterfaceId",
+		RdsInstance:         "DBInstanceIdentifier",
 		Route53Zone:         "Id",
 		RouteTable:          "RouteTableId",
 		S3Bucket:            "Name",
@@ -119,6 +123,7 @@ var (
 		SecurityGroup:       9850,
 		NetworkACL:          9840,
 		Vpc:                 9830,
+		RdsInstance:         9825,
 		IamPolicy:           9820,
 		IamGroup:            9810,
 		IamUser:             9800,
@@ -166,6 +171,7 @@ type AWS struct {
 	ec2iface.EC2API
 	autoscalingiface.AutoScalingAPI
 	elbiface.ELBAPI
+	rdsiface.RDSAPI
 	route53iface.Route53API
 	cloudformationiface.CloudFormationAPI
 	efsiface.EFSAPI
@@ -191,6 +197,7 @@ func NewAWS(s *session.Session) *AWS {
 		IAMAPI:            iam.New(s),
 		KMSAPI:            kms.New(s),
 		Route53API:        route53.New(s),
+		RDSAPI:            rds.New(s),
 		S3API:             s3.New(s),
 		STSAPI:            sts.New(s),
 	}
@@ -257,6 +264,8 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.networkAcls()
 	case NetworkInterface:
 		return a.networkInterfaces()
+	case RdsInstance:
+		return a.rdsInstances()
 	case Route53Zone:
 		return a.route53Zones()
 	case RouteTable:
@@ -447,6 +456,14 @@ func (a *AWS) routeTables() (interface{}, error) {
 		return nil, err
 	}
 	return output.RouteTables, nil
+}
+
+func (a *AWS) rdsInstances() (interface{}, error) {
+	output, err := a.DescribeDBInstances(&rds.DescribeDBInstancesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.RdsInstances, nil
 }
 
 func (a *AWS) SecurityGroup() (interface{}, error) {
