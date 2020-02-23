@@ -58,7 +58,7 @@ const (
 	NatGateway          TerraformResourceType = "aws_nat_gateway"
 	NetworkACL          TerraformResourceType = "aws_network_acl"
 	NetworkInterface    TerraformResourceType = "aws_network_interface"
-	RdsInstance         TerraformResourceType = "aws_db_instance"
+	DBInstance          TerraformResourceType = "aws_db_instance"
 	Route53Zone         TerraformResourceType = "aws_route53_zone"
 	RouteTable          TerraformResourceType = "aws_route_table"
 	S3Bucket            TerraformResourceType = "aws_s3_bucket"
@@ -92,7 +92,7 @@ var (
 		NatGateway:          "NatGatewayId",
 		NetworkACL:          "NetworkAclId",
 		NetworkInterface:    "NetworkInterfaceId",
-		RdsInstance:         "DBInstanceIdentifier",
+		DBInstance:          "DBInstanceIdentifier",
 		Route53Zone:         "Id",
 		RouteTable:          "RouteTableId",
 		S3Bucket:            "Name",
@@ -123,7 +123,7 @@ var (
 		SecurityGroup:       9850,
 		NetworkACL:          9840,
 		Vpc:                 9830,
-		RdsInstance:         9825,
+		DBInstance:          9825,
 		IamPolicy:           9820,
 		IamGroup:            9810,
 		IamUser:             9800,
@@ -264,7 +264,7 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.networkAcls()
 	case NetworkInterface:
 		return a.networkInterfaces()
-	case RdsInstance:
+	case DBInstance:
 		return a.rdsInstances()
 	case Route53Zone:
 		return a.route53Zones()
@@ -463,7 +463,7 @@ func (a *AWS) rdsInstances() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return output.RdsInstances, nil
+	return output.DBInstances, nil
 }
 
 func (a *AWS) SecurityGroup() (interface{}, error) {

@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
+
 	"github.com/gruntwork-io/terratest/modules/random"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
@@ -67,6 +70,7 @@ type AWS struct {
 	kmsiface.KMSAPI
 	s3iface.S3API
 	stsiface.STSAPI
+	rdsiface.RDSAPI
 }
 
 func NewAWS(s *session.Session) AWS {
@@ -81,6 +85,7 @@ func NewAWS(s *session.Session) AWS {
 		Route53API:        route53.New(s),
 		S3API:             s3.New(s),
 		STSAPI:            sts.New(s),
+		RDSAPI:            rds.New(s),
 	}
 }
 
