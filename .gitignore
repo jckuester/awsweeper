@@ -4,3 +4,4 @@ bin/
 .terradozer/
 .terraform/
 *.tfstate
+coverage.txt

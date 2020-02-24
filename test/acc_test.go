@@ -6,11 +6,10 @@ import (
 	"testing"
 
 	res "github.com/cloudetc/awsweeper/resource"
-
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tj/assert"
 )
 
 func TestAcc_DryRun(t *testing.T) {

@@ -12,7 +12,7 @@ env:
     - AWS_DEFAULT_REGION=us-west-2
 
 before_install:
-  - ./aws_credentials.sh
+  - ./before_ci.sh
 
 install:
   - make setup
