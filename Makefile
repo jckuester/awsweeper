@@ -4,7 +4,6 @@ PKG_LIST              := $(shell go list ./...)
 setup: ## Install build, test, and lint dependencies
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.21.0
 	go install github.com/golang/mock/mockgen
-	go install github.com/hashicorp/terraform
 	curl -sSfL https://raw.githubusercontent.com/jckuester/go-acc/master/install.sh | sh -s v0.2.1
 
 .PHONY: lint
