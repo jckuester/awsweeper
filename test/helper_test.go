@@ -10,6 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ecs"
+
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
+
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 
@@ -60,17 +64,18 @@ var (
 )
 
 type AWS struct {
-	ec2iface.EC2API
 	autoscalingiface.AutoScalingAPI
-	elbiface.ELBAPI
-	route53iface.Route53API
 	cloudformationiface.CloudFormationAPI
+	ec2iface.EC2API
+	ecsiface.ECSAPI
 	efsiface.EFSAPI
+	elbiface.ELBAPI
 	iamiface.IAMAPI
 	kmsiface.KMSAPI
+	rdsiface.RDSAPI
+	route53iface.Route53API
 	s3iface.S3API
 	stsiface.STSAPI
-	rdsiface.RDSAPI
 }
 
 func NewAWS(s *session.Session) AWS {
@@ -78,14 +83,15 @@ func NewAWS(s *session.Session) AWS {
 		AutoScalingAPI:    autoscaling.New(s),
 		CloudFormationAPI: cloudformation.New(s),
 		EC2API:            ec2.New(s),
+		ECSAPI:            ecs.New(s),
 		EFSAPI:            efs.New(s),
 		ELBAPI:            elb.New(s),
 		IAMAPI:            iam.New(s),
 		KMSAPI:            kms.New(s),
+		RDSAPI:            rds.New(s),
 		Route53API:        route53.New(s),
 		S3API:             s3.New(s),
 		STSAPI:            sts.New(s),
-		RDSAPI:            rds.New(s),
 	}
 }
 

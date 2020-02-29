@@ -25,6 +25,7 @@ func WrappedMain() int {
 	set := flag.NewFlagSet(app, 0)
 	versionFlag := set.Bool("version", false, "Show version")
 	helpFlag := set.Bool("help", false, "Show help")
+	logDebug := set.Bool("debug", false, "Enable debug logging")
 	dryRunFlag := set.Bool("dry-run", false, "Don't delete anything, just show what would happen")
 	forceDeleteFlag := set.Bool("force", false, "Start deleting without asking for confirmation")
 	profile := set.String("profile", "", "Use a specific profile from your credential file")
@@ -82,6 +83,10 @@ func WrappedMain() int {
 		Profile:           *profile,
 	}))
 
+	if *logDebug {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	log.SetHandler(apexCliHandler.Default)
 
 	provider, err := provider.Init("aws")
@@ -136,6 +141,8 @@ Options:
   --region				The region to use. Overrides config/env settings
 
   --dry-run				Don't delete anything, just show what would happen
+
+  --debug				Enable debug logging
 
   --force				Start deleting without asking for confirmation
 

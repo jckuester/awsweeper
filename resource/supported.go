@@ -15,6 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
@@ -42,6 +44,7 @@ const (
 	CloudformationStack TerraformResourceType = "aws_cloudformation_stack"
 	EbsSnapshot         TerraformResourceType = "aws_ebs_snapshot"
 	EbsVolume           TerraformResourceType = "aws_ebs_volume"
+	EcsCluster          TerraformResourceType = "aws_ecs_cluster"
 	EfsFileSystem       TerraformResourceType = "aws_efs_file_system"
 	Eip                 TerraformResourceType = "aws_eip"
 	Elb                 TerraformResourceType = "aws_elb"
@@ -76,6 +79,7 @@ var (
 		CloudformationStack: "StackId",
 		EbsSnapshot:         "SnapshotId",
 		EbsVolume:           "VolumeId",
+		EcsCluster:          "ClusterName",
 		EfsFileSystem:       "FileSystemId",
 		Eip:                 "AllocationId",
 		Elb:                 "LoadBalancerName",
@@ -107,6 +111,7 @@ var (
 	// since dependent resources need to be deleted before their dependencies
 	// (e.g. aws_subnet before aws_vpc)
 	DependencyOrder = map[TerraformResourceType]int{
+		EcsCluster:          10000,
 		AutoscalingGroup:    9990,
 		Instance:            9980,
 		KeyPair:             9970,
@@ -171,6 +176,7 @@ func getDeleteID(resType TerraformResourceType) (string, error) {
 // AWS wraps the AWS API
 type AWS struct {
 	ec2iface.EC2API
+	ecsiface.ECSAPI
 	autoscalingiface.AutoScalingAPI
 	elbiface.ELBAPI
 	rdsiface.RDSAPI
@@ -194,6 +200,7 @@ func NewAWS(s *session.Session) *AWS {
 		AutoScalingAPI:    autoscaling.New(s),
 		CloudFormationAPI: cloudformation.New(s),
 		EC2API:            ec2.New(s),
+		ECSAPI:            ecs.New(s),
 		EFSAPI:            efs.New(s),
 		ELBAPI:            elb.New(s),
 		IAMAPI:            iam.New(s),
@@ -232,6 +239,8 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.ebsSnapshots()
 	case EbsVolume:
 		return a.ebsVolumes()
+	case EcsCluster:
+		return a.ecsClusters()
 	case EfsFileSystem:
 		return a.efsFileSystems()
 	case Eip:
@@ -580,6 +589,20 @@ func (a *AWS) ebsVolumes() (interface{}, error) {
 		return nil, err
 	}
 	return output.Volumes, nil
+}
+
+func (a *AWS) ecsClusters() (interface{}, error) {
+	listOutput, err := a.ListClusters(&ecs.ListClustersInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	descOutput, err := a.DescribeClusters(&ecs.DescribeClustersInput{
+		Clusters: listOutput.ClusterArns,
+		Include:  []*string{aws.String("TAGS")},
+	})
+
+	return descOutput.Clusters, nil
 }
 
 func (a *AWS) amis() (interface{}, error) {
