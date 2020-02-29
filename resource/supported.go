@@ -79,7 +79,7 @@ var (
 		CloudformationStack: "StackId",
 		EbsSnapshot:         "SnapshotId",
 		EbsVolume:           "VolumeId",
-		EcsCluster:          "ClusterArn",
+		EcsCluster:          "ClusterName",
 		EfsFileSystem:       "FileSystemId",
 		Eip:                 "AllocationId",
 		Elb:                 "LoadBalancerName",
@@ -111,6 +111,7 @@ var (
 	// since dependent resources need to be deleted before their dependencies
 	// (e.g. aws_subnet before aws_vpc)
 	DependencyOrder = map[TerraformResourceType]int{
+		EcsCluster:          10000,
 		AutoscalingGroup:    9990,
 		Instance:            9980,
 		KeyPair:             9970,
@@ -141,7 +142,6 @@ var (
 		KmsAlias:            9610,
 		KmsKey:              9600,
 		NetworkInterface:    9000,
-		EcsCluster:          8980,
 	}
 
 	tagFieldNames = []string{
@@ -592,11 +592,17 @@ func (a *AWS) ebsVolumes() (interface{}, error) {
 }
 
 func (a *AWS) ecsClusters() (interface{}, error) {
-	output, err := a.ListClusters(&ecs.ListClustersInput{})
+	listOutput, err := a.ListClusters(&ecs.ListClustersInput{})
 	if err != nil {
 		return nil, err
 	}
-	return output, nil
+
+	descOutput, err := a.DescribeClusters(&ecs.DescribeClustersInput{
+		Clusters: listOutput.ClusterArns,
+		Include:  []*string{aws.String("TAGS")},
+	})
+
+	return descOutput.Clusters, nil
 }
 
 func (a *AWS) amis() (interface{}, error) {

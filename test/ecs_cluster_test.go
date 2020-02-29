@@ -5,24 +5,22 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/ecs"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAcc_DBInstance_DeleteByID(t *testing.T) {
+func TestAcc_ECSCluster_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Only running from time to time, as this test costs some money.")
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/db-instance"
+	terraformDir := "./test-fixtures/ecs-cluster"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -31,28 +29,28 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertDBInstanceExists(t, id)
 
-	writeConfigID(t, terraformDir, res.DBInstance, id)
+	assertEcsClusterExists(t, id)
+
+	writeConfigID(t, terraformDir, res.EcsCluster, id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertDBInstanceDeleted(t, id)
+	assertEcsClusterDeleted(t, id)
 
 	fmt.Println(logBuffer)
 }
 
-func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
+func TestAcc_ECSCluster_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Tags not supported for aws_db_instance yet.")
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/db-instance"
+	terraformDir := "./test-fixtures/ecs-cluster"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -61,46 +59,45 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertDBInstanceExists(t, id)
 
-	writeConfigTag(t, terraformDir, res.DBInstance)
+	assertEcsClusterExists(t, id)
+
+	writeConfigTag(t, terraformDir, res.EcsCluster)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertDBInstanceDeleted(t, id)
+	assertEcsClusterDeleted(t, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertDBInstanceExists(t *testing.T, id string) {
-	assert.True(t, dbInstanceExists(t, id))
+func assertEcsClusterExists(t *testing.T, id string) {
+	assert.True(t, ecsClusterExists(t, id))
 }
 
-func assertDBInstanceDeleted(t *testing.T, id string) {
-	assert.False(t, dbInstanceExists(t, id))
+func assertEcsClusterDeleted(t *testing.T, id string) {
+	assert.False(t, ecsClusterExists(t, id))
 }
 
-func dbInstanceExists(t *testing.T, id string) bool {
-	conn := sharedAwsClient.RDSAPI
+func ecsClusterExists(t *testing.T, id string) bool {
+	conn := sharedAwsClient.ECSAPI
 
-	opts := &rds.DescribeDBInstancesInput{
-		DBInstanceIdentifier: &id,
+	opts := &ecs.DescribeClustersInput{
+		Clusters: []*string{&id},
 	}
-	resp, err := conn.DescribeDBInstances(opts)
+
+	resp, err := conn.DescribeClusters(opts)
 	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if !ok {
-			t.Fatal(err)
-		}
-		if awsErr.Code() == "DBInstanceNotFound" {
-			return false
-		}
 		t.Fatal(err)
 	}
 
-	if len(resp.DBInstances) == 0 {
+	if len(resp.Clusters) == 0 {
+		return false
+	}
+
+	if *resp.Clusters[0].Status == "INACTIVE" {
 		return false
 	}
 
