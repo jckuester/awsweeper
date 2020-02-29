@@ -164,6 +164,7 @@ AWSweeper can currently delete many but not [all of the existing types of AWS re
 - aws_cloudformation_stack
 - aws_ebs_snapshot
 - aws_ebs_volume
+- aws_ecs_cluster
 - aws_efs_file_system
 - aws_eip
 - aws_elb
