@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	goLog "log"
 	"os"
+	"time"
 
 	apexCliHandler "github.com/apex/log/handlers/cli"
 
@@ -31,6 +32,7 @@ func WrappedMain() int {
 	profile := set.String("profile", "", "Use a specific profile from your credential file")
 	region := set.String("region", "", "The region to use. Overrides config/env settings")
 	//maxRetries := set.Int("max-retries", 25, "The maximum number of times an AWS API request is being executed")
+	timeout := set.String("timeout", "20s", "Amount of time to wait for a delete of a resource to finish")
 	outputType := set.String("output", "string", "The type of output result (String, JSON or YAML) default: String")
 
 	// discard internal logs of Terraform AWS provider
@@ -89,7 +91,13 @@ func WrappedMain() int {
 
 	log.SetHandler(apexCliHandler.Default)
 
-	provider, err := provider.Init("aws")
+	timeoutDuration, err := time.ParseDuration(*timeout)
+	if err != nil {
+		log.WithError(err).Error("failed to parse timeout")
+		return 1
+	}
+
+	provider, err := provider.Init("aws", timeoutDuration)
 	if err != nil {
 		log.WithError(err).Error("failed to initialize Terraform AWS Providers")
 		return 1
@@ -146,7 +154,7 @@ Options:
 
   --force				Start deleting without asking for confirmation
 
-  --max-retries				The maximum number of times an AWS API request is being executed
+  --timeout 			Amount of time to wait for a delete of a resource to finish
   
   --output				The type of output result (string, json or yaml) default: string
 `
