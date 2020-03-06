@@ -35,11 +35,11 @@ Happy erasing!
 It's recommended to install a specific version of awsweeper available on the
 [releases page](https://github.com/cloudetc/awsweeper/releases).
 
-Here is the recommended way to install awsweeper v0.5.1:
+Here is the recommended way to install awsweeper v0.6.0:
 
 ```bash
 # install it into ./bin/
-curl -sSfL https://raw.githubusercontent.com/cloudetc/awsweeper/master/install.sh | sh -s v0.5.1
+curl -sSfL https://raw.githubusercontent.com/cloudetc/awsweeper/master/install.sh | sh -s v0.6.0
 ```
 
 ## Usage
