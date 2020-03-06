@@ -323,7 +323,6 @@ github.com/hashicorp/hil v0.0.0-20190212112733-ab17b08d6590 h1:2yzhWGdgQUWZUCNK+
 github.com/hashicorp/hil v0.0.0-20190212112733-ab17b08d6590/go.mod h1:n2TSygSNwsLJ76m8qFXTSc7beTb+auJxYdqrnoqwZWE=
 github.com/hashicorp/memberlist v0.1.0/go.mod h1:ncdBp14cuox2iFOq3kDiquKU6fqsTBc3W6JvZwjxxsE=
 github.com/hashicorp/serf v0.0.0-20160124182025-e4ec8cc423bb/go.mod h1:h/Ru6tmZazX7WO/GDmwdpS975F019L4t5ng5IgwbNrE=
-github.com/hashicorp/terraform v0.12.20/go.mod h1:UtGvFLi7LjM1AdiOX3mY/3+2X0Fdu2rqISHNrEquWlg=
 github.com/hashicorp/terraform v0.12.21 h1:0qamALIu4/g2+4k4rC5DpxMdLz4A4K67pGQA2X4prgs=
 github.com/hashicorp/terraform v0.12.21/go.mod h1:eJcloDEx5ywM4a1tetIuVrlqklM0bUVRYJBYAh4CYzA=
 github.com/hashicorp/terraform-config-inspect v0.0.0-20191212124732-c6ae6269b9d7 h1:Pc5TCv9mbxFN6UVX0LH6CpQrdTM5YjbVI2w15237Pjk=
@@ -339,10 +338,8 @@ github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:
 github.com/imdario/mergo v0.3.5/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/imdario/mergo v0.3.7/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
-github.com/jckuester/terradozer v0.0.0-20200223164014-1a0aa05006e4 h1:+GWKljQ63J4FcWBWtZKhpgfFWHwBm76DQyMGBxpLvbM=
-github.com/jckuester/terradozer v0.0.0-20200223164014-1a0aa05006e4/go.mod h1:NBwpCpbSUzEiVR6VbcDEW8RlyOWyhT1l/eay9W3wD+8=
-github.com/jckuester/terradozer v0.0.0-20200302205917-2129179a05fa h1:LTf5zRWLpwM0IMXDVPr4PVfJrXurS9VKOncuw1kuijY=
-github.com/jckuester/terradozer v0.0.0-20200302205917-2129179a05fa/go.mod h1:zix2s8OX1MkC2TxCt9K7J0FH+4kv23TEm0sdM1AFeIw=
+github.com/jckuester/terradozer v0.0.0-20200304191955-1c2f6b619e97 h1:X7NBC+MwEWksds5op7tUEooO7hRlk12aqa4S1pwKlDo=
+github.com/jckuester/terradozer v0.0.0-20200304191955-1c2f6b619e97/go.mod h1:zix2s8OX1MkC2TxCt9K7J0FH+4kv23TEm0sdM1AFeIw=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
