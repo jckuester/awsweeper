@@ -159,10 +159,14 @@ var (
 	// creationTimeFieldNames are a list field names that are used to find the creation date of a resource.
 	creationTimeFieldNames = []string{
 		"LaunchTime",
+		"CreateTime",
+		"CreateDate",
 		"CreatedTime",
 		"CreationDate",
 		"CreationTime",
+		"CreationTimestamp",
 		"StartTime",
+		"InstanceCreateTime",
 	}
 )
 

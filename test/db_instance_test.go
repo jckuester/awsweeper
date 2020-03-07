@@ -48,7 +48,7 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Tags not supported for aws_db_instance yet.")
+	t.Skip("Tags not supported yet.")
 
 	env := InitEnv(t)
 

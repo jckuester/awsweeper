@@ -29,7 +29,7 @@ const (
 	NoSuchHostedZone = "NoSuchHostedZone"
 )
 
-// EnvVars contains environment variables for that must be set for tests.
+// EnvVars contains environment variables for tests.
 type EnvVars struct {
 	AWSRegion  string
 	AWSProfile string
