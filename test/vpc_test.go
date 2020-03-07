@@ -30,7 +30,7 @@ func TestAcc_Vpc_DeleteByID(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	vpcID := terraform.Output(t, terraformOptions, "id")
-	assertVpcExists(t, vpcID)
+	assertVpcExists(t, env, vpcID)
 
 	writeConfigID(t, terraformDir, res.Vpc, vpcID)
 	defer os.Remove(terraformDir + "/config.yml")
@@ -38,7 +38,7 @@ func TestAcc_Vpc_DeleteByID(t *testing.T) {
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertVpcDeleted(t, vpcID)
+	assertVpcDeleted(t, env, vpcID)
 
 	fmt.Println(logBuffer)
 }
@@ -58,8 +58,8 @@ func TestAcc_Vpc_DeleteByTag(t *testing.T) {
 
 	terraform.InitAndApply(t, terraformOptions)
 
-	vpcID := terraform.Output(t, terraformOptions, "id")
-	assertVpcExists(t, vpcID)
+	id := terraform.Output(t, terraformOptions, "id")
+	assertVpcExists(t, env, id)
 
 	writeConfigTag(t, terraformDir, res.Vpc)
 	defer os.Remove(terraformDir + "/config.yml")
@@ -67,26 +67,24 @@ func TestAcc_Vpc_DeleteByTag(t *testing.T) {
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertVpcDeleted(t, vpcID)
+	assertVpcDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertVpcExists(t *testing.T, id string) {
-	assert.True(t, vpcExists(t, id))
+func assertVpcExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, vpcExists(t, env, id))
 }
 
-func assertVpcDeleted(t *testing.T, id string) {
-	assert.False(t, vpcExists(t, id))
+func assertVpcDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, vpcExists(t, env, id))
 }
 
-func vpcExists(t *testing.T, id string) bool {
-	conn := sharedAwsClient.EC2API
-
-	desc := &ec2.DescribeVpcsInput{
+func vpcExists(t *testing.T, env EnvVars, id string) bool {
+	opts := &ec2.DescribeVpcsInput{
 		VpcIds: []*string{&id},
 	}
-	resp, err := conn.DescribeVpcs(desc)
+	resp, err := env.AWSClient.DescribeVpcs(opts)
 	if err != nil {
 		ec2err, ok := err.(awserr.Error)
 		if !ok {

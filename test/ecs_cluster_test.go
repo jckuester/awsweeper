@@ -30,7 +30,7 @@ func TestAcc_ECSCluster_DeleteByID(t *testing.T) {
 
 	id := terraform.Output(t, terraformOptions, "id")
 
-	assertEcsClusterExists(t, id)
+	assertEcsClusterExists(t, env, id)
 
 	writeConfigID(t, terraformDir, res.EcsCluster, id)
 	defer os.Remove(terraformDir + "/config.yml")
@@ -38,7 +38,7 @@ func TestAcc_ECSCluster_DeleteByID(t *testing.T) {
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertEcsClusterDeleted(t, id)
+	assertEcsClusterDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
@@ -60,7 +60,7 @@ func TestAcc_ECSCluster_DeleteByTag(t *testing.T) {
 
 	id := terraform.Output(t, terraformOptions, "id")
 
-	assertEcsClusterExists(t, id)
+	assertEcsClusterExists(t, env, id)
 
 	writeConfigTag(t, terraformDir, res.EcsCluster)
 	defer os.Remove(terraformDir + "/config.yml")
@@ -68,27 +68,25 @@ func TestAcc_ECSCluster_DeleteByTag(t *testing.T) {
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertEcsClusterDeleted(t, id)
+	assertEcsClusterDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertEcsClusterExists(t *testing.T, id string) {
-	assert.True(t, ecsClusterExists(t, id))
+func assertEcsClusterExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, ecsClusterExists(t, env, id))
 }
 
-func assertEcsClusterDeleted(t *testing.T, id string) {
-	assert.False(t, ecsClusterExists(t, id))
+func assertEcsClusterDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, ecsClusterExists(t, env, id))
 }
 
-func ecsClusterExists(t *testing.T, id string) bool {
-	conn := sharedAwsClient.ECSAPI
-
+func ecsClusterExists(t *testing.T, env EnvVars, id string) bool {
 	opts := &ecs.DescribeClustersInput{
 		Clusters: []*string{&id},
 	}
 
-	resp, err := conn.DescribeClusters(opts)
+	resp, err := env.AWSClient.DescribeClusters(opts)
 	if err != nil {
 		t.Fatal(err)
 	}

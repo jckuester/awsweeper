@@ -69,9 +69,9 @@ func TestAcc_DryRun(t *testing.T) {
 			require.NoError(t, err)
 
 			if tc.expectResourceIsDeleted {
-				assertVpcDeleted(t, vpcID)
+				assertVpcDeleted(t, env, vpcID)
 			} else {
-				assertVpcExists(t, vpcID)
+				assertVpcExists(t, env, vpcID)
 			}
 
 			actualLogs := logBuffer.String()

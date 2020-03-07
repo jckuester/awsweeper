@@ -5,6 +5,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
+
 	"github.com/pkg/errors"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -42,6 +46,7 @@ const (
 	Ami                 TerraformResourceType = "aws_ami"
 	AutoscalingGroup    TerraformResourceType = "aws_autoscaling_group"
 	CloudformationStack TerraformResourceType = "aws_cloudformation_stack"
+	CloudWatchLogGroup  TerraformResourceType = "aws_cloudwatch_log_group"
 	EbsSnapshot         TerraformResourceType = "aws_ebs_snapshot"
 	EbsVolume           TerraformResourceType = "aws_ebs_volume"
 	EcsCluster          TerraformResourceType = "aws_ecs_cluster"
@@ -77,6 +82,7 @@ var (
 		Ami:                 "ImageId",
 		AutoscalingGroup:    "AutoScalingGroupName",
 		CloudformationStack: "StackId",
+		CloudWatchLogGroup:  "LogGroupName",
 		EbsSnapshot:         "SnapshotId",
 		EbsVolume:           "VolumeId",
 		EcsCluster:          "ClusterName",
@@ -142,6 +148,7 @@ var (
 		KmsAlias:            9610,
 		KmsKey:              9600,
 		NetworkInterface:    9000,
+		CloudWatchLogGroup:  8900,
 	}
 
 	tagFieldNames = []string{
@@ -152,10 +159,14 @@ var (
 	// creationTimeFieldNames are a list field names that are used to find the creation date of a resource.
 	creationTimeFieldNames = []string{
 		"LaunchTime",
+		"CreateTime",
+		"CreateDate",
 		"CreatedTime",
 		"CreationDate",
 		"CreationTime",
+		"CreationTimestamp",
 		"StartTime",
+		"InstanceCreateTime",
 	}
 )
 
@@ -175,16 +186,17 @@ func getDeleteID(resType TerraformResourceType) (string, error) {
 
 // AWS wraps the AWS API
 type AWS struct {
+	autoscalingiface.AutoScalingAPI
+	cloudformationiface.CloudFormationAPI
+	cloudwatchlogsiface.CloudWatchLogsAPI
 	ec2iface.EC2API
 	ecsiface.ECSAPI
-	autoscalingiface.AutoScalingAPI
-	elbiface.ELBAPI
-	rdsiface.RDSAPI
-	route53iface.Route53API
-	cloudformationiface.CloudFormationAPI
 	efsiface.EFSAPI
+	elbiface.ELBAPI
 	iamiface.IAMAPI
 	kmsiface.KMSAPI
+	rdsiface.RDSAPI
+	route53iface.Route53API
 	s3iface.S3API
 	stsiface.STSAPI
 }
@@ -199,6 +211,7 @@ func NewAWS(s *session.Session) *AWS {
 	return &AWS{
 		AutoScalingAPI:    autoscaling.New(s),
 		CloudFormationAPI: cloudformation.New(s),
+		CloudWatchLogsAPI: cloudwatchlogs.New(s),
 		EC2API:            ec2.New(s),
 		ECSAPI:            ecs.New(s),
 		EFSAPI:            efs.New(s),
@@ -234,7 +247,9 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 	case AutoscalingGroup:
 		return a.autoscalingGroups()
 	case CloudformationStack:
-		return a.cloudformationStacks()
+		return a.cloudFormationStacks()
+	case CloudWatchLogGroup:
+		return a.cloudWatchLogGroups()
 	case EbsSnapshot:
 		return a.ebsSnapshots()
 	case EbsVolume:
@@ -401,12 +416,20 @@ func (a *AWS) natGateways() (interface{}, error) {
 	return output.NatGateways, nil
 }
 
-func (a *AWS) cloudformationStacks() (interface{}, error) {
+func (a *AWS) cloudFormationStacks() (interface{}, error) {
 	output, err := a.DescribeStacks(&cloudformation.DescribeStacksInput{})
 	if err != nil {
 		return nil, err
 	}
 	return output.Stacks, nil
+}
+
+func (a *AWS) cloudWatchLogGroups() (interface{}, error) {
+	output, err := a.CloudWatchLogsAPI.DescribeLogGroups(&cloudwatchlogs.DescribeLogGroupsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.LogGroups, nil
 }
 
 func (a *AWS) route53Zones() (interface{}, error) {

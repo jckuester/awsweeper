@@ -5,24 +5,21 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/rds"
-
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAcc_DBInstance_DeleteByID(t *testing.T) {
+func TestAcc_CloudWatchLogGroup_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Only running from time to time, as this test costs some money.")
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/db-instance"
+	terraformDir := "./test-fixtures/cloudwatch-log-group"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -31,20 +28,20 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertDBInstanceExists(t, env, id)
+	assertCloudWatchLogGroupExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.DBInstance, id)
+	writeConfigID(t, terraformDir, res.CloudWatchLogGroup, id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertDBInstanceDeleted(t, env, id)
+	assertCloudWatchLogGroupDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
+func TestAcc_CloudWatchLogGroup_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
@@ -52,7 +49,7 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/db-instance"
+	terraformDir := "./test-fixtures/cloudwatch-log-group"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -61,45 +58,38 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertDBInstanceExists(t, env, id)
+	assertCloudWatchLogGroupExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.DBInstance)
+	writeConfigTag(t, terraformDir, res.CloudWatchLogGroup)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertDBInstanceDeleted(t, env, id)
+	assertCloudWatchLogGroupDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertDBInstanceExists(t *testing.T, env EnvVars, id string) {
-	assert.True(t, dbInstanceExists(t, env, id))
+func assertCloudWatchLogGroupExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, cloudWatchLogGroupExists(t, env, id))
 }
 
-func assertDBInstanceDeleted(t *testing.T, env EnvVars, id string) {
-	assert.False(t, dbInstanceExists(t, env, id))
+func assertCloudWatchLogGroupDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, cloudWatchLogGroupExists(t, env, id))
 }
 
-func dbInstanceExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &rds.DescribeDBInstancesInput{
-		DBInstanceIdentifier: &id,
+func cloudWatchLogGroupExists(t *testing.T, env EnvVars, id string) bool {
+	opts := &cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupNamePrefix: &id,
 	}
 
-	resp, err := env.AWSClient.DescribeDBInstances(opts)
+	resp, err := env.AWSClient.CloudWatchLogsAPI.DescribeLogGroups(opts)
 	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if !ok {
-			t.Fatal(err)
-		}
-		if awsErr.Code() == "DBInstanceNotFound" {
-			return false
-		}
 		t.Fatal(err)
 	}
 
-	if len(resp.DBInstances) == 0 {
+	if len(resp.LogGroups) == 0 {
 		return false
 	}
 
