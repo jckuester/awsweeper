@@ -28,16 +28,16 @@ func TestAcc_Elb_DeleteByID(t *testing.T) {
 
 	terraform.InitAndApply(t, terraformOptions)
 
-	elbID := terraform.Output(t, terraformOptions, "id")
-	assertElbExists(t, elbID)
+	id := terraform.Output(t, terraformOptions, "id")
+	assertElbExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.Elb, elbID)
+	writeConfigID(t, terraformDir, res.Elb, id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertElbDeleted(t, elbID)
+	assertElbDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
@@ -57,8 +57,8 @@ func TestAcc_Elb_DeleteByTag(t *testing.T) {
 
 	terraform.InitAndApply(t, terraformOptions)
 
-	elbID := terraform.Output(t, terraformOptions, "id")
-	assertElbExists(t, elbID)
+	id := terraform.Output(t, terraformOptions, "id")
+	assertElbExists(t, env, id)
 
 	writeConfigTag(t, terraformDir, res.Elb)
 	defer os.Remove(terraformDir + "/config.yml")
@@ -66,26 +66,25 @@ func TestAcc_Elb_DeleteByTag(t *testing.T) {
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertElbDeleted(t, elbID)
+	assertElbDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertElbExists(t *testing.T, id string) {
-	assert.True(t, elbExists(t, id))
+func assertElbExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, elbExists(t, env, id))
 }
 
-func assertElbDeleted(t *testing.T, id string) {
-	assert.False(t, elbExists(t, id))
+func assertElbDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, elbExists(t, env, id))
 }
 
-func elbExists(t *testing.T, id string) bool {
-	conn := sharedAwsClient.ELBAPI
-
-	DescribeElbOpts := &elb.DescribeLoadBalancersInput{
+func elbExists(t *testing.T, env EnvVars, id string) bool {
+	opts := &elb.DescribeLoadBalancersInput{
 		LoadBalancerNames: []*string{&id},
 	}
-	resp, err := conn.DescribeLoadBalancers(DescribeElbOpts)
+
+	resp, err := env.AWSClient.ELBAPI.DescribeLoadBalancers(opts)
 	if err != nil {
 		elbErr, ok := err.(awserr.Error)
 		if !ok {

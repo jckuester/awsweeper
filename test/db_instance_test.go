@@ -31,7 +31,7 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertDBInstanceExists(t, id)
+	assertDBInstanceExists(t, env, id)
 
 	writeConfigID(t, terraformDir, res.DBInstance, id)
 	defer os.Remove(terraformDir + "/config.yml")
@@ -39,7 +39,7 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertDBInstanceDeleted(t, id)
+	assertDBInstanceDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
@@ -61,7 +61,7 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertDBInstanceExists(t, id)
+	assertDBInstanceExists(t, env, id)
 
 	writeConfigTag(t, terraformDir, res.DBInstance)
 	defer os.Remove(terraformDir + "/config.yml")
@@ -69,26 +69,25 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertDBInstanceDeleted(t, id)
+	assertDBInstanceDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertDBInstanceExists(t *testing.T, id string) {
-	assert.True(t, dbInstanceExists(t, id))
+func assertDBInstanceExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, dbInstanceExists(t, env, id))
 }
 
-func assertDBInstanceDeleted(t *testing.T, id string) {
-	assert.False(t, dbInstanceExists(t, id))
+func assertDBInstanceDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, dbInstanceExists(t, env, id))
 }
 
-func dbInstanceExists(t *testing.T, id string) bool {
-	conn := sharedAwsClient.RDSAPI
-
+func dbInstanceExists(t *testing.T, env EnvVars, id string) bool {
 	opts := &rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: &id,
 	}
-	resp, err := conn.DescribeDBInstances(opts)
+
+	resp, err := env.AWSClient.DescribeDBInstances(opts)
 	if err != nil {
 		awsErr, ok := err.(awserr.Error)
 		if !ok {

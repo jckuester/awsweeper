@@ -82,6 +82,7 @@ func cloudWatchLogGroupExists(t *testing.T, env EnvVars, id string) bool {
 	opts := &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: &id,
 	}
+
 	resp, err := env.AWSClient.CloudWatchLogsAPI.DescribeLogGroups(opts)
 	if err != nil {
 		t.Fatal(err)

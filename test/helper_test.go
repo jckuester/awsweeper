@@ -10,45 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
-
-	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
-
-	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
-
-	"github.com/gruntwork-io/terratest/modules/random"
-
-	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/onsi/gomega/gexec"
-	"github.com/stretchr/testify/require"
-
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/aws/aws-sdk-go/service/efs"
-	"github.com/aws/aws-sdk-go/service/efs/efsiface"
-	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/aws/aws-sdk-go/service/elb/elbiface"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/route53/route53iface"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
-
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	res "github.com/cloudetc/awsweeper/resource"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/onsi/gomega/gexec"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -59,58 +29,11 @@ const (
 	NoSuchHostedZone = "NoSuchHostedZone"
 )
 
-var (
-	sharedAwsClient AWS
-)
-
-type AWS struct {
-	autoscalingiface.AutoScalingAPI
-	cloudformationiface.CloudFormationAPI
-	ec2iface.EC2API
-	ecsiface.ECSAPI
-	efsiface.EFSAPI
-	elbiface.ELBAPI
-	iamiface.IAMAPI
-	kmsiface.KMSAPI
-	rdsiface.RDSAPI
-	route53iface.Route53API
-	s3iface.S3API
-	stsiface.STSAPI
-}
-
-func NewAWS(s *session.Session) AWS {
-	return AWS{
-		AutoScalingAPI:    autoscaling.New(s),
-		CloudFormationAPI: cloudformation.New(s),
-		EC2API:            ec2.New(s),
-		ECSAPI:            ecs.New(s),
-		EFSAPI:            efs.New(s),
-		ELBAPI:            elb.New(s),
-		IAMAPI:            iam.New(s),
-		KMSAPI:            kms.New(s),
-		RDSAPI:            rds.New(s),
-		Route53API:        route53.New(s),
-		S3API:             s3.New(s),
-		STSAPI:            sts.New(s),
-	}
-}
-
-func init() {
-	sharedAwsClient = initTests(nil)
-}
-
-func initTests(region *string) AWS {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config:            aws.Config{Region: region},
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-	return NewAWS(sess)
-}
-
 // EnvVars contains environment variables for that must be set for tests.
 type EnvVars struct {
 	AWSRegion  string
 	AWSProfile string
+	AWSClient  *res.AWS
 }
 
 // InitEnv sets environment variables for acceptance tests.
@@ -127,9 +50,15 @@ func InitEnv(t *testing.T) EnvVars {
 		t.Fatal("env variable AWS_DEFAULT_REGION needs to be set for tests")
 	}
 
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config:            aws.Config{Region: aws.String(region)},
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
 	return EnvVars{
 		AWSProfile: profile,
 		AWSRegion:  region,
+		AWSClient:  res.NewAWS(sess),
 	}
 }
 
@@ -192,7 +121,7 @@ func getTerraformOptions(terraformDir string, env EnvVars) *terraform.Options {
 			"profile": env.AWSProfile,
 			"name":    name,
 		},
-		// BackendConfig defines where to store the Terraform state file of the test in S3
+		// BackendConfig defines where to store the Terraform state files of tests
 		BackendConfig: map[string]interface{}{
 			"bucket":  testTfStateBucket,
 			"key":     fmt.Sprintf("%s/%s.tfstate", terraformDir, name),
