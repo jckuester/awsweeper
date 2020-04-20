@@ -297,6 +297,7 @@ github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHh
 github.com/hashicorp/go-plugin v1.0.1-0.20190610192547-a1bc61569a26/go.mod h1:++UyYGoz3o5w9ZzAdZxtQKrWWP+iqPBn3cQptSMzBuY=
 github.com/hashicorp/go-plugin v1.0.1 h1:4OtAfUGbnKC6yS48p0CtMX2oFYtzFZVv6rok3cRWgnE=
 github.com/hashicorp/go-plugin v1.0.1/go.mod h1:++UyYGoz3o5w9ZzAdZxtQKrWWP+iqPBn3cQptSMzBuY=
+github.com/hashicorp/go-retryablehttp v0.5.2 h1:AoISa4P4IsW0/m4T6St8Yw38gTl5GtBAgfkhYh1xAz4=
 github.com/hashicorp/go-retryablehttp v0.5.2/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
 github.com/hashicorp/go-rootcerts v1.0.0/go.mod h1:K6zTfqpRlCUIjkwsN4Z+hiSfzSTQa6eBIzfwKfwNnHU=
 github.com/hashicorp/go-safetemp v1.0.0 h1:2HR189eFNrjHQyENnQMMpCiBAsRxzbTMIgBhEyExpmo=
@@ -325,6 +326,8 @@ github.com/hashicorp/memberlist v0.1.0/go.mod h1:ncdBp14cuox2iFOq3kDiquKU6fqsTBc
 github.com/hashicorp/serf v0.0.0-20160124182025-e4ec8cc423bb/go.mod h1:h/Ru6tmZazX7WO/GDmwdpS975F019L4t5ng5IgwbNrE=
 github.com/hashicorp/terraform v0.12.21 h1:0qamALIu4/g2+4k4rC5DpxMdLz4A4K67pGQA2X4prgs=
 github.com/hashicorp/terraform v0.12.21/go.mod h1:eJcloDEx5ywM4a1tetIuVrlqklM0bUVRYJBYAh4CYzA=
+github.com/hashicorp/terraform v0.12.24 h1:lTTswsCcmTOhTwuUl2NdjtJBCNdGqZmRGQi0cjFHYOM=
+github.com/hashicorp/terraform v0.12.24/go.mod h1:eJcloDEx5ywM4a1tetIuVrlqklM0bUVRYJBYAh4CYzA=
 github.com/hashicorp/terraform-config-inspect v0.0.0-20191212124732-c6ae6269b9d7 h1:Pc5TCv9mbxFN6UVX0LH6CpQrdTM5YjbVI2w15237Pjk=
 github.com/hashicorp/terraform-config-inspect v0.0.0-20191212124732-c6ae6269b9d7/go.mod h1:p+ivJws3dpqbp1iP84+npOyAmTTOLMgCzrXd3GSdn/A=
 github.com/hashicorp/terraform-svchost v0.0.0-20191011084731-65d371908596 h1:hjyO2JsNZUKT1ym+FAdlBEkGPevazYsmVgIMw7dVELg=
@@ -340,6 +343,18 @@ github.com/imdario/mergo v0.3.7/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJ
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/jckuester/terradozer v0.0.0-20200304191955-1c2f6b619e97 h1:X7NBC+MwEWksds5op7tUEooO7hRlk12aqa4S1pwKlDo=
 github.com/jckuester/terradozer v0.0.0-20200304191955-1c2f6b619e97/go.mod h1:zix2s8OX1MkC2TxCt9K7J0FH+4kv23TEm0sdM1AFeIw=
+github.com/jckuester/terradozer v0.0.0-20200420075328-8fe8415080a8 h1:mEI4dtNSgR+qOL7InnogcvuyPas16JRXa3o0uS7aNes=
+github.com/jckuester/terradozer v0.0.0-20200420075328-8fe8415080a8/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
+github.com/jckuester/terradozer v0.0.0-20200420083551-be75f34509de h1:mDHrDC2Ua/CoR7lHGYBHrzQMTDoG7SG57slXa31t8AI=
+github.com/jckuester/terradozer v0.0.0-20200420083551-be75f34509de/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
+github.com/jckuester/terradozer v0.0.0-20200420195213-a7717cdf3666 h1:pPNttWGrfpOdueZXVWstLXUwEQJUCWCTjAVq6TWaDpM=
+github.com/jckuester/terradozer v0.0.0-20200420195213-a7717cdf3666/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
+github.com/jckuester/terradozer v0.0.0-20200420200814-e74a5631a0d2 h1:z+oaPHgnJsYfq6/Wq9RdMObxzkMgr3cJUE81x/QJt0Q=
+github.com/jckuester/terradozer v0.0.0-20200420200814-e74a5631a0d2/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
+github.com/jckuester/terradozer v0.0.0-20200420201339-32fa652a4fa3 h1:kg8FT/vtPhfrGFVCh1JnWsUhCvCVdMUy2hvndjiWiNc=
+github.com/jckuester/terradozer v0.0.0-20200420201339-32fa652a4fa3/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
+github.com/jckuester/terradozer v0.0.0-20200421213247-b221e0b2723b h1:2zzmIlbbagdLN1yaQ+vsciY/rNQb/OqG2O63WDowhYM=
+github.com/jckuester/terradozer v0.0.0-20200421213247-b221e0b2723b/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=

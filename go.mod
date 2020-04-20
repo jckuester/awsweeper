@@ -8,8 +8,8 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/golang/mock v1.4.0
 	github.com/gruntwork-io/terratest v0.24.2
-	github.com/hashicorp/terraform v0.12.21
-	github.com/jckuester/terradozer v0.0.0-20200304191955-1c2f6b619e97
+	github.com/hashicorp/terraform v0.12.24
+	github.com/jckuester/terradozer v0.0.0-20200421213247-b221e0b2723b
 	github.com/mitchellh/cli v1.0.0
 	github.com/onsi/gomega v1.9.0
 	github.com/pkg/errors v0.9.1
