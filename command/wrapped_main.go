@@ -21,7 +21,7 @@ import (
 // WrappedMain is the actual main function that does not exit for acceptance testing purposes
 func WrappedMain() int {
 	app := "awsweeper"
-	version := "v0.4.1"
+	version := "v0.7.0"
 
 	set := flag.NewFlagSet(app, 0)
 	versionFlag := set.Bool("version", false, "Show version")
