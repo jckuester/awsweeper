@@ -85,7 +85,8 @@ var (
 		CloudWatchLogGroup:  "LogGroupName",
 		EbsSnapshot:         "SnapshotId",
 		EbsVolume:           "VolumeId",
-		EcsCluster:          "ClusterName",
+		// Note: to import a cluster, the name is used as ID
+		EcsCluster:          "ClusterArn",
 		EfsFileSystem:       "FileSystemId",
 		Eip:                 "AllocationId",
 		Elb:                 "LoadBalancerName",
