@@ -194,6 +194,7 @@ func getDeleteID(resType TerraformResourceType) (string, error) {
 type AWS struct {
 	autoscalingiface.AutoScalingAPI
 	cloudformationiface.CloudFormationAPI
+	cloudtrailiface.CloudTrailAPI
 	cloudwatchlogsiface.CloudWatchLogsAPI
 	ec2iface.EC2API
 	ecsiface.ECSAPI
