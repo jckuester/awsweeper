@@ -609,6 +609,7 @@ func (a *AWS) cloudTrails() (interface{}, error) {
 		return nil, err
 	}
 	return output.Trails, nil
+}
 
 func (a *AWS) ebsSnapshots() (interface{}, error) {
 	output, err := a.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
