@@ -168,6 +168,7 @@ A technical reason for this is that AWSweeper is build upon the already existing
 | aws_ami                          | x             | x
 | aws_autoscaling_group            | x             | x
 | aws_cloudformation_stack         | x             | x
+| aws_cloudtrail_trail             |               |
 | aws_cloudwatch_log_group (*new*) |               | x
 | aws_ebs_snapshot                 | x             | x
 | aws_ebs_volume                   | x             | x
