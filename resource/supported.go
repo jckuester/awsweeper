@@ -114,7 +114,7 @@ var (
 		S3Bucket:            "Name",
 		SecurityGroup:       "GroupId",
 		Subnet:              "SubnetId",
-		Trail:               "Name",
+		CloudTrail:          "Name",
 		Vpc:                 "VpcId",
 		VpcEndpoint:         "VpcEndpointId",
 	}
@@ -156,7 +156,7 @@ var (
 		KmsKey:              9600,
 		NetworkInterface:    9000,
 		CloudWatchLogGroup:  8900,
-		Trail:               8800,
+		CloudTrail:          8800,
 	}
 
 	tagFieldNames = []string{
@@ -315,7 +315,7 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.SecurityGroup()
 	case Subnet:
 		return a.subnets()
-	case Trail:
+	case CloudTrail:
 		return a.cloudTrails()
 	case Vpc:
 		return a.vpcs()
