@@ -608,7 +608,7 @@ func (a *AWS) cloudTrails() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return output.CloudTrail, nil
+	return output.CloudTrails, nil
 }
 
 func (a *AWS) ebsSnapshots() (interface{}, error) {
