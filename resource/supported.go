@@ -114,7 +114,7 @@ var (
 		S3Bucket:            "Name",
 		SecurityGroup:       "GroupId",
 		Subnet:              "SubnetId",
-		Trail:               "TrailName",
+		Trail:               "Name",
 		Vpc:                 "VpcId",
 		VpcEndpoint:         "VpcEndpointId",
 	}
