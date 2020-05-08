@@ -47,7 +47,6 @@ const (
 	Ami                 TerraformResourceType = "aws_ami"
 	AutoscalingGroup    TerraformResourceType = "aws_autoscaling_group"
 	CloudformationStack TerraformResourceType = "aws_cloudformation_stack"
-	CloudTrailTrail     TerraformResourceType = "aws_cloudtrail_trail"
 	CloudWatchLogGroup  TerraformResourceType = "aws_cloudwatch_log_group"
 	EbsSnapshot         TerraformResourceType = "aws_ebs_snapshot"
 	EbsVolume           TerraformResourceType = "aws_ebs_volume"
@@ -76,6 +75,7 @@ const (
 	S3Bucket            TerraformResourceType = "aws_s3_bucket"
 	SecurityGroup       TerraformResourceType = "aws_security_group"
 	Subnet              TerraformResourceType = "aws_subnet"
+	Trail               TerraformResourceType = "aws_cloudtrail_trail"
 	Vpc                 TerraformResourceType = "aws_vpc"
 	VpcEndpoint         TerraformResourceType = "aws_vpc_endpoint"
 )
