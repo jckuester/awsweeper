@@ -1,7 +1,7 @@
 aws_ami:
 aws_autoscaling_group:
 aws_cloudformation_stack:
-aws_cloudtrail_trail:
+aws_cloudtrail:
 aws_ecs_cluster:
 aws_ebs_snapshot:
 aws_ebs_volume:
