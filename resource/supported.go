@@ -155,6 +155,7 @@ var (
 		KmsKey:              9600,
 		NetworkInterface:    9000,
 		CloudWatchLogGroup:  8900,
+		Trail:               8800,
 	}
 
 	tagFieldNames = []string{
