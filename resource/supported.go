@@ -75,7 +75,7 @@ const (
 	S3Bucket            TerraformResourceType = "aws_s3_bucket"
 	SecurityGroup       TerraformResourceType = "aws_security_group"
 	Subnet              TerraformResourceType = "aws_subnet"
-	Trail               TerraformResourceType = "aws_cloudtrail"
+	CloudTrail          TerraformResourceType = "aws_cloudtrail"
 	Vpc                 TerraformResourceType = "aws_vpc"
 	VpcEndpoint         TerraformResourceType = "aws_vpc_endpoint"
 )
