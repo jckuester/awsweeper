@@ -47,6 +47,7 @@ const (
 	Ami                 TerraformResourceType = "aws_ami"
 	AutoscalingGroup    TerraformResourceType = "aws_autoscaling_group"
 	CloudformationStack TerraformResourceType = "aws_cloudformation_stack"
+	CloudTrailTrail     TerraformResourceType = "aws_cloudtrail_trail"
 	CloudWatchLogGroup  TerraformResourceType = "aws_cloudwatch_log_group"
 	EbsSnapshot         TerraformResourceType = "aws_ebs_snapshot"
 	EbsVolume           TerraformResourceType = "aws_ebs_volume"
