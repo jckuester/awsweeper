@@ -313,6 +313,8 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.SecurityGroup()
 	case Subnet:
 		return a.subnets()
+	case Trail:
+		return a.trails()
 	case Vpc:
 		return a.vpcs()
 	case VpcEndpoint:
@@ -598,6 +600,13 @@ func (a *AWS) s3Buckets() (interface{}, error) {
 	}
 	return output.Buckets, nil
 }
+
+func (a *AWS) trails() (interface{}, error) {
+	output, err := a.ListTrails(&cloudtrail.ListTrailsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Trails, nil
 
 func (a *AWS) ebsSnapshots() (interface{}, error) {
 	output, err := a.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
