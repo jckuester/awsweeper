@@ -316,7 +316,7 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 	case Subnet:
 		return a.subnets()
 	case Trail:
-		return a.trails()
+		return a.cloudTrails()
 	case Vpc:
 		return a.vpcs()
 	case VpcEndpoint:
@@ -603,8 +603,8 @@ func (a *AWS) s3Buckets() (interface{}, error) {
 	return output.Buckets, nil
 }
 
-func (a *AWS) trails() (interface{}, error) {
-	output, err := a.ListTrails(&cloudtrail.ListTrailsInput{})
+func (a *AWS) cloudTrails() (interface{}, error) {
+	output, err := a.DescribeTrails(&cloudtrail.DescribeTrailsInput{})
 	if err != nil {
 		return nil, err
 	}
