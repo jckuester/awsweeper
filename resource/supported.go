@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
+	"github.com/aws/aws-sdk-go/service/cloudtrail"
+	"github.com/aws/aws-sdk-go/service/cloudtrail/cloudtrailiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -73,6 +75,7 @@ const (
 	S3Bucket            TerraformResourceType = "aws_s3_bucket"
 	SecurityGroup       TerraformResourceType = "aws_security_group"
 	Subnet              TerraformResourceType = "aws_subnet"
+	CloudTrail          TerraformResourceType = "aws_cloudtrail"
 	Vpc                 TerraformResourceType = "aws_vpc"
 	VpcEndpoint         TerraformResourceType = "aws_vpc_endpoint"
 )
@@ -111,6 +114,7 @@ var (
 		S3Bucket:            "Name",
 		SecurityGroup:       "GroupId",
 		Subnet:              "SubnetId",
+		CloudTrail:          "Name",
 		Vpc:                 "VpcId",
 		VpcEndpoint:         "VpcEndpointId",
 	}
@@ -152,6 +156,7 @@ var (
 		KmsKey:              9600,
 		NetworkInterface:    9000,
 		CloudWatchLogGroup:  8900,
+		CloudTrail:          8800,
 	}
 
 	tagFieldNames = []string{
@@ -191,6 +196,7 @@ func getDeleteID(resType TerraformResourceType) (string, error) {
 type AWS struct {
 	autoscalingiface.AutoScalingAPI
 	cloudformationiface.CloudFormationAPI
+	cloudtrailiface.CloudTrailAPI
 	cloudwatchlogsiface.CloudWatchLogsAPI
 	ec2iface.EC2API
 	ecsiface.ECSAPI
@@ -309,6 +315,8 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.SecurityGroup()
 	case Subnet:
 		return a.subnets()
+	case CloudTrail:
+		return a.cloudTrails()
 	case Vpc:
 		return a.vpcs()
 	case VpcEndpoint:
@@ -593,6 +601,14 @@ func (a *AWS) s3Buckets() (interface{}, error) {
 		return nil, err
 	}
 	return output.Buckets, nil
+}
+
+func (a *AWS) cloudTrails() (interface{}, error) {
+	output, err := a.DescribeTrails(&cloudtrail.DescribeTrailsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.TrailList, nil
 }
 
 func (a *AWS) ebsSnapshots() (interface{}, error) {
