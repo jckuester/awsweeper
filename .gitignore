@@ -1,3 +1,7 @@
 dist/
 mocks/
 bin/
+.terradozer/
+.terraform/
+*.tfstate
+coverage.txt

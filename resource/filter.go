@@ -2,24 +2,17 @@ package resource
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
-	"log"
-
-	"fmt"
-
-	"github.com/spf13/afero"
+	"github.com/apex/log"
 	"gopkg.in/yaml.v2"
 )
-
-// AppFs is an abstraction of the file system to allow mocking in tests.
-var AppFs = afero.NewOsFs()
 
 // Config represents the content of a yaml file that is used as a contract to filter resources for deletion.
 type Config map[TerraformResourceType][]TypeFilter
@@ -67,14 +60,14 @@ func NewFilter(yamlFile string) *Filter {
 func read(filename string) Config {
 	var cfg Config
 
-	data, err := afero.ReadFile(AppFs, filename)
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		logrus.WithError(err).Fatalf("Failed to read config file: %s", filename)
+		log.WithError(err).Fatalf("failed to read config file: %s", filename)
 	}
 
 	err = yaml.UnmarshalStrict(data, &cfg)
 	if err != nil {
-		logrus.WithError(err).Fatalf("Cannot unmarshal config: %s", filename)
+		log.WithError(err).Fatalf("failed to unmarshal config: %s", filename)
 	}
 
 	return cfg
@@ -113,7 +106,7 @@ func (rtf TypeFilter) matchID(id string) bool {
 
 	if ok, err := rtf.ID.matches(id); ok {
 		if err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal("failed to match ID")
 		}
 		return true
 	}
@@ -132,7 +125,7 @@ func (rtf TypeFilter) matchTags(tags map[string]string) bool {
 		if tagVal, ok := tags[cfgTagKey]; ok {
 			if matched, err := regex.matches(tagVal); !matched {
 				if err != nil {
-					log.Fatal(err)
+					log.WithError(err).Fatal("failed to match tags")
 				}
 				return false
 			}

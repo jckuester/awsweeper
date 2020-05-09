@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/apex/log"
 
 	"github.com/pkg/errors"
 )
@@ -14,7 +14,6 @@ import (
 func DeletableResources(resType TerraformResourceType, resources interface{}) (Resources, error) {
 	deletableResources := Resources{}
 	reflectResources := reflect.ValueOf(resources)
-
 	for i := 0; i < reflectResources.Len(); i++ {
 		deleteID, err := getDeleteID(resType)
 		if err != nil {
@@ -28,7 +27,7 @@ func DeletableResources(resType TerraformResourceType, resources interface{}) (R
 
 		tags, err := findTags(reflectResources.Index(i))
 		if err != nil {
-			logrus.WithError(err).Debug()
+			log.WithError(err).Debug("failed to find tags")
 		}
 
 		var creationTime *time.Time

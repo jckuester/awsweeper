@@ -4,8 +4,8 @@
   <a href="https://github.com/cloudetc/awsweeper/releases/latest">
     <img alt="Release" src="https://img.shields.io/github/release/cloudetc/awsweeper.svg?style=flat-square">
   </a>
-  <a href="https://gitlab.com/jckuester/awsweeper/commits/master">
-    <img alt="pipeline status" src="https://gitlab.com/jckuester/awsweeper/badges/master/pipeline.svg" />
+  <a href="https://travis-ci.org/cloudetc/awsweeper">
+    <img alt="pipeline status" src="https://img.shields.io/travis/cloudetc/awsweeper/master.svg" />
   </a>
   <a href="https://goreportcard.com/report/github.com/cloudetc/awsweeper">
     <img alt="Go Report" src="https://goreportcard.com/badge/github.com/cloudetc/awsweeper?style=flat-square" />
@@ -30,9 +30,17 @@ Happy erasing!
 
 [![AWSweeper tutorial](img/asciinema-tutorial.gif)](https://asciinema.org/a/149097)
 
-## Download
+## Installation
 
-Releases for your platform are [here](https://github.com/cloudetc/awsweeper/releases).
+It's recommended to install a specific version of awsweeper available on the
+[releases page](https://github.com/cloudetc/awsweeper/releases).
+
+Here is the recommended way to install awsweeper v0.6.0:
+
+```bash
+# install it into ./bin/
+curl -sSfL https://raw.githubusercontent.com/cloudetc/awsweeper/master/install.sh | sh -s v0.6.0
+```
 
 ## Usage
 
@@ -62,8 +70,8 @@ Resources to be deleted are filtered by a yaml configuration. To learn how, have
           after: 2018-06-14
     aws_iam_role:
 
-This config would delete all instances which ID matches `^foo.*` *and* which have tags `foo: bar` *and* `bla: blub`
-*and* which have been created between `2018-10-28 12:28:39 +0000 UTC` and `2018-06-14`. Additionally, it would delete instances
+This config would delete all instances which ID matches `^foo.*` *AND* which have tags `foo: bar` *AND* `bla: blub`
+*AND* which have been created between `2018-10-28 12:28:39 +0000 UTC` and `2018-06-14`. Additionally, it would delete instances
 with tag `foo: bar` and which are older than `2018-06-14`.
 
 Furthermore, this config would delete all IAM roles, as there is no list of filters provided for this resource type.
@@ -161,56 +169,66 @@ would be deleted. This way, you can fine-tune your yaml configuration until it w
 
 ## Supported resources
 
-AWSweeper can currently delete many but not [all of the existing types of AWS resources](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html):
+AWSweeper can currently delete more than 30 AWS resource types.
 
-- aws_ami
-- aws_autoscaling_group
-- aws_cloudformation_stack
-- aws_ebs_snapshot
-- aws_ebs_volume
-- aws_efs_file_system
-- aws_eip
-- aws_elb
-- aws_iam_group
-- aws_iam_instance_profile
-- aws_iam_policy
-- aws_iam_role
-- aws_iam_user
-- aws_instance
-- aws_internet_gateway
-- aws_key_pair
-- aws_kms_alias
-- aws_kms_key
-- aws_launch_configuration
-- aws_nat_gateway
-- aws_network_acl
-- aws_network_interface
-- aws_route53_zone
-- aws_route_table
-- aws_s3_bucket
-- aws_security_group
-- aws_subnet
-- aws_vpc
-- aws_vpc_endpoint
+Note that the resource types in the list below are [Terraform Types](https://www.terraform.io/docs/providers/aws/index.html),
+which must be used in the YAML configuration to filter resources.
+A technical reason for this is that AWSweeper is build upon the already existing delete routines provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
 
-Note that the above list contains [terraform types](https://www.terraform.io/docs/providers/aws/index.html) which must be used instead of [AWS resource types](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) to identify resources in the yaml configuration.
-The reason is that AWSweeper is build upon the already existing delete routines provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
-
+| Resource Type                    | Delete by tag | Delete by creation date
+| :-----------------------------   |:-------------:|:-----------------------:
+| aws_ami                          | x             | x
+| aws_autoscaling_group            | x             | x
+| aws_cloudformation_stack         | x             | x
+| aws_cloudtrail             |               |
+| aws_cloudwatch_log_group (*new*) |               | x
+| aws_ebs_snapshot                 | x             | x
+| aws_ebs_volume                   | x             | x
+| aws_ecs_cluster (*new*)          | x             |
+| aws_efs_file_system              | x             | x
+| aws_eip                          | x             |
+| aws_elb                          | x             | x
+| aws_iam_group                    | x             | x
+| aws_iam_instance_profile         |               | x
+| aws_iam_policy                   |               | x
+| aws_iam_role                     | x             | x
+| aws_iam_user                     | x             | x
+| aws_instance                     | x             | x
+| aws_internet_gateway             | x             |
+| aws_key_pair                     | x             |
+| aws_kms_alias                    |               |
+| aws_kms_key                      |               |
+| aws_lambda_function (*new*)      |               |
+| aws_launch_configuration         |               | x
+| aws_nat_gateway                  | x             |
+| aws_network_acl                  | x             |
+| aws_network_interface            | x             |
+| aws_rds_instance (*new*)         |               | x
+| aws_route53_zone                 |               |
+| aws_route_table                  | x             |
+| aws_s3_bucket                    |               | x
+| aws_security_group               | x             |
+| aws_subnet                       | x             |
+| aws_vpc                          | x             |
+| aws_vpc_endpoint                 | x             | x
+   
 ## Acceptance tests
 
-***WARNING:*** Running acceptance tests create real resources that might cost you money.
+***IMPORTANT:*** Acceptance tests create real resources that might cost you money. Also, note that if you contribute a PR, 
+the [Travis build](https://travis-ci.org/github/cloudetc/awsweeper) will always fail since AWS credentials are not 
+injected into the PR build coming from forks for security reasons. You can either run tests locally against your personal 
+AWS account or ask me to run them for you instead.
 
 Run all acceptance tests with
 
-    make testacc
+    AWS_PROFILE=<myaccount> AWS_DEFAULT_REGION=us-west-2 make test-all
 
-or use
+or to test the working of AWSweeper for a just single resource, such as `aws_vpc`, use
 
-    make testacc TESTARGS='-run=TestAccVpc*'
-
-to test the working of AWSweeper for a just single resource, such as `aws_vpc`.
+    AWS_PROFILE=<myaccount> AWS_DEFAULT_REGION=us-west-2 make test-all TESTARGS='-run=TestAcc_Vpc*'
 
 ## Disclaimer
 
-This tool is thoroughly tested. However, you are using this tool at your own risk! I will not take any responsibility if you delete any critical resources in your
+This tool is thoroughly tested. However, you are using this tool at your own risk!
+I will not take responsibility if you delete any critical resources in your
 production environments.

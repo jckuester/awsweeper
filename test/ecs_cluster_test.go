@@ -5,22 +5,22 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/aws/aws-sdk-go/service/ecs"
+
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAcc_Elb_DeleteByID(t *testing.T) {
+func TestAcc_ECSCluster_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/elb"
+	terraformDir := "./test-fixtures/ecs-cluster"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -29,27 +29,28 @@ func TestAcc_Elb_DeleteByID(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertElbExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.Elb, id)
+	assertEcsClusterExists(t, env, id)
+
+	writeConfigID(t, terraformDir, res.EcsCluster, id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "-debug")
 	require.NoError(t, err)
 
-	assertElbDeleted(t, env, id)
+	assertEcsClusterDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func TestAcc_Elb_DeleteByTag(t *testing.T) {
+func TestAcc_ECSCluster_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/elb"
+	terraformDir := "./test-fixtures/ecs-cluster"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -58,45 +59,43 @@ func TestAcc_Elb_DeleteByTag(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertElbExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.Elb)
+	assertEcsClusterExists(t, env, id)
+
+	writeConfigTag(t, terraformDir, res.EcsCluster)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertElbDeleted(t, env, id)
+	assertEcsClusterDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertElbExists(t *testing.T, env EnvVars, id string) {
-	assert.True(t, elbExists(t, env, id))
+func assertEcsClusterExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, ecsClusterExists(t, env, id))
 }
 
-func assertElbDeleted(t *testing.T, env EnvVars, id string) {
-	assert.False(t, elbExists(t, env, id))
+func assertEcsClusterDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, ecsClusterExists(t, env, id))
 }
 
-func elbExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &elb.DescribeLoadBalancersInput{
-		LoadBalancerNames: []*string{&id},
+func ecsClusterExists(t *testing.T, env EnvVars, id string) bool {
+	opts := &ecs.DescribeClustersInput{
+		Clusters: []*string{&id},
 	}
 
-	resp, err := env.AWSClient.ELBAPI.DescribeLoadBalancers(opts)
+	resp, err := env.AWSClient.DescribeClusters(opts)
 	if err != nil {
-		elbErr, ok := err.(awserr.Error)
-		if !ok {
-			t.Fatal(err)
-		}
-		if elbErr.Code() == "LoadBalancerNotFound" {
-			return false
-		}
 		t.Fatal(err)
 	}
 
-	if len(resp.LoadBalancerDescriptions) == 0 {
+	if len(resp.Clusters) == 0 {
+		return false
+	}
+
+	if *resp.Clusters[0].Status == "INACTIVE" {
 		return false
 	}
 

@@ -5,22 +5,24 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/rds"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/elb"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAcc_Elb_DeleteByID(t *testing.T) {
+func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
+	t.Skip("Only running from time to time, as this test costs some money.")
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/elb"
+	terraformDir := "./test-fixtures/db-instance"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -29,27 +31,28 @@ func TestAcc_Elb_DeleteByID(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertElbExists(t, env, id)
+	assertDBInstanceExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.Elb, id)
+	writeConfigID(t, terraformDir, res.DBInstance, id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertElbDeleted(t, env, id)
+	assertDBInstanceDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func TestAcc_Elb_DeleteByTag(t *testing.T) {
+func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
+	t.Skip("Tags not supported yet.")
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/elb"
+	terraformDir := "./test-fixtures/db-instance"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -58,45 +61,45 @@ func TestAcc_Elb_DeleteByTag(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertElbExists(t, env, id)
+	assertDBInstanceExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.Elb)
+	writeConfigTag(t, terraformDir, res.DBInstance)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertElbDeleted(t, env, id)
+	assertDBInstanceDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertElbExists(t *testing.T, env EnvVars, id string) {
-	assert.True(t, elbExists(t, env, id))
+func assertDBInstanceExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, dbInstanceExists(t, env, id))
 }
 
-func assertElbDeleted(t *testing.T, env EnvVars, id string) {
-	assert.False(t, elbExists(t, env, id))
+func assertDBInstanceDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, dbInstanceExists(t, env, id))
 }
 
-func elbExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &elb.DescribeLoadBalancersInput{
-		LoadBalancerNames: []*string{&id},
+func dbInstanceExists(t *testing.T, env EnvVars, id string) bool {
+	opts := &rds.DescribeDBInstancesInput{
+		DBInstanceIdentifier: &id,
 	}
 
-	resp, err := env.AWSClient.ELBAPI.DescribeLoadBalancers(opts)
+	resp, err := env.AWSClient.DescribeDBInstances(opts)
 	if err != nil {
-		elbErr, ok := err.(awserr.Error)
+		awsErr, ok := err.(awserr.Error)
 		if !ok {
 			t.Fatal(err)
 		}
-		if elbErr.Code() == "LoadBalancerNotFound" {
+		if awsErr.Code() == "DBInstanceNotFound" {
 			return false
 		}
 		t.Fatal(err)
 	}
 
-	if len(resp.LoadBalancerDescriptions) == 0 {
+	if len(resp.DBInstances) == 0 {
 		return false
 	}
 

@@ -14,14 +14,14 @@ import (
 	res "github.com/cloudetc/awsweeper/resource"
 )
 
-func TestAcc_Vpc_DeleteByID(t *testing.T) {
+func TestAcc_EbsSnapshot_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/vpc"
+	terraformDir := "./test-fixtures/ebs-snapshot"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -30,27 +30,27 @@ func TestAcc_Vpc_DeleteByID(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertVpcExists(t, env, id)
+	assertEbsSnapshotExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.Vpc, id)
+	writeConfigID(t, terraformDir, res.EbsSnapshot, id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "-debug")
 	require.NoError(t, err)
 
-	assertVpcDeleted(t, env, id)
+	assertEbsSnapshotDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func TestAcc_Vpc_DeleteByTag(t *testing.T) {
+func TestAcc_EbsSnapshot_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/vpc"
+	terraformDir := "./test-fixtures/ebs-snapshot"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -59,44 +59,45 @@ func TestAcc_Vpc_DeleteByTag(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertVpcExists(t, env, id)
+	assertEbsSnapshotExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.Vpc)
+	writeConfigTag(t, terraformDir, res.EbsSnapshot)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertVpcDeleted(t, env, id)
+	assertEbsSnapshotDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertVpcExists(t *testing.T, env EnvVars, id string) {
-	assert.True(t, vpcExists(t, env, id))
+func assertEbsSnapshotExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, ebsSnapshotExists(t, env, id))
 }
 
-func assertVpcDeleted(t *testing.T, env EnvVars, id string) {
-	assert.False(t, vpcExists(t, env, id))
+func assertEbsSnapshotDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, ebsSnapshotExists(t, env, id))
 }
 
-func vpcExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &ec2.DescribeVpcsInput{
-		VpcIds: []*string{&id},
+func ebsSnapshotExists(t *testing.T, env EnvVars, id string) bool {
+	opts := &ec2.DescribeSnapshotsInput{
+		SnapshotIds: []*string{&id},
 	}
-	resp, err := env.AWSClient.DescribeVpcs(opts)
+
+	resp, err := env.AWSClient.DescribeSnapshots(opts)
 	if err != nil {
 		ec2err, ok := err.(awserr.Error)
 		if !ok {
-			t.Fatal()
+			t.Fatal(err)
 		}
-		if ec2err.Code() == "InvalidVpcID.NotFound" {
+		if ec2err.Code() == "InvalidSnapshot.NotFound" {
 			return false
 		}
-		t.Fatal()
+		t.Fatal(err)
 	}
 
-	if len(resp.Vpcs) == 0 {
+	if len(resp.Snapshots) == 0 {
 		return false
 	}
 

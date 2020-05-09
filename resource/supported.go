@@ -11,8 +11,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
+	"github.com/aws/aws-sdk-go/service/cloudtrail"
+	"github.com/aws/aws-sdk-go/service/cloudtrail/cloudtrailiface"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
@@ -21,13 +27,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
+	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
-	"github.com/go-errors/errors"
+	"github.com/pkg/errors"
 )
 
 // TerraformResourceType identifies the type of a resource
@@ -37,8 +47,10 @@ const (
 	Ami                 TerraformResourceType = "aws_ami"
 	AutoscalingGroup    TerraformResourceType = "aws_autoscaling_group"
 	CloudformationStack TerraformResourceType = "aws_cloudformation_stack"
+	CloudWatchLogGroup  TerraformResourceType = "aws_cloudwatch_log_group"
 	EbsSnapshot         TerraformResourceType = "aws_ebs_snapshot"
 	EbsVolume           TerraformResourceType = "aws_ebs_volume"
+	EcsCluster          TerraformResourceType = "aws_ecs_cluster"
 	EfsFileSystem       TerraformResourceType = "aws_efs_file_system"
 	Eip                 TerraformResourceType = "aws_eip"
 	Elb                 TerraformResourceType = "aws_elb"
@@ -52,15 +64,18 @@ const (
 	KeyPair             TerraformResourceType = "aws_key_pair"
 	KmsAlias            TerraformResourceType = "aws_kms_alias"
 	KmsKey              TerraformResourceType = "aws_kms_key"
+	LambdaFunction      TerraformResourceType = "aws_lambda_function"
 	LaunchConfiguration TerraformResourceType = "aws_launch_configuration"
 	NatGateway          TerraformResourceType = "aws_nat_gateway"
 	NetworkACL          TerraformResourceType = "aws_network_acl"
 	NetworkInterface    TerraformResourceType = "aws_network_interface"
+	DBInstance          TerraformResourceType = "aws_db_instance"
 	Route53Zone         TerraformResourceType = "aws_route53_zone"
 	RouteTable          TerraformResourceType = "aws_route_table"
 	S3Bucket            TerraformResourceType = "aws_s3_bucket"
 	SecurityGroup       TerraformResourceType = "aws_security_group"
 	Subnet              TerraformResourceType = "aws_subnet"
+	CloudTrail          TerraformResourceType = "aws_cloudtrail"
 	Vpc                 TerraformResourceType = "aws_vpc"
 	VpcEndpoint         TerraformResourceType = "aws_vpc_endpoint"
 )
@@ -70,8 +85,11 @@ var (
 		Ami:                 "ImageId",
 		AutoscalingGroup:    "AutoScalingGroupName",
 		CloudformationStack: "StackId",
+		CloudWatchLogGroup:  "LogGroupName",
 		EbsSnapshot:         "SnapshotId",
 		EbsVolume:           "VolumeId",
+		// Note: to import a cluster, the name is used as ID
+		EcsCluster:          "ClusterArn",
 		EfsFileSystem:       "FileSystemId",
 		Eip:                 "AllocationId",
 		Elb:                 "LoadBalancerName",
@@ -85,15 +103,18 @@ var (
 		KeyPair:             "KeyName",
 		KmsAlias:            "AliasName",
 		KmsKey:              "KeyId",
+		LambdaFunction:      "FunctionName",
 		LaunchConfiguration: "LaunchConfigurationName",
 		NatGateway:          "NatGatewayId",
 		NetworkACL:          "NetworkAclId",
 		NetworkInterface:    "NetworkInterfaceId",
+		DBInstance:          "DBInstanceIdentifier",
 		Route53Zone:         "Id",
 		RouteTable:          "RouteTableId",
 		S3Bucket:            "Name",
 		SecurityGroup:       "GroupId",
 		Subnet:              "SubnetId",
+		CloudTrail:          "Name",
 		Vpc:                 "VpcId",
 		VpcEndpoint:         "VpcEndpointId",
 	}
@@ -102,6 +123,8 @@ var (
 	// since dependent resources need to be deleted before their dependencies
 	// (e.g. aws_subnet before aws_vpc)
 	DependencyOrder = map[TerraformResourceType]int{
+		LambdaFunction:      10100,
+		EcsCluster:          10000,
 		AutoscalingGroup:    9990,
 		Instance:            9980,
 		KeyPair:             9970,
@@ -119,6 +142,7 @@ var (
 		SecurityGroup:       9850,
 		NetworkACL:          9840,
 		Vpc:                 9830,
+		DBInstance:          9825,
 		IamPolicy:           9820,
 		IamGroup:            9810,
 		IamUser:             9800,
@@ -131,6 +155,8 @@ var (
 		KmsAlias:            9610,
 		KmsKey:              9600,
 		NetworkInterface:    9000,
+		CloudWatchLogGroup:  8900,
+		CloudTrail:          8800,
 	}
 
 	tagFieldNames = []string{
@@ -141,9 +167,14 @@ var (
 	// creationTimeFieldNames are a list field names that are used to find the creation date of a resource.
 	creationTimeFieldNames = []string{
 		"LaunchTime",
+		"CreateTime",
+		"CreateDate",
 		"CreatedTime",
 		"CreationDate",
+		"CreationTime",
+		"CreationTimestamp",
 		"StartTime",
+		"InstanceCreateTime",
 	}
 )
 
@@ -163,14 +194,19 @@ func getDeleteID(resType TerraformResourceType) (string, error) {
 
 // AWS wraps the AWS API
 type AWS struct {
-	ec2iface.EC2API
 	autoscalingiface.AutoScalingAPI
-	elbiface.ELBAPI
-	route53iface.Route53API
 	cloudformationiface.CloudFormationAPI
+	cloudtrailiface.CloudTrailAPI
+	cloudwatchlogsiface.CloudWatchLogsAPI
+	ec2iface.EC2API
+	ecsiface.ECSAPI
 	efsiface.EFSAPI
+	elbiface.ELBAPI
 	iamiface.IAMAPI
 	kmsiface.KMSAPI
+	lambdaiface.LambdaAPI
+	rdsiface.RDSAPI
+	route53iface.Route53API
 	s3iface.S3API
 	stsiface.STSAPI
 }
@@ -185,12 +221,17 @@ func NewAWS(s *session.Session) *AWS {
 	return &AWS{
 		AutoScalingAPI:    autoscaling.New(s),
 		CloudFormationAPI: cloudformation.New(s),
+		CloudTrailAPI:     cloudtrail.New(s),
+		CloudWatchLogsAPI: cloudwatchlogs.New(s),
 		EC2API:            ec2.New(s),
+		ECSAPI:            ecs.New(s),
 		EFSAPI:            efs.New(s),
 		ELBAPI:            elb.New(s),
 		IAMAPI:            iam.New(s),
 		KMSAPI:            kms.New(s),
+		LambdaAPI:         lambda.New(s),
 		Route53API:        route53.New(s),
+		RDSAPI:            rds.New(s),
 		S3API:             s3.New(s),
 		STSAPI:            sts.New(s),
 	}
@@ -218,11 +259,15 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 	case AutoscalingGroup:
 		return a.autoscalingGroups()
 	case CloudformationStack:
-		return a.cloudformationStacks()
+		return a.cloudFormationStacks()
+	case CloudWatchLogGroup:
+		return a.cloudWatchLogGroups()
 	case EbsSnapshot:
 		return a.ebsSnapshots()
 	case EbsVolume:
 		return a.ebsVolumes()
+	case EcsCluster:
+		return a.ecsClusters()
 	case EfsFileSystem:
 		return a.efsFileSystems()
 	case Eip:
@@ -249,6 +294,8 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.KmsAliases()
 	case KmsKey:
 		return a.KmsKeys()
+	case LambdaFunction:
+		return a.lambdaFunctions()
 	case LaunchConfiguration:
 		return a.launchConfigurations()
 	case NatGateway:
@@ -257,6 +304,8 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.networkAcls()
 	case NetworkInterface:
 		return a.networkInterfaces()
+	case DBInstance:
+		return a.rdsInstances()
 	case Route53Zone:
 		return a.route53Zones()
 	case RouteTable:
@@ -267,6 +316,8 @@ func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
 		return a.SecurityGroup()
 	case Subnet:
 		return a.subnets()
+	case CloudTrail:
+		return a.cloudTrails()
 	case Vpc:
 		return a.vpcs()
 	case VpcEndpoint:
@@ -341,11 +392,11 @@ func (a *AWS) findElbTags(elbNames []string) ([]*elb.TagDescription, error) {
 		if end > len(elbNames) {
 			end = len(elbNames)
 		}
-		awsNames := make([]*string, end - i)
+		awsNames := make([]*string, end-i)
 		for i, n := range elbNames[i:end] {
 			awsNames[i] = aws.String(n)
 		}
-		resp, err := a.ELBAPI.DescribeTags(&elb.DescribeTagsInput{ LoadBalancerNames: awsNames })
+		resp, err := a.ELBAPI.DescribeTags(&elb.DescribeTagsInput{LoadBalancerNames: awsNames})
 		if err != nil {
 			return nil, fmt.Errorf("DescribeTags SDK error: %v", err)
 		}
@@ -381,12 +432,20 @@ func (a *AWS) natGateways() (interface{}, error) {
 	return output.NatGateways, nil
 }
 
-func (a *AWS) cloudformationStacks() (interface{}, error) {
+func (a *AWS) cloudFormationStacks() (interface{}, error) {
 	output, err := a.DescribeStacks(&cloudformation.DescribeStacksInput{})
 	if err != nil {
 		return nil, err
 	}
 	return output.Stacks, nil
+}
+
+func (a *AWS) cloudWatchLogGroups() (interface{}, error) {
+	output, err := a.CloudWatchLogsAPI.DescribeLogGroups(&cloudwatchlogs.DescribeLogGroupsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.LogGroups, nil
 }
 
 func (a *AWS) route53Zones() (interface{}, error) {
@@ -447,6 +506,14 @@ func (a *AWS) routeTables() (interface{}, error) {
 		return nil, err
 	}
 	return output.RouteTables, nil
+}
+
+func (a *AWS) rdsInstances() (interface{}, error) {
+	output, err := a.DescribeDBInstances(&rds.DescribeDBInstancesInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.DBInstances, nil
 }
 
 func (a *AWS) SecurityGroup() (interface{}, error) {
@@ -514,7 +581,7 @@ func (a *AWS) iamInstanceProfiles() (interface{}, error) {
 }
 
 func (a *AWS) KmsAliases() (interface{}, error) {
-	output, err := a.ListAliases(&kms.ListAliasesInput{})
+	output, err := a.KMSAPI.ListAliases(&kms.ListAliasesInput{})
 	if err != nil {
 		return nil, err
 	}
@@ -535,6 +602,14 @@ func (a *AWS) s3Buckets() (interface{}, error) {
 		return nil, err
 	}
 	return output.Buckets, nil
+}
+
+func (a *AWS) cloudTrails() (interface{}, error) {
+	output, err := a.DescribeTrails(&cloudtrail.DescribeTrailsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.TrailList, nil
 }
 
 func (a *AWS) ebsSnapshots() (interface{}, error) {
@@ -563,6 +638,20 @@ func (a *AWS) ebsVolumes() (interface{}, error) {
 	return output.Volumes, nil
 }
 
+func (a *AWS) ecsClusters() (interface{}, error) {
+	listOutput, err := a.ListClusters(&ecs.ListClustersInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	descOutput, err := a.DescribeClusters(&ecs.DescribeClustersInput{
+		Clusters: listOutput.ClusterArns,
+		Include:  []*string{aws.String("TAGS")},
+	})
+
+	return descOutput.Clusters, nil
+}
+
 func (a *AWS) amis() (interface{}, error) {
 	output, err := a.DescribeImages(&ec2.DescribeImagesInput{
 		Filters: []*ec2.Filter{
@@ -587,6 +676,14 @@ func (a *AWS) autoscalingGroups() (interface{}, error) {
 		return nil, err
 	}
 	return output.AutoScalingGroups, nil
+}
+
+func (a *AWS) lambdaFunctions() (interface{}, error) {
+	output, err := a.ListFunctions(&lambda.ListFunctionsInput{})
+	if err != nil {
+		return nil, err
+	}
+	return output.Functions, nil
 }
 
 func (a *AWS) launchConfigurations() (interface{}, error) {

@@ -5,22 +5,21 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAcc_Elb_DeleteByID(t *testing.T) {
+func TestAcc_CloudWatchLogGroup_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/elb"
+	terraformDir := "./test-fixtures/cloudwatch-log-group"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -29,27 +28,28 @@ func TestAcc_Elb_DeleteByID(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertElbExists(t, env, id)
+	assertCloudWatchLogGroupExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.Elb, id)
+	writeConfigID(t, terraformDir, res.CloudWatchLogGroup, id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertElbDeleted(t, env, id)
+	assertCloudWatchLogGroupDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func TestAcc_Elb_DeleteByTag(t *testing.T) {
+func TestAcc_CloudWatchLogGroup_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
+	t.Skip("Tags not supported yet.")
 
 	env := InitEnv(t)
 
-	terraformDir := "./test-fixtures/elb"
+	terraformDir := "./test-fixtures/cloudwatch-log-group"
 
 	terraformOptions := getTerraformOptions(terraformDir, env)
 
@@ -58,45 +58,38 @@ func TestAcc_Elb_DeleteByTag(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 
 	id := terraform.Output(t, terraformOptions, "id")
-	assertElbExists(t, env, id)
+	assertCloudWatchLogGroupExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.Elb)
+	writeConfigTag(t, terraformDir, res.CloudWatchLogGroup)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
-	assertElbDeleted(t, env, id)
+	assertCloudWatchLogGroupDeleted(t, env, id)
 
 	fmt.Println(logBuffer)
 }
 
-func assertElbExists(t *testing.T, env EnvVars, id string) {
-	assert.True(t, elbExists(t, env, id))
+func assertCloudWatchLogGroupExists(t *testing.T, env EnvVars, id string) {
+	assert.True(t, cloudWatchLogGroupExists(t, env, id))
 }
 
-func assertElbDeleted(t *testing.T, env EnvVars, id string) {
-	assert.False(t, elbExists(t, env, id))
+func assertCloudWatchLogGroupDeleted(t *testing.T, env EnvVars, id string) {
+	assert.False(t, cloudWatchLogGroupExists(t, env, id))
 }
 
-func elbExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &elb.DescribeLoadBalancersInput{
-		LoadBalancerNames: []*string{&id},
+func cloudWatchLogGroupExists(t *testing.T, env EnvVars, id string) bool {
+	opts := &cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupNamePrefix: &id,
 	}
 
-	resp, err := env.AWSClient.ELBAPI.DescribeLoadBalancers(opts)
+	resp, err := env.AWSClient.CloudWatchLogsAPI.DescribeLogGroups(opts)
 	if err != nil {
-		elbErr, ok := err.(awserr.Error)
-		if !ok {
-			t.Fatal(err)
-		}
-		if elbErr.Code() == "LoadBalancerNotFound" {
-			return false
-		}
 		t.Fatal(err)
 	}
 
-	if len(resp.LoadBalancerDescriptions) == 0 {
+	if len(resp.LogGroups) == 0 {
 		return false
 	}
 
