@@ -19,11 +19,10 @@ type Filter map[TerraformResourceType][]TypeFilter
 
 // TypeFilter represents an entry in Config and selects the resources of a particular resource type.
 type TypeFilter struct {
-	ID   *StringFilter            `yaml:",omitempty"`
-	Tags map[string]*StringFilter `yaml:",omitempty"`
-	// select resources by creation time
-	Created *Created `yaml:",omitempty"`
-	Tagged  *bool    `yaml:",omitempty"`
+	ID      *StringFilter            `yaml:",omitempty"`
+	Tags    map[string]*StringFilter `yaml:",omitempty"`
+	Created *Created                 `yaml:",omitempty"`
+	Tagged  *bool                    `yaml:",omitempty"`
 }
 
 type StringMatcher interface {
@@ -107,18 +106,18 @@ func (rtf TypeFilter) matchID(id string) bool {
 //The keys must match exactly, whereas the tag value is checked against a regex.
 func (rtf TypeFilter) MatchTags(tags map[string]string) bool {
 	if rtf.Tagged != nil {
-		if *rtf.Tagged && tags != nil {
+		if *rtf.Tagged && len(tags) != 0 {
 			return true
 		}
 
-		if !*rtf.Tagged && tags == nil {
+		if !*rtf.Tagged && len(tags) == 0 {
 			return true
 		}
 
 		return false
 	}
 
-	if rtf.Tags == nil {
+	if len(rtf.Tags) == 0 {
 		return true
 	}
 

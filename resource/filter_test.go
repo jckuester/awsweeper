@@ -194,7 +194,7 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "matching key, but no value",
+			name: "matching key, but not value",
 			filter: resource.TypeFilter{
 				Tags: map[string]*resource.StringFilter{
 					"foo": {Pattern: "^bar"},
@@ -214,8 +214,20 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "matching key and value",
+			name: "untagged filter, matching key and value",
 			filter: resource.TypeFilter{
+				Tagged: aws.Bool(false),
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar"},
+			want: false,
+		},
+		{
+			name: "tagged filter, matching key and value",
+			filter: resource.TypeFilter{
+				Tagged: aws.Bool(true),
 				Tags: map[string]*resource.StringFilter{
 					"foo": {Pattern: "^ba"},
 				},
