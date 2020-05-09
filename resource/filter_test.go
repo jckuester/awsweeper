@@ -14,12 +14,10 @@ import (
 func TestYamlFilter_Validate(t *testing.T) {
 	// given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.IamRole:       {},
-			resource.SecurityGroup: {},
-			resource.Instance:      {},
-			resource.Vpc:           {},
-		},
+		resource.IamRole:       {},
+		resource.SecurityGroup: {},
+		resource.Instance:      {},
+		resource.Vpc:           {},
 	}
 
 	// when
@@ -31,9 +29,7 @@ func TestYamlFilter_Validate(t *testing.T) {
 
 func TestYamlFilter_Validate_EmptyConfig(t *testing.T) {
 	// given
-	f := &resource.Filter{
-		Cfg: resource.Config{},
-	}
+	f := &resource.Filter{}
 
 	// when
 	err := f.Validate()
@@ -45,10 +41,8 @@ func TestYamlFilter_Validate_EmptyConfig(t *testing.T) {
 func TestYamlFilter_Validate_UnsupportedType(t *testing.T) {
 	// given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance:    {},
-			"not_supported_type": {},
-		},
+		resource.Instance:    {},
+		"not_supported_type": {},
 	}
 
 	// when
@@ -61,10 +55,8 @@ func TestYamlFilter_Validate_UnsupportedType(t *testing.T) {
 func TestYamlFilter_Types(t *testing.T) {
 	// given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {},
-			resource.Vpc:      {},
-		},
+		resource.Instance: {},
+		resource.Vpc:      {},
 	}
 
 	// when
@@ -79,10 +71,8 @@ func TestYamlFilter_Types(t *testing.T) {
 func TestYamlFilter_Types_DependencyOrder(t *testing.T) {
 	// given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Subnet: {},
-			resource.Vpc:    {},
-		},
+		resource.Subnet: {},
+		resource.Vpc:    {},
 	}
 
 	// when
@@ -104,7 +94,7 @@ func Test_ParseFile(t *testing.T) {
     created:
       before: 23h`)
 
-	var cfg resource.Config
+	var cfg resource.Filter
 	err := yaml.UnmarshalStrict(input, &cfg)
 	require.NoError(t, err)
 	require.NotNil(t, cfg[resource.Instance])

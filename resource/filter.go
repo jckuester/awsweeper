@@ -14,16 +14,16 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Config represents the content of a yaml file that is used as a contract to filter resources for deletion.
-type Config map[TerraformResourceType][]TypeFilter
+// Filter represents the content of a yaml file that is used filter resources for deletion.
+type Filter map[TerraformResourceType][]TypeFilter
 
 // TypeFilter represents an entry in Config and selects the resources of a particular resource type.
 type TypeFilter struct {
 	ID   *StringFilter            `yaml:",omitempty"`
 	Tags map[string]*StringFilter `yaml:",omitempty"`
 	// select resources by creation time
-	Created  *Created `yaml:",omitempty"`
-	Untagged bool     `yaml:",omitempty"`
+	Created *Created `yaml:",omitempty"`
+	Tagged  bool     `yaml:",omitempty"`
 }
 
 type StringMatcher interface {
@@ -44,33 +44,21 @@ type Created struct {
 	After  *CreatedTime `yaml:",omitempty"`
 }
 
-// Filter selects resources based on a given yaml config.
-type Filter struct {
-	Cfg Config
-}
+// NewFilter creates a resource filter defined via a given path to a yaml file.
+func NewFilter(path string) (*Filter, error) {
+	var cfg Filter
 
-// NewFilter creates a new filter based on a config given via a yaml file.
-func NewFilter(yamlFile string) *Filter {
-	return &Filter{
-		Cfg: read(yamlFile),
-	}
-}
-
-// read reads a filter from a yaml file.
-func read(filename string) Config {
-	var cfg Config
-
-	data, err := ioutil.ReadFile(filename)
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.WithError(err).Fatalf("failed to read config file: %s", filename)
+		return nil, err
 	}
 
 	err = yaml.UnmarshalStrict(data, &cfg)
 	if err != nil {
-		log.WithError(err).Fatalf("failed to unmarshal config: %s", filename)
+		return nil, err
 	}
 
-	return cfg
+	return &cfg, nil
 }
 
 // Validate checks if all resource types appearing in the config are currently supported.
@@ -85,9 +73,9 @@ func (f Filter) Validate() error {
 
 // Types returns all the resource types in the config in their dependency order.
 func (f Filter) Types() []TerraformResourceType {
-	resTypes := make([]TerraformResourceType, 0, len(f.Cfg))
+	resTypes := make([]TerraformResourceType, 0, len(f))
 
-	for k := range f.Cfg {
+	for k := range f {
 		resTypes = append(resTypes, k)
 	}
 
@@ -114,9 +102,10 @@ func (rtf TypeFilter) matchID(id string) bool {
 	return false
 }
 
-// MatchesTags checks whether a resource's tags
-// match the filter. The keys must match exactly, whereas the tag value is checked against a regex.
-func (rtf TypeFilter) matchTags(tags map[string]string) bool {
+// MatchesTags checks whether a resource's tags match the filter.
+//
+//The keys must match exactly, whereas the tag value is checked against a regex.
+func (rtf TypeFilter) MatchTags(tags map[string]string) bool {
 	if rtf.Tags == nil {
 		return true
 	}
@@ -127,9 +116,10 @@ func (rtf TypeFilter) matchTags(tags map[string]string) bool {
 				if err != nil {
 					log.WithError(err).Fatal("failed to match tags")
 				}
+
 				return false
 			}
-		} else if rtf.Untagged {
+		} else if rtf.Tagged {
 			return true
 		} else {
 			return false
@@ -163,7 +153,7 @@ func (rtf TypeFilter) matchCreated(creationTime *time.Time) bool {
 
 // matches checks whether a resource matches the filter criteria.
 func (f Filter) matches(r *Resource) bool {
-	resTypeFilters, found := f.Cfg[r.Type]
+	resTypeFilters, found := f[r.Type]
 	if !found {
 		return false
 	}
@@ -173,7 +163,7 @@ func (f Filter) matches(r *Resource) bool {
 	}
 
 	for _, rtf := range resTypeFilters {
-		if rtf.matchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) {
+		if rtf.MatchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) {
 			return true
 		}
 	}

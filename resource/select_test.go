@@ -14,9 +14,8 @@ import (
 
 func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 	//given
-	f := &resource.Filter{
-		Cfg: resource.Config{},
-	}
+	f := &resource.Filter{}
+
 	res := []*resource.Resource{
 		{
 			Type: resource.Instance,
@@ -34,9 +33,7 @@ func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {},
-		},
+		resource.Instance: {},
 	}
 	res := []*resource.Resource{
 		{
@@ -56,11 +53,9 @@ func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					ID: &resource.StringFilter{Pattern: "^select"},
-				},
+		resource.Instance: {
+			{
+				ID: &resource.StringFilter{Pattern: "^select"},
 			},
 		},
 	}
@@ -87,12 +82,10 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					Tags: map[string]*resource.StringFilter{
-						"foo": {Pattern: "^bar"},
-					},
+		resource.Instance: {
+			{
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^bar"},
 				},
 			},
 		},
@@ -130,13 +123,11 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					Tags: map[string]*resource.StringFilter{
-						"foo": {Pattern: "^bar"},
-						"bla": {Pattern: "^blub"},
-					},
+		resource.Instance: {
+			{
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^bar"},
+					"bla": {Pattern: "^blub"},
 				},
 			},
 		},
@@ -171,13 +162,11 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					ID: &resource.StringFilter{Pattern: "^foo"},
-					Tags: map[string]*resource.StringFilter{
-						"foo": {Pattern: "^bar"},
-					},
+		resource.Instance: {
+			{
+				ID: &resource.StringFilter{Pattern: "^foo"},
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^bar"},
 				},
 			},
 		},
@@ -215,13 +204,11 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 func TestYamlFilter_Apply_Created(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					Created: &resource.Created{
-						After:  &resource.CreatedTime{Time: time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)},
-						Before: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
-					},
+		resource.Instance: {
+			{
+				Created: &resource.Created{
+					After:  &resource.CreatedTime{Time: time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)},
+					Before: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
 				},
 			},
 		},
@@ -265,12 +252,10 @@ func TestYamlFilter_Apply_Created(t *testing.T) {
 func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					Created: &resource.Created{
-						Before: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
-					},
+		resource.Instance: {
+			{
+				Created: &resource.Created{
+					Before: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
 				},
 			},
 		},
@@ -304,12 +289,10 @@ func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
 func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					Created: &resource.Created{
-						After: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
-					},
+		resource.Instance: {
+			{
+				Created: &resource.Created{
+					After: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
 				},
 			},
 		},
@@ -343,15 +326,13 @@ func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
 func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					ID: &resource.StringFilter{Pattern: "^select"},
-				},
-				{
-					Tags: map[string]*resource.StringFilter{
-						"foo": {Pattern: "^bar"},
-					},
+		resource.Instance: {
+			{
+				ID: &resource.StringFilter{Pattern: "^select"},
+			},
+			{
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^bar"},
 				},
 			},
 		},
@@ -393,15 +374,13 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		Cfg: resource.Config{
-			resource.Instance: {
-				{
-					ID: &resource.StringFilter{Pattern: "^select", Negate: true},
-				},
-				{
-					Tags: map[string]*resource.StringFilter{
-						"foo": {Pattern: "^bar", Negate: true},
-					},
+		resource.Instance: {
+			{
+				ID: &resource.StringFilter{Pattern: "^select", Negate: true},
+			},
+			{
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^bar", Negate: true},
 				},
 			},
 		},
