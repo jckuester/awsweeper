@@ -202,17 +202,18 @@ A technical reason for this is that AWSweeper is build upon the already existing
    
 ## Acceptance tests
 
-***WARNING:*** Acceptance tests create real resources that might cost you money.
+***IMPORTANT:*** Acceptance tests create real resources that might cost you money. Also, note that if you contribute a PR, 
+the [Travis build](https://travis-ci.org/github/cloudetc/awsweeper) will always fail since AWS credentials are not 
+injected into the PR build coming from forks for security reasons. You can either run tests locally against your personal 
+AWS account or ask me to run them for you instead.
 
 Run all acceptance tests with
 
-    make testacc
+    AWS_PROFILE=<myaccount> AWS_DEFAULT_REGION=us-west-2 make test-all
 
-or use
+or to test the working of AWSweeper for a just single resource, such as `aws_vpc`, use
 
-    make testacc TESTARGS='-run=TestAccVpc*'
-
-to test the working of AWSweeper for a just single resource, such as `aws_vpc`.
+    AWS_PROFILE=<myaccount> AWS_DEFAULT_REGION=us-west-2 make test-all TESTARGS='-run=TestAcc_Vpc*'
 
 ## Disclaimer
 
