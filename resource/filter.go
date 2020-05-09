@@ -23,7 +23,7 @@ type TypeFilter struct {
 	Tags map[string]*StringFilter `yaml:",omitempty"`
 	// select resources by creation time
 	Created *Created `yaml:",omitempty"`
-	Tagged  bool     `yaml:",omitempty"`
+	Tagged  *bool    `yaml:",omitempty"`
 }
 
 type StringMatcher interface {
@@ -106,6 +106,18 @@ func (rtf TypeFilter) matchID(id string) bool {
 //
 //The keys must match exactly, whereas the tag value is checked against a regex.
 func (rtf TypeFilter) MatchTags(tags map[string]string) bool {
+	if rtf.Tagged != nil {
+		if *rtf.Tagged && tags != nil {
+			return true
+		}
+
+		if !*rtf.Tagged && tags == nil {
+			return true
+		}
+
+		return false
+	}
+
 	if rtf.Tags == nil {
 		return true
 	}
@@ -119,8 +131,6 @@ func (rtf TypeFilter) MatchTags(tags map[string]string) bool {
 
 				return false
 			}
-		} else if rtf.Tagged {
-			return true
 		} else {
 			return false
 		}

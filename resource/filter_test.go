@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/cloudetc/awsweeper/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,4 +116,119 @@ func Test_ParseFile(t *testing.T) {
 	assert.True(t, cfg[resource.Instance][1].Created.Before.Before(time.Now().UTC().Add(-22*time.Hour)))
 	assert.True(t, cfg[resource.Instance][1].Created.Before.After(time.Now().UTC().Add(-24*time.Hour)))
 	require.Nil(t, cfg[resource.Instance][1].Created.After)
+}
+
+func TestTypeFilter_MatchTags_Tagged(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter resource.TypeFilter
+		tags   map[string]string
+		want   bool
+	}{
+		{
+			name:   "no tagged filter, resource has tags",
+			filter: resource.TypeFilter{},
+			tags:   map[string]string{"foo": "bar"},
+			want:   true,
+		},
+		{
+			name:   "no tagged filter, resource has no tags",
+			filter: resource.TypeFilter{},
+			want:   true,
+		},
+		{
+			name: "tagged filter, resource has tags",
+			filter: resource.TypeFilter{
+				Tagged: aws.Bool(true),
+			},
+			tags: map[string]string{"foo": "bar"},
+			want: true,
+		},
+		{
+			name: "tagged filter, resource has no tags",
+			filter: resource.TypeFilter{
+				Tagged: aws.Bool(true),
+			},
+			want: false,
+		},
+		{
+			name: "untagged filter, resource has tags",
+			filter: resource.TypeFilter{
+				Tagged: aws.Bool(false),
+			},
+			tags: map[string]string{"foo": "bar"},
+			want: false,
+		},
+		{
+			name: "untagged filter, resource has no tags",
+			filter: resource.TypeFilter{
+				Tagged: aws.Bool(false),
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.filter.MatchTags(tt.tags); got != tt.want {
+				t.Errorf("MatchTags() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTypeFilter_MatchTags(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter resource.TypeFilter
+		tags   map[string]string
+		want   bool
+	}{
+		{
+			name: "no matching key",
+			filter: resource.TypeFilter{
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foz": "bar"},
+			want: false,
+		},
+		{
+			name: "matching key, but no value",
+			filter: resource.TypeFilter{
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^bar"},
+				},
+			},
+			tags: map[string]string{"foo": "baz"},
+			want: false,
+		},
+		{
+			name: "matching key and value",
+			filter: resource.TypeFilter{
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar"},
+			want: true,
+		},
+		{
+			name: "matching key and value",
+			filter: resource.TypeFilter{
+				Tags: map[string]*resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar"},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.filter.MatchTags(tt.tags); got != tt.want {
+				t.Errorf("MatchTags() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
