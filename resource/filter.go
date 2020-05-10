@@ -22,7 +22,6 @@ type TypeFilter struct {
 	ID      *StringFilter           `yaml:",omitempty"`
 	Tagged  *bool                   `yaml:",omitempty"`
 	Tags    map[string]StringFilter `yaml:",omitempty"`
-	NoTags  map[string]StringFilter `yaml:",omitempty"`
 	Created *Created                `yaml:",omitempty"`
 }
 
@@ -127,6 +126,10 @@ func (f TypeFilter) MatchTags(tags map[string]string) bool {
 	}
 
 	for key, valueFilter := range f.Tags {
+		if isNegated(key) {
+			continue
+		}
+
 		value, ok := tags[key]
 		if !ok {
 			return false
@@ -144,12 +147,25 @@ func (f TypeFilter) MatchTags(tags map[string]string) bool {
 	return true
 }
 
-func (f TypeFilter) MatchNoTags(tags map[string]string) bool {
-	if f.NoTags == nil {
+func isNegated(s string) bool {
+	if strings.HasPrefix(s, "NOT(") && strings.HasSuffix(s, ")") {
 		return true
 	}
 
-	for key, valueFilter := range f.NoTags {
+	return false
+}
+
+func (f TypeFilter) MatchNoTags(tags map[string]string) bool {
+	if f.Tags == nil {
+		return true
+	}
+
+	for key, valueFilter := range f.Tags {
+		if !isNegated(key) {
+			continue
+		}
+		key = strings.TrimSuffix(strings.TrimPrefix(key, "NOT("), ")")
+
 		value, ok := tags[key]
 		if !ok {
 			return true
