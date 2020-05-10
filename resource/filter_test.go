@@ -170,7 +170,7 @@ func TestTypeFilter_MatchTagged(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.filter.MatchTagged(tt.tags); got != tt.want {
-				t.Errorf("MatchTags() = %v, want %v", got, tt.want)
+				t.Errorf("MatchTagged() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -389,7 +389,7 @@ func TestTypeFilter_MatchNoTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.filter.MatchNoTags(tt.tags); got != tt.want {
+			if got := tt.filter.MatchTags(tt.tags); got != tt.want {
 				t.Errorf("MatchTags() = %v, want %v", got, tt.want)
 			}
 		})

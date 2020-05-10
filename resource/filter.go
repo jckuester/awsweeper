@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Filter represents the content of a yaml file that is used filter resources for deletion.
+// Filter represents the content of a yaml file that is used to filter resources for deletion.
 type Filter map[TerraformResourceType][]TypeFilter
 
 // TypeFilter represents an entry in the yaml file to filter the resources of a particular resource type.
@@ -101,6 +101,7 @@ func (f TypeFilter) matchID(id string) bool {
 	return false
 }
 
+// MatchTagged filters resources with a non-empty or empty tag set.
 func (f TypeFilter) MatchTagged(tags map[string]string) bool {
 	if f.Tagged == nil {
 		return true
@@ -117,19 +118,20 @@ func (f TypeFilter) MatchTagged(tags map[string]string) bool {
 	return false
 }
 
-// MatchesTags checks whether a resource's tags match the filter.
-//
-//The keys must match exactly, whereas the tag value is checked against a regex.
+// MatchesTags checks whether a resource's tag set matches the filter.
 func (f TypeFilter) MatchTags(tags map[string]string) bool {
-	if f.Tags == nil {
+	return f.matchIncludedTags(tags) && f.matchExcludedTags(tags)
+}
+
+// matchIncludedTags checks for tags that must be included in a resource's tag set.
+func (f TypeFilter) matchIncludedTags(tags map[string]string) bool {
+	tagFilters := notNegatedTagFilterExpr(f.Tags)
+
+	if len(tagFilters) == 0 {
 		return true
 	}
 
-	for key, valueFilter := range f.Tags {
-		if isNegated(key) {
-			continue
-		}
-
+	for key, valueFilter := range tagFilters {
 		value, ok := tags[key]
 		if !ok {
 			return false
@@ -147,25 +149,15 @@ func (f TypeFilter) MatchTags(tags map[string]string) bool {
 	return true
 }
 
-func isNegated(s string) bool {
-	if strings.HasPrefix(s, "NOT(") && strings.HasSuffix(s, ")") {
+// matchExcludedTags checks for tags that must not exist in a resource's tag set.
+func (f TypeFilter) matchExcludedTags(tags map[string]string) bool {
+	tagFilters := negatedTagFilterExpr(f.Tags)
+
+	if len(tagFilters) == 0 {
 		return true
 	}
 
-	return false
-}
-
-func (f TypeFilter) MatchNoTags(tags map[string]string) bool {
-	if f.Tags == nil {
-		return true
-	}
-
-	for key, valueFilter := range f.Tags {
-		if !isNegated(key) {
-			continue
-		}
-		key = strings.TrimSuffix(strings.TrimPrefix(key, "NOT("), ")")
-
+	for key, valueFilter := range tagFilters {
 		value, ok := tags[key]
 		if !ok {
 			return true
@@ -181,6 +173,39 @@ func (f TypeFilter) MatchNoTags(tags map[string]string) bool {
 	}
 
 	return false
+}
+
+// notNegatedTagFilterExpr returns tag filter expressions where keys are not surrounded by NOT(...).
+func notNegatedTagFilterExpr(tags map[string]StringFilter) map[string]StringFilter {
+	result := map[string]StringFilter{}
+
+	for key, value := range tags {
+		if !isNegatedTagKey(key) {
+			result[key] = value
+		}
+	}
+
+	return result
+}
+
+// notNegatedTagFilterExpr returns tag filter expressions where keys are surrounded by NOT(...).
+func negatedTagFilterExpr(tags map[string]StringFilter) map[string]StringFilter {
+	result := map[string]StringFilter{}
+
+	for key, value := range tags {
+		if isNegatedTagKey(key) {
+			key = strings.TrimPrefix(key, "NOT(")
+			key = strings.TrimSuffix(key, ")")
+
+			result[key] = value
+		}
+	}
+
+	return result
+}
+
+func isNegatedTagKey(key string) bool {
+	return strings.HasPrefix(key, "NOT(") && strings.HasSuffix(key, ")")
 }
 
 func (f TypeFilter) matchCreated(creationTime *time.Time) bool {
@@ -205,8 +230,8 @@ func (f TypeFilter) matchCreated(creationTime *time.Time) bool {
 	return createdAfter && createdBefore
 }
 
-// matches checks whether a resource matches the filter criteria.
-func (f Filter) matches(r *Resource) bool {
+// Match checks whether a resource matches the filter criteria.
+func (f Filter) Match(r *Resource) bool {
 	resTypeFilters, found := f[r.Type]
 	if !found {
 		return false
@@ -219,7 +244,6 @@ func (f Filter) matches(r *Resource) bool {
 	for _, rtf := range resTypeFilters {
 		if rtf.MatchTagged(r.Tags) &&
 			rtf.MatchTags(r.Tags) &&
-			rtf.MatchNoTags(r.Tags) &&
 			rtf.matchID(r.ID) &&
 			rtf.matchCreated(r.Created) {
 			return true

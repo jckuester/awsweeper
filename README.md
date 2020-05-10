@@ -9,12 +9,12 @@
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
 [![Travis](https://img.shields.io/travis/cloudetc/awsweeper/master.svg?style=for-the-badge)](https://travis-ci.org/cloudetc/awsweeper)
 
-AWSweeper cleans out all (or part) of the resources in your AWS account. Resources can be deleted by type, ID, tags, or
-creation date using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared via a filter in a YAML file 
-(see example snippets of a [filter.yml](#filter) below).
+AWSweeper cleans out all (or parts) of the resources in your AWS account. Resources to be deleted can be filtered by
+their ID, tags or creation date using [regular expressions](https://golang.org/pkg/regexp/syntax/) declared via a filter
+in a YAML file (see [filter.yml](example/config.yml) as an example).
 
 AWSweeper [can delete many](#supported-resources), but not all resources yet. Your help
-supporting more resources is very much appreciated ([please read this issue](https://github.com/cloudetc/awsweeper/issues/21)
+to support more resources is very much appreciated ([please read this issue](https://github.com/cloudetc/awsweeper/issues/21)
  to see how easy it is). 
 
 Happy erasing!
@@ -41,21 +41,15 @@ To see options available run `awsweeper --help`.
 
 ## Filter
 
-Delete resources via a filter declared in a YAML file.
-
-The following filter deletes all EC2 instances that ID matches `^foo.*` and that have been created between
- `2018-06-28 12:28:39` and `2018-10-14` UTC (instance filter part 1); additionally, EC2 instances having a tag 
- `foo: bar` *AND* not a tag key `owner` with arbitrary value are deleted (instance filter part 2); last but not least,
- ALL security groups are deleted.
+Resources are deleted via a filter declared in a YAML file.
 
     aws_instance:
-    
       # instance filter part 1
       - id: ^foo.*
         created:
           before: 2018-10-14
           after: 2018-06-28 12:28:39
-          
+            
       # instance filter part 2   
       - tags:
           foo: bar
@@ -63,11 +57,14 @@ The following filter deletes all EC2 instances that ID matches `^foo.*` and that
            
     aws_security_groups:
 
+The filter snippet above deletes all EC2 instances that ID matches `^foo.*` and that have been created between
+ `2018-06-28 12:28:39` and `2018-10-14` UTC (instance filter part 1); additionally, EC2 instances having a tag 
+ `foo: bar` *AND* not a tag key `owner` with any value are deleted (instance filter part 2); last but not least,
+ ALL security groups are deleted by this filter.
+
 The general filter syntax is as follows:
 
     <resource type>:
-
-      # filter 1
       - id: <regex to filter by id> | NOT(<regex to filter by id>)
         tagged: bool (optional)
         tags:
@@ -76,10 +73,8 @@ The general filter syntax is as follows:
         created:
           before: <timestamp> (optional)
           after: <timestamp> (optional)
- 
-      # filter 2
+      # OR
       - ...
-
     <resource type>:
       ...
 
@@ -88,23 +83,20 @@ Here is a more detailed description of the various ways to filter resources:
 ##### 1) Delete all resources of a particular type
 
    [Terraform resource type indentifiers](https://www.terraform.io/docs/providers/aws/index.html) are used to delete 
-   resources by type.
-   
-   The following filter deletes *ALL* security groups, IAM roles, and EC2 instances:
+   resources by type. The following filter snippet deletes *ALL* security groups, IAM roles, and EC2 instances:
    
     aws_security_group:
     aws_iam_role:
     aws_instance:
    
-   Don't forget the `:` at the end of each line.
+   Don't forget the `:` at the end of each line. Use the [all.yml](./all.yml), to delete all (currently supported)
+   resources.
 
 ##### 2) Delete by tags
 
    If most of your resources have tags, this is probably the best way to filter them
    for deletion. **Be aware**: Not all resources [support tags](#supported-resources) yet and can be filtered this way.
-   
-   `tagged: false` deletes all resources that have no tags. Contrary, resources with any tags can be deleted with `tagged: true`.
-   
+      
    The key and the value part of the tag filter can be negated by a surrounding `NOT(...)`. This allows for removing of 
    all resources not matching some tag key or value. In the example below, all EC2 instances without the `owner: me`
    tag are deleted:
@@ -112,10 +104,16 @@ Here is a more detailed description of the various ways to filter resources:
     aws_instance:
       - tags:
           NOT(Owner): me
+          
+   The flag `tagged: false` deletes all resources that have no tags. Contrary, resources with any tags can be deleted 
+   with `tagged: true`:
+
+    aws_instance:
+      - tagged: true
 
 ##### 3) Delete By ID
 
-   You can narrow down on particular types of resources by filtering on their IDs.
+   You can narrow down on particular types of resources by filtering on based their IDs.
 
    To see what the ID of a resource is (could be its name, ARN, a random number),
    run AWSweeper in dry-run mode: `awsweeper --dry-run all.yml`. This way, nothing is deleted but

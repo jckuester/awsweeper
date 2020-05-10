@@ -37,7 +37,7 @@ func (f Filter) defaultFilter(res Resources) []Resources {
 	result := Resources{}
 
 	for _, r := range res {
-		if f.matches(r) {
+		if f.Match(r) {
 			result = append(result, r)
 		}
 	}
@@ -49,7 +49,7 @@ func (f Filter) efsFileSystemFilter(res Resources, raw interface{}, c *AWS) []Re
 	resultMt := Resources{}
 
 	for _, r := range res {
-		if f.matches(&Resource{Type: r.Type, ID: *raw.([]*efs.FileSystemDescription)[0].Name}) {
+		if f.Match(&Resource{Type: r.Type, ID: *raw.([]*efs.FileSystemDescription)[0].Name}) {
 			res, err := c.DescribeMountTargets(&efs.DescribeMountTargetsInput{
 				FileSystemId: &r.ID,
 			})
@@ -74,7 +74,7 @@ func (f Filter) iamUserFilter(res Resources, c *AWS) []Resources {
 	resultUserPol := Resources{}
 
 	for _, r := range res {
-		if f.matches(r) {
+		if f.Match(r) {
 			// list inline policies, delete with "aws_iam_user_policy" delete routine
 			ups, err := c.ListUserPolicies(&iam.ListUserPoliciesInput{
 				UserName: &r.ID,
@@ -116,7 +116,7 @@ func (f Filter) iamPolicyFilter(res Resources, raw interface{}, c *AWS) []Resour
 	resultAtt := Resources{}
 
 	for i, r := range res {
-		if f.matches(r) {
+		if f.Match(r) {
 			es, err := c.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
 				PolicyArn: &r.ID,
 			})
@@ -161,7 +161,7 @@ func (f Filter) kmsKeysFilter(res Resources, c *AWS) []Resources {
 	result := Resources{}
 
 	for _, r := range res {
-		if f.matches(r) {
+		if f.Match(r) {
 			req, res := c.DescribeKeyRequest(&kms.DescribeKeyInput{
 				KeyId: aws.String(r.ID),
 			})
@@ -184,7 +184,7 @@ func (f Filter) kmsKeyAliasFilter(res Resources) []Resources {
 	result := Resources{}
 
 	for _, r := range res {
-		if f.matches(r) && !strings.HasPrefix(r.ID, "alias/aws/") {
+		if f.Match(r) && !strings.HasPrefix(r.ID, "alias/aws/") {
 			result = append(result, r)
 		}
 	}
