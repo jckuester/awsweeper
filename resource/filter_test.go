@@ -51,7 +51,7 @@ func TestYamlFilter_Validate_UnsupportedType(t *testing.T) {
 	err := f.Validate()
 
 	// then
-	assert.EqualError(t, err, "unsupported resource type found in yaml config: not_supported_type")
+	assert.EqualError(t, err, "unsupported resource type: not_supported_type")
 }
 
 func TestYamlFilter_Types(t *testing.T) {
@@ -118,7 +118,7 @@ func Test_ParseFile(t *testing.T) {
 	require.Nil(t, cfg[resource.Instance][1].Created.After)
 }
 
-func TestTypeFilter_MatchTags_Tagged(t *testing.T) {
+func TestTypeFilter_MatchTagged(t *testing.T) {
 	tests := []struct {
 		name   string
 		filter resource.TypeFilter
@@ -169,7 +169,7 @@ func TestTypeFilter_MatchTags_Tagged(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.filter.MatchTags(tt.tags); got != tt.want {
+			if got := tt.filter.MatchTagged(tt.tags); got != tt.want {
 				t.Errorf("MatchTags() = %v, want %v", got, tt.want)
 			}
 		})
@@ -186,7 +186,7 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 		{
 			name: "no matching key",
 			filter: resource.TypeFilter{
-				Tags: map[string]*resource.StringFilter{
+				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^ba"},
 				},
 			},
@@ -196,7 +196,7 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 		{
 			name: "matching key, but not value",
 			filter: resource.TypeFilter{
-				Tags: map[string]*resource.StringFilter{
+				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar"},
 				},
 			},
@@ -206,29 +206,7 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 		{
 			name: "matching key and value",
 			filter: resource.TypeFilter{
-				Tags: map[string]*resource.StringFilter{
-					"foo": {Pattern: "^ba"},
-				},
-			},
-			tags: map[string]string{"foo": "bar"},
-			want: true,
-		},
-		{
-			name: "untagged filter, matching key and value",
-			filter: resource.TypeFilter{
-				Tagged: aws.Bool(false),
-				Tags: map[string]*resource.StringFilter{
-					"foo": {Pattern: "^ba"},
-				},
-			},
-			tags: map[string]string{"foo": "bar"},
-			want: false,
-		},
-		{
-			name: "tagged filter, matching key and value",
-			filter: resource.TypeFilter{
-				Tagged: aws.Bool(true),
-				Tags: map[string]*resource.StringFilter{
+				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^ba"},
 				},
 			},

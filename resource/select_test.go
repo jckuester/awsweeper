@@ -84,7 +84,7 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 	f := &resource.Filter{
 		resource.Instance: {
 			{
-				Tags: map[string]*resource.StringFilter{
+				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar"},
 				},
 			},
@@ -125,7 +125,7 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 	f := &resource.Filter{
 		resource.Instance: {
 			{
-				Tags: map[string]*resource.StringFilter{
+				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar"},
 					"bla": {Pattern: "^blub"},
 				},
@@ -165,7 +165,7 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 		resource.Instance: {
 			{
 				ID: &resource.StringFilter{Pattern: "^foo"},
-				Tags: map[string]*resource.StringFilter{
+				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar"},
 				},
 			},
@@ -331,7 +331,7 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 				ID: &resource.StringFilter{Pattern: "^select"},
 			},
 			{
-				Tags: map[string]*resource.StringFilter{
+				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar"},
 				},
 			},
@@ -379,7 +379,7 @@ func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
 				ID: &resource.StringFilter{Pattern: "^select", Negate: true},
 			},
 			{
-				Tags: map[string]*resource.StringFilter{
+				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar", Negate: true},
 				},
 			},

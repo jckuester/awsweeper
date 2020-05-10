@@ -17,12 +17,13 @@ import (
 // Filter represents the content of a yaml file that is used filter resources for deletion.
 type Filter map[TerraformResourceType][]TypeFilter
 
-// TypeFilter represents an entry in Config and selects the resources of a particular resource type.
+// TypeFilter represents an entry in the yaml file to filter the resources of a particular resource type.
 type TypeFilter struct {
-	ID      *StringFilter            `yaml:",omitempty"`
-	Tags    map[string]*StringFilter `yaml:",omitempty"`
-	Created *Created                 `yaml:",omitempty"`
-	Tagged  *bool                    `yaml:",omitempty"`
+	ID      *StringFilter           `yaml:",omitempty"`
+	Tagged  *bool                   `yaml:",omitempty"`
+	Tags    map[string]StringFilter `yaml:",omitempty"`
+	NoTags  map[string]StringFilter `yaml:",omitempty"`
+	Created *Created                `yaml:",omitempty"`
 }
 
 type StringMatcher interface {
@@ -64,7 +65,7 @@ func NewFilter(path string) (*Filter, error) {
 func (f Filter) Validate() error {
 	for _, resType := range f.Types() {
 		if !SupportedResourceType(resType) {
-			return fmt.Errorf("unsupported resource type found in yaml config: %s", resType)
+			return fmt.Errorf("unsupported resource type: %s", resType)
 		}
 	}
 	return nil
@@ -86,12 +87,12 @@ func (f Filter) Types() []TerraformResourceType {
 }
 
 // MatchID checks whether a resource ID matches the filter.
-func (rtf TypeFilter) matchID(id string) bool {
-	if rtf.ID == nil {
+func (f TypeFilter) matchID(id string) bool {
+	if f.ID == nil {
 		return true
 	}
 
-	if ok, err := rtf.ID.matches(id); ok {
+	if ok, err := f.ID.matches(id); ok {
 		if err != nil {
 			log.WithError(err).Fatal("failed to match ID")
 		}
@@ -101,36 +102,41 @@ func (rtf TypeFilter) matchID(id string) bool {
 	return false
 }
 
-// MatchesTags checks whether a resource's tags match the filter.
-//
-//The keys must match exactly, whereas the tag value is checked against a regex.
-func (rtf TypeFilter) MatchTags(tags map[string]string) bool {
-	if rtf.Tagged != nil {
-		if *rtf.Tagged && len(tags) != 0 {
-			return true
-		}
-
-		if !*rtf.Tagged && len(tags) == 0 {
-			return true
-		}
-
-		return false
-	}
-
-	if len(rtf.Tags) == 0 {
+func (f TypeFilter) MatchTagged(tags map[string]string) bool {
+	if f.Tagged == nil {
 		return true
 	}
 
-	for cfgTagKey, regex := range rtf.Tags {
-		if tagVal, ok := tags[cfgTagKey]; ok {
-			if matched, err := regex.matches(tagVal); !matched {
-				if err != nil {
-					log.WithError(err).Fatal("failed to match tags")
-				}
+	if *f.Tagged && len(tags) != 0 {
+		return true
+	}
 
-				return false
+	if !*f.Tagged && len(tags) == 0 {
+		return true
+	}
+
+	return false
+}
+
+// MatchesTags checks whether a resource's tags match the filter.
+//
+//The keys must match exactly, whereas the tag value is checked against a regex.
+func (f TypeFilter) MatchTags(tags map[string]string) bool {
+	if f.Tags == nil {
+		return true
+	}
+
+	for key, valueFilter := range f.Tags {
+		value, ok := tags[key]
+		if !ok {
+			return false
+		}
+
+		if match, err := valueFilter.matches(value); !match {
+			if err != nil {
+				log.WithError(err).Fatal("failed to match tags")
 			}
-		} else {
+
 			return false
 		}
 	}
@@ -138,8 +144,8 @@ func (rtf TypeFilter) MatchTags(tags map[string]string) bool {
 	return true
 }
 
-func (rtf TypeFilter) matchCreated(creationTime *time.Time) bool {
-	if rtf.Created == nil {
+func (f TypeFilter) matchCreated(creationTime *time.Time) bool {
+	if f.Created == nil {
 		return true
 	}
 
@@ -148,13 +154,13 @@ func (rtf TypeFilter) matchCreated(creationTime *time.Time) bool {
 	}
 
 	createdAfter := true
-	if rtf.Created.After != nil {
-		createdAfter = creationTime.Unix() > rtf.Created.After.Unix()
+	if f.Created.After != nil {
+		createdAfter = creationTime.Unix() > f.Created.After.Unix()
 	}
 
 	createdBefore := true
-	if rtf.Created.Before != nil {
-		createdBefore = creationTime.Unix() < rtf.Created.Before.Unix()
+	if f.Created.Before != nil {
+		createdBefore = creationTime.Unix() < f.Created.Before.Unix()
 	}
 
 	return createdAfter && createdBefore
@@ -172,10 +178,11 @@ func (f Filter) matches(r *Resource) bool {
 	}
 
 	for _, rtf := range resTypeFilters {
-		if rtf.MatchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) {
+		if rtf.MatchTagged(r.Tags) && rtf.MatchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) {
 			return true
 		}
 	}
+
 	return false
 }
 

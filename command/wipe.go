@@ -71,7 +71,7 @@ func (c *Wipe) Run(args []string) int {
 
 		err = c.filter.Validate()
 		if err != nil {
-			log.WithError(err).Fatal("failed to validate filter config")
+			log.WithError(err).Fatal("invalid filter config")
 		}
 	} else {
 		fmt.Println(help())
