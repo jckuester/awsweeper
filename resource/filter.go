@@ -144,6 +144,29 @@ func (f TypeFilter) MatchTags(tags map[string]string) bool {
 	return true
 }
 
+func (f TypeFilter) MatchNoTags(tags map[string]string) bool {
+	if f.NoTags == nil {
+		return true
+	}
+
+	for key, valueFilter := range f.NoTags {
+		value, ok := tags[key]
+		if !ok {
+			return true
+		}
+
+		if match, err := valueFilter.matches(value); !match {
+			if err != nil {
+				log.WithError(err).Fatal("failed to match tags")
+			}
+
+			return true
+		}
+	}
+
+	return false
+}
+
 func (f TypeFilter) matchCreated(creationTime *time.Time) bool {
 	if f.Created == nil {
 		return true
@@ -178,7 +201,11 @@ func (f Filter) matches(r *Resource) bool {
 	}
 
 	for _, rtf := range resTypeFilters {
-		if rtf.MatchTagged(r.Tags) && rtf.MatchTags(r.Tags) && rtf.matchID(r.ID) && rtf.matchCreated(r.Created) {
+		if rtf.MatchTagged(r.Tags) &&
+			rtf.MatchTags(r.Tags) &&
+			rtf.MatchNoTags(r.Tags) &&
+			rtf.matchID(r.ID) &&
+			rtf.matchCreated(r.Created) {
 			return true
 		}
 	}

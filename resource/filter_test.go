@@ -137,7 +137,7 @@ func TestTypeFilter_MatchTagged(t *testing.T) {
 			want:   true,
 		},
 		{
-			name: "tagged filter, resource has tags",
+			name: "filter tagged resources, resource has tags",
 			filter: resource.TypeFilter{
 				Tagged: aws.Bool(true),
 			},
@@ -145,14 +145,14 @@ func TestTypeFilter_MatchTagged(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "tagged filter, resource has no tags",
+			name: "filter tagged resources, resource has no tags",
 			filter: resource.TypeFilter{
 				Tagged: aws.Bool(true),
 			},
 			want: false,
 		},
 		{
-			name: "untagged filter, resource has tags",
+			name: "filter untagged resources, resource has tags",
 			filter: resource.TypeFilter{
 				Tagged: aws.Bool(false),
 			},
@@ -160,7 +160,7 @@ func TestTypeFilter_MatchTagged(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "untagged filter, resource has no tags",
+			name: "filter untagged resources, resource has no tags",
 			filter: resource.TypeFilter{
 				Tagged: aws.Bool(false),
 			},
@@ -184,7 +184,27 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 		want   bool
 	}{
 		{
-			name: "no matching key",
+			name:   "no tags filter, resources has no tags",
+			filter: resource.TypeFilter{},
+			want:   true,
+		},
+		{
+			name:   "no tags filter, resources has tags",
+			filter: resource.TypeFilter{},
+			tags:   map[string]string{"foo": "bar"},
+			want:   true,
+		},
+		{
+			name: "filter one tag, resource has no tags",
+			filter: resource.TypeFilter{
+				Tags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "filter one tag, resource tags have no matching key",
 			filter: resource.TypeFilter{
 				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^ba"},
@@ -194,7 +214,7 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "matching key, but not value",
+			name: "filter one tag, one resource tag's key matches, but not value",
 			filter: resource.TypeFilter{
 				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar"},
@@ -204,7 +224,7 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "matching key and value",
+			name: "filter one tag, resource tag's key and value match",
 			filter: resource.TypeFilter{
 				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^ba"},
@@ -213,10 +233,163 @@ func TestTypeFilter_MatchTags(t *testing.T) {
 			tags: map[string]string{"foo": "bar"},
 			want: true,
 		},
+		{
+			name: "filter one tag, one out of multiple resource tag's key and value match",
+			filter: resource.TypeFilter{
+				Tags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boo": "baz"},
+			want: true,
+		},
+		{
+			name: "filter multiple tags, all match",
+			filter: resource.TypeFilter{
+				Tags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+					"boo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boo": "baz"},
+			want: true,
+		},
+		{
+			name: "filter multiple tags, one doesn't match (key)",
+			filter: resource.TypeFilter{
+				Tags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+					"boo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boz": "baz"},
+			want: false,
+		},
+		{
+			name: "filter multiple tags, one doesn't match (value)",
+			filter: resource.TypeFilter{
+				Tags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+					"boo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boo": "boz"},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.filter.MatchTags(tt.tags); got != tt.want {
+				t.Errorf("MatchTags() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTypeFilter_MatchNoTags(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter resource.TypeFilter
+		tags   map[string]string
+		want   bool
+	}{
+		{
+			name:   "no notags filter, resource has no tags",
+			filter: resource.TypeFilter{},
+			want:   true,
+		},
+		{
+			name:   "no notags filter, resource has tags",
+			filter: resource.TypeFilter{},
+			tags:   map[string]string{"foo": "bar"},
+			want:   true,
+		},
+		{
+			name: "resource has no tags",
+			filter: resource.TypeFilter{
+				NoTags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "no matching key",
+			filter: resource.TypeFilter{
+				NoTags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foz": "bar"},
+			want: true,
+		},
+		{
+			name: "matching key, but not value",
+			filter: resource.TypeFilter{
+				NoTags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^bar"},
+				},
+			},
+			tags: map[string]string{"foo": "baz"},
+			want: true,
+		},
+		{
+			name: "matching key and value",
+			filter: resource.TypeFilter{
+				NoTags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boo": "baz"},
+			want: false,
+		},
+		{
+			name: "matching key and value, multiple tags",
+			filter: resource.TypeFilter{
+				NoTags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boo": "baz"},
+			want: false,
+		},
+		{
+			name: "multiple filter match",
+			filter: resource.TypeFilter{
+				NoTags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+					"boo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boo": "baz"},
+			want: false,
+		},
+		{
+			name: "one of multiple filter rules doesn't match key",
+			filter: resource.TypeFilter{
+				NoTags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+					"boo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boz": "baz"},
+			want: true,
+		},
+		{
+			name: "one of multiple filter rules doesn't match value",
+			filter: resource.TypeFilter{
+				NoTags: map[string]resource.StringFilter{
+					"foo": {Pattern: "^ba"},
+					"boo": {Pattern: "^ba"},
+				},
+			},
+			tags: map[string]string{"foo": "bar", "boo": "boz"},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.filter.MatchNoTags(tt.tags); got != tt.want {
 				t.Errorf("MatchTags() = %v, want %v", got, tt.want)
 			}
 		})
