@@ -62,11 +62,16 @@ func list(c *Wipe) []terradozerRes.DestroyableResource {
 // Run executes the wipe command.
 func (c *Wipe) Run(args []string) int {
 	if len(args) == 1 {
-		c.filter = resource.NewFilter(args[0])
-
-		err := c.filter.Validate()
+		filter, err := resource.NewFilter(args[0])
 		if err != nil {
-			log.WithError(err).Fatal("failed to validate filter config")
+			log.WithError(err).Fatal("failed to create resource filter")
+		}
+
+		c.filter = filter
+
+		err = c.filter.Validate()
+		if err != nil {
+			log.WithError(err).Fatal("invalid filter config")
 		}
 	} else {
 		fmt.Println(help())
