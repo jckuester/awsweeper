@@ -3,38 +3,23 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
-	"github.com/apex/log"
-	"github.com/cloudetc/awsweeper/internal"
-	"github.com/cloudetc/awsweeper/resource"
 	"github.com/jckuester/terradozer/pkg/provider"
+
+	"github.com/apex/log"
+	"github.com/cloudetc/awsweeper/resource"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
-	"github.com/mitchellh/cli"
 	"gopkg.in/yaml.v2"
 )
 
-// Wipe is currently the only command.
-//
-// It deletes selected AWS resources by
-// a given filter (yaml configuration file).
-type Wipe struct {
-	UI          cli.Ui
-	dryRun      bool
-	forceDelete bool
-	client      *resource.AWS
-	provider    *provider.TerraformProvider
-	filter      *resource.Filter
-	outputType  string
-}
-
-func list(c *Wipe) []terradozerRes.DestroyableResource {
+func List(filter *resource.Filter, client *resource.AWS,
+	provider *provider.TerraformProvider, outputType string) []terradozerRes.DestroyableResource {
 	var destroyableRes []terradozerRes.DestroyableResource
 
-	for _, resType := range c.filter.Types() {
-		rawResources, err := c.client.RawResources(resType)
+	for _, resType := range filter.Types() {
+		rawResources, err := client.RawResources(resType)
 		if err != nil {
 			log.WithError(err).Fatal("failed to get raw resources")
 		}
@@ -44,63 +29,19 @@ func list(c *Wipe) []terradozerRes.DestroyableResource {
 			log.WithError(err).Fatal("failed to convert raw resources into deletable resources")
 		}
 
-		filteredRes := c.filter.Apply(resType, deletableResources, rawResources, c.client)
+		filteredRes := filter.Apply(resType, deletableResources, rawResources, client)
 		for _, res := range filteredRes {
-			print(res, c.outputType)
+			print(res, outputType)
 		}
 
 		for _, resFiltered := range filteredRes {
 			for _, r := range resFiltered {
-				destroyableRes = append(destroyableRes, terradozerRes.New(string(r.Type), r.ID, c.provider))
+				destroyableRes = append(destroyableRes, terradozerRes.New(string(r.Type), r.ID, provider))
 			}
 		}
 	}
 
 	return destroyableRes
-}
-
-// Run executes the wipe command.
-func (c *Wipe) Run(args []string) int {
-	if len(args) == 1 {
-		filter, err := resource.NewFilter(args[0])
-		if err != nil {
-			log.WithError(err).Fatal("failed to create resource filter")
-		}
-
-		c.filter = filter
-
-		err = c.filter.Validate()
-		if err != nil {
-			log.WithError(err).Fatal("invalid filter config")
-		}
-	} else {
-		fmt.Println(help())
-		return 1
-	}
-
-	internal.LogTitle("showing resources that would be deleted (dry run)")
-	resources := list(c)
-
-	if len(resources) == 0 {
-		internal.LogTitle("no resources found to delete")
-		return 0
-	}
-
-	internal.LogTitle(fmt.Sprintf("total number of resources that would be deleted: %d", len(resources)))
-
-	if !c.dryRun {
-		if !internal.UserConfirmedDeletion(os.Stdin, c.forceDelete) {
-			return 0
-		}
-
-		internal.LogTitle("Starting to delete resources")
-
-		numDeletedResources := terradozerRes.DestroyResources(resources, false, 10)
-
-		internal.LogTitle(fmt.Sprintf("total number of deleted resources: %d", numDeletedResources))
-	}
-
-	return 0
 }
 
 func print(res resource.Resources, outputType string) {
@@ -164,14 +105,4 @@ func printYaml(res resource.Resources) {
 	}
 
 	fmt.Print(string(b))
-}
-
-// Help returns help information of this command
-func (c *Wipe) Help() string {
-	return help()
-}
-
-// Synopsis returns a short version of the help information of this command
-func (c *Wipe) Synopsis() string {
-	return "Delete AWS resources via a yaml configuration"
 }
