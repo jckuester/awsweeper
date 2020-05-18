@@ -6,37 +6,52 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jckuester/terradozer/pkg/provider"
-
 	"github.com/apex/log"
 	"github.com/cloudetc/awsweeper/resource"
+	awsls "github.com/jckuester/awsls/aws"
+	awslsRes "github.com/jckuester/awsls/resource"
+	"github.com/jckuester/terradozer/pkg/provider"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
 	"gopkg.in/yaml.v2"
 )
 
-func List(filter *resource.Filter, client *resource.AWS,
+func List(filter *resource.Filter, client *resource.AWS, awsClient *awsls.Client,
 	provider *provider.TerraformProvider, outputType string) []terradozerRes.DestroyableResource {
 	var destroyableRes []terradozerRes.DestroyableResource
 
-	for _, resType := range filter.Types() {
-		rawResources, err := client.RawResources(resType)
-		if err != nil {
-			log.WithError(err).Fatal("failed to get raw resources")
-		}
+	for _, rType := range filter.Types() {
+		if resource.SupportedResourceType(rType) {
+			rawResources, err := client.RawResources(rType)
+			if err != nil {
+				log.WithError(err).Fatal("failed to get raw resources")
+			}
 
-		deletableResources, err := resource.DeletableResources(resType, rawResources)
-		if err != nil {
-			log.WithError(err).Fatal("failed to convert raw resources into deletable resources")
-		}
+			deletableResources, err := resource.DeletableResources(rType, rawResources)
+			if err != nil {
+				log.WithError(err).Fatal("failed to convert raw resources into deletable resources")
+			}
 
-		filteredRes := filter.Apply(resType, deletableResources, rawResources, client)
-		for _, res := range filteredRes {
-			print(res, outputType)
-		}
+			filteredRes := filter.Apply(rType, deletableResources, rawResources, client)
+			print(filteredRes, outputType)
 
-		for _, resFiltered := range filteredRes {
-			for _, r := range resFiltered {
-				destroyableRes = append(destroyableRes, terradozerRes.New(string(r.Type), r.ID, provider))
+			resourcesWithStates := awslsRes.GetStates(filteredRes, provider)
+
+			for _, r := range resourcesWithStates {
+				destroyableRes = append(destroyableRes, r.Resource)
+			}
+		} else {
+			resources, err := awsls.ListResourcesByType(awsClient, rType)
+			if err != nil {
+				log.WithError(err).Fatal("failed to list awsls supported resources")
+			}
+
+			filteredRes := filter.Apply(rType, resources, nil, client)
+			print(filteredRes, outputType)
+
+			resourcesWithStates := awslsRes.GetStates(filteredRes, provider)
+
+			for _, r := range resourcesWithStates {
+				destroyableRes = append(destroyableRes, r.Resource)
 			}
 		}
 	}
@@ -44,7 +59,7 @@ func List(filter *resource.Filter, client *resource.AWS,
 	return destroyableRes
 }
 
-func print(res resource.Resources, outputType string) {
+func print(res []awsls.Resource, outputType string) {
 	if len(res) == 0 {
 		return
 	}
@@ -61,7 +76,7 @@ func print(res resource.Resources, outputType string) {
 	}
 }
 
-func printString(res resource.Resources) {
+func printString(res []awsls.Resource) {
 	fmt.Printf("\n\t---\n\tType: %s\n\tFound: %d\n\n", res[0].Type, len(res))
 
 	for _, r := range res {
@@ -80,8 +95,8 @@ func printString(res resource.Resources) {
 			}
 		}
 		printStat += "\n"
-		if r.Created != nil {
-			printStat += fmt.Sprintf("\tCreated:\t%s", r.Created)
+		if r.CreatedAt != nil {
+			printStat += fmt.Sprintf("\tCreated:\t%s", r.CreatedAt)
 			printStat += "\n"
 		}
 		fmt.Println(printStat)
@@ -89,7 +104,7 @@ func printString(res resource.Resources) {
 	fmt.Print("\t---\n\n")
 }
 
-func printJson(res resource.Resources) {
+func printJson(res []awsls.Resource) {
 	b, err := json.Marshal(res)
 	if err != nil {
 		log.WithError(err).Fatal("failed to marshal resources into JSON")
@@ -98,7 +113,7 @@ func printJson(res resource.Resources) {
 	fmt.Print(string(b))
 }
 
-func printYaml(res resource.Resources) {
+func printYaml(res []awsls.Resource) {
 	b, err := yaml.Marshal(res)
 	if err != nil {
 		log.WithError(err).Fatal("failed to marshal resources into YAML")

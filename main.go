@@ -147,7 +147,7 @@ func mainExitCode() int {
 
 	client := resource.NewAWS(sess)
 
-	_, err = awsls.NewClient()
+	awsClient, err := awsls.NewClient()
 	if err != nil {
 		fmt.Fprint(os.Stderr, color.RedString("\nError: %s\n", err))
 
@@ -155,7 +155,7 @@ func mainExitCode() int {
 	}
 
 	internal.LogTitle("showing resources that would be deleted (dry run)")
-	resources := command.List(filter, client, provider, outputType)
+	resources := command.List(filter, client, awsClient, provider, outputType)
 
 	if len(resources) == 0 {
 		internal.LogTitle("no resources found to delete")

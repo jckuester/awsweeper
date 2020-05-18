@@ -1,6 +1,7 @@
 package resource_test
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -63,36 +64,36 @@ func TestFilter_Validate(t *testing.T) {
 	}
 }
 
-func TestYamlFilter_Types(t *testing.T) {
-	// given
-	f := &resource.Filter{
-		resource.Instance: {},
-		resource.Vpc:      {},
+func TestFilter_Types(t *testing.T) {
+	tests := []struct {
+		name string
+		f    resource.Filter
+		want []string
+	}{
+		{
+			name: "dependency order",
+			f: resource.Filter{
+				resource.Vpc:      {},
+				resource.Instance: {},
+			},
+			want: []string{resource.Instance, resource.Vpc},
+		},
+		{
+			name: "dependency order not specified",
+			f: resource.Filter{
+				resource.Vpc:   {},
+				"aws_glue_job": {},
+			},
+			want: []string{resource.Vpc, "aws_glue_job"},
+		},
 	}
-
-	// when
-	resTypes := f.Types()
-
-	// then
-	assert.Len(t, resTypes, 2)
-	assert.Contains(t, resTypes, resource.Vpc)
-	assert.Contains(t, resTypes, resource.Instance)
-}
-
-func TestYamlFilter_Types_DependencyOrder(t *testing.T) {
-	// given
-	f := &resource.Filter{
-		resource.Subnet: {},
-		resource.Vpc:    {},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.f.Types(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Types() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-
-	// when
-	resTypes := f.Types()
-
-	// then
-	assert.Len(t, resTypes, 2)
-	assert.Equal(t, resTypes[0], resource.Subnet)
-	assert.Equal(t, resTypes[1], resource.Vpc)
 }
 
 func Test_ParseFile(t *testing.T) {

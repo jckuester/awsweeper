@@ -3,7 +3,6 @@ package resource
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -232,20 +231,6 @@ func NewAWS(s *session.Session) *AWS {
 		S3API:             s3.New(s),
 		STSAPI:            sts.New(s),
 	}
-}
-
-// Resources is a list of AWS resources.
-type Resources []*Resource
-
-// Resource contains information about a single AWS resource that can be deleted by Terraform.
-type Resource struct {
-	Type string
-	// ID by which the resource can be deleted (in some cases the ID is the resource's name, but not always;
-	// that's why we need the deleteIDs map)
-	ID      string
-	Tags    map[string]string
-	Created *time.Time
-	Attrs   map[string]string
 }
 
 // RawResources lists all resources of a particular type
