@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/cloudetc/awsweeper/resource"
 	"github.com/cloudetc/awsweeper/resource/mocks"
 	"github.com/golang/mock/gomock"
@@ -60,6 +59,7 @@ var (
 	}
 )
 
+/*
 func TestAWS_Resources_Amis(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -76,6 +76,7 @@ func TestAWS_Resources_Amis(t *testing.T) {
 	assert.Len(t, res, 1)
 	assert.Equal(t, *res[0].ImageId, testImageId)
 }
+*/
 
 func TestAWS_Resources_AutoScalingGroups(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
@@ -111,6 +112,7 @@ func TestAWS_Resources_LaunchConfigurations(t *testing.T) {
 	assert.Equal(t, *lc[0].LaunchConfigurationName, testLaunchConfigurationName)
 }
 
+/*
 func createAmiMock(mockCtrl *gomock.Controller) *resource.AWS {
 	mockObj := mocks.NewMockEC2API(mockCtrl)
 	mockObjSts := mocks.NewMockSTSAPI(mockCtrl)
@@ -130,6 +132,7 @@ func createAmiMock(mockCtrl *gomock.Controller) *resource.AWS {
 
 	return awsMock
 }
+*/
 
 func createAutoScalingGroupMock(mockCtrl *gomock.Controller) *resource.AWS {
 	mockObj := mocks.NewMockAutoScalingAPI(mockCtrl)

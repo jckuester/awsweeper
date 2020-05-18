@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/apex/log"
+	awsls "github.com/jckuester/awsls/resource"
 	"gopkg.in/yaml.v2"
 )
 
 // Filter represents the content of a yaml file that is used to filter resources for deletion.
-type Filter map[TerraformResourceType][]TypeFilter
+type Filter map[string][]TypeFilter
 
 // TypeFilter represents an entry in the yaml file to filter the resources of a particular resource type.
 type TypeFilter struct {
@@ -63,7 +64,7 @@ func NewFilter(path string) (*Filter, error) {
 // Validate checks if all resource types appearing in the config are currently supported.
 func (f Filter) Validate() error {
 	for _, resType := range f.Types() {
-		if !SupportedResourceType(resType) {
+		if !(SupportedResourceType(resType) || awsls.IsSupportedType(resType)) {
 			return fmt.Errorf("unsupported resource type: %s", resType)
 		}
 	}
@@ -71,8 +72,8 @@ func (f Filter) Validate() error {
 }
 
 // Types returns all the resource types in the config in their dependency order.
-func (f Filter) Types() []TerraformResourceType {
-	resTypes := make([]TerraformResourceType, 0, len(f))
+func (f Filter) Types() []string {
+	resTypes := make([]string, 0, len(f))
 
 	for k := range f {
 		resTypes = append(resTypes, k)

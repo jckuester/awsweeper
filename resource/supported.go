@@ -40,48 +40,45 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TerraformResourceType identifies the type of a resource
-type TerraformResourceType string
-
 const (
-	Ami                 TerraformResourceType = "aws_ami"
-	AutoscalingGroup    TerraformResourceType = "aws_autoscaling_group"
-	CloudformationStack TerraformResourceType = "aws_cloudformation_stack"
-	CloudWatchLogGroup  TerraformResourceType = "aws_cloudwatch_log_group"
-	EbsSnapshot         TerraformResourceType = "aws_ebs_snapshot"
-	EbsVolume           TerraformResourceType = "aws_ebs_volume"
-	EcsCluster          TerraformResourceType = "aws_ecs_cluster"
-	EfsFileSystem       TerraformResourceType = "aws_efs_file_system"
-	Eip                 TerraformResourceType = "aws_eip"
-	Elb                 TerraformResourceType = "aws_elb"
-	IamGroup            TerraformResourceType = "aws_iam_group"
-	IamInstanceProfile  TerraformResourceType = "aws_iam_instance_profile"
-	IamPolicy           TerraformResourceType = "aws_iam_policy"
-	IamRole             TerraformResourceType = "aws_iam_role"
-	IamUser             TerraformResourceType = "aws_iam_user"
-	Instance            TerraformResourceType = "aws_instance"
-	InternetGateway     TerraformResourceType = "aws_internet_gateway"
-	KeyPair             TerraformResourceType = "aws_key_pair"
-	KmsAlias            TerraformResourceType = "aws_kms_alias"
-	KmsKey              TerraformResourceType = "aws_kms_key"
-	LambdaFunction      TerraformResourceType = "aws_lambda_function"
-	LaunchConfiguration TerraformResourceType = "aws_launch_configuration"
-	NatGateway          TerraformResourceType = "aws_nat_gateway"
-	NetworkACL          TerraformResourceType = "aws_network_acl"
-	NetworkInterface    TerraformResourceType = "aws_network_interface"
-	DBInstance          TerraformResourceType = "aws_db_instance"
-	Route53Zone         TerraformResourceType = "aws_route53_zone"
-	RouteTable          TerraformResourceType = "aws_route_table"
-	S3Bucket            TerraformResourceType = "aws_s3_bucket"
-	SecurityGroup       TerraformResourceType = "aws_security_group"
-	Subnet              TerraformResourceType = "aws_subnet"
-	CloudTrail          TerraformResourceType = "aws_cloudtrail"
-	Vpc                 TerraformResourceType = "aws_vpc"
-	VpcEndpoint         TerraformResourceType = "aws_vpc_endpoint"
+	Ami                 = "aws_ami"
+	AutoscalingGroup    = "aws_autoscaling_group"
+	CloudformationStack = "aws_cloudformation_stack"
+	CloudWatchLogGroup  = "aws_cloudwatch_log_group"
+	EbsSnapshot         = "aws_ebs_snapshot"
+	EbsVolume           = "aws_ebs_volume"
+	EcsCluster          = "aws_ecs_cluster"
+	EfsFileSystem       = "aws_efs_file_system"
+	Eip                 = "aws_eip"
+	Elb                 = "aws_elb"
+	IamGroup            = "aws_iam_group"
+	IamInstanceProfile  = "aws_iam_instance_profile"
+	IamPolicy           = "aws_iam_policy"
+	IamRole             = "aws_iam_role"
+	IamUser             = "aws_iam_user"
+	Instance            = "aws_instance"
+	InternetGateway     = "aws_internet_gateway"
+	KeyPair             = "aws_key_pair"
+	KmsAlias            = "aws_kms_alias"
+	KmsKey              = "aws_kms_key"
+	LambdaFunction      = "aws_lambda_function"
+	LaunchConfiguration = "aws_launch_configuration"
+	NatGateway          = "aws_nat_gateway"
+	NetworkACL          = "aws_network_acl"
+	NetworkInterface    = "aws_network_interface"
+	DBInstance          = "aws_db_instance"
+	Route53Zone         = "aws_route53_zone"
+	RouteTable          = "aws_route_table"
+	S3Bucket            = "aws_s3_bucket"
+	SecurityGroup       = "aws_security_group"
+	Subnet              = "aws_subnet"
+	CloudTrail          = "aws_cloudtrail"
+	Vpc                 = "aws_vpc"
+	VpcEndpoint         = "aws_vpc_endpoint"
 )
 
 var (
-	deleteIDs = map[TerraformResourceType]string{
+	deleteIDs = map[string]string{
 		Ami:                 "ImageId",
 		AutoscalingGroup:    "AutoScalingGroupName",
 		CloudformationStack: "StackId",
@@ -122,7 +119,7 @@ var (
 	// DependencyOrder is the order in which resource types should be deleted,
 	// since dependent resources need to be deleted before their dependencies
 	// (e.g. aws_subnet before aws_vpc)
-	DependencyOrder = map[TerraformResourceType]int{
+	DependencyOrder = map[string]int{
 		LambdaFunction:      10100,
 		EcsCluster:          10000,
 		AutoscalingGroup:    9990,
@@ -178,13 +175,13 @@ var (
 	}
 )
 
-func SupportedResourceType(resType TerraformResourceType) bool {
+func SupportedResourceType(resType string) bool {
 	_, found := deleteIDs[resType]
 
 	return found
 }
 
-func getDeleteID(resType TerraformResourceType) (string, error) {
+func getDeleteID(resType string) (string, error) {
 	deleteID, found := deleteIDs[resType]
 	if !found {
 		return "", errors.Errorf("no delete ID specified for resource type: %s", resType)
@@ -242,7 +239,7 @@ type Resources []*Resource
 
 // Resource contains information about a single AWS resource that can be deleted by Terraform.
 type Resource struct {
-	Type TerraformResourceType
+	Type string
 	// ID by which the resource can be deleted (in some cases the ID is the resource's name, but not always;
 	// that's why we need the deleteIDs map)
 	ID      string
@@ -252,7 +249,7 @@ type Resource struct {
 }
 
 // RawResources lists all resources of a particular type
-func (a *AWS) RawResources(resType TerraformResourceType) (interface{}, error) {
+func (a *AWS) RawResources(resType string) (interface{}, error) {
 	switch resType {
 	case Ami:
 		return a.amis()

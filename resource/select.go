@@ -13,7 +13,7 @@ import (
 // here is where the filtering of resources happens, i.e.
 // the filter entry in the config for a certain resource type
 // is applied to all resources of that type.
-func (f Filter) Apply(resType TerraformResourceType, res Resources, raw interface{}, aws *AWS) []Resources {
+func (f Filter) Apply(resType string, res Resources, raw interface{}, aws *AWS) []Resources {
 	switch resType {
 	case EfsFileSystem:
 		return f.efsFileSystemFilter(res, raw, aws)

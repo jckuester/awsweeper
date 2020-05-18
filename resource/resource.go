@@ -11,7 +11,7 @@ import (
 
 // Resources converts given raw resources for a given resource type
 // into a format that can be deleted by the Terraform API.
-func DeletableResources(resType TerraformResourceType, resources interface{}) (Resources, error) {
+func DeletableResources(resType string, resources interface{}) (Resources, error) {
 	deletableResources := Resources{}
 	reflectResources := reflect.ValueOf(resources)
 	for i := 0; i < reflectResources.Len(); i++ {
