@@ -38,7 +38,7 @@ func TestFilter_Validate(t *testing.T) {
 				resource.IamRole:       {},
 				resource.SecurityGroup: {},
 				resource.Instance:      {},
-				resource.Vpc:           {},
+				"aws_vpc":              {},
 			},
 		},
 		{
@@ -73,18 +73,18 @@ func TestFilter_Types(t *testing.T) {
 		{
 			name: "dependency order",
 			f: resource.Filter{
-				resource.Vpc:      {},
+				"aws_vpc":         {},
 				resource.Instance: {},
 			},
-			want: []string{resource.Instance, resource.Vpc},
+			want: []string{resource.Instance, "aws_vpc"},
 		},
 		{
 			name: "dependency order not specified",
 			f: resource.Filter{
-				resource.Vpc:   {},
+				"aws_vpc":      {},
 				"aws_glue_job": {},
 			},
-			want: []string{resource.Vpc, "aws_glue_job"},
+			want: []string{"aws_vpc", "aws_glue_job"},
 		},
 	}
 	for _, tt := range tests {

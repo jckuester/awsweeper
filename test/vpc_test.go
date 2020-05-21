@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	res "github.com/cloudetc/awsweeper/resource"
 )
 
 func TestAcc_Vpc_DeleteByID(t *testing.T) {
@@ -32,7 +31,7 @@ func TestAcc_Vpc_DeleteByID(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertVpcExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.Vpc, id)
+	writeConfigID(t, terraformDir, "aws_vpc", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
@@ -61,7 +60,7 @@ func TestAcc_Vpc_DeleteByTag(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertVpcExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.Vpc)
+	writeConfigTag(t, terraformDir, "aws_vpc")
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")

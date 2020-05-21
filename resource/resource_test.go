@@ -48,7 +48,7 @@ func TestDeletableResources_Created(t *testing.T) {
 	// then
 	require.Len(t, res, 1)
 	require.Equal(t, testInstanceID, res[0].ID)
-	require.Equal(t, testLaunchTime, res[0].Created)
+	require.Equal(t, testLaunchTime, res[0].CreatedAt)
 
 }
 
@@ -68,5 +68,5 @@ func TestDeletableResources_CreatedFieldIsTypeString(t *testing.T) {
 
 	// then
 	require.Len(t, res, 1)
-	require.Equal(t, testCreationDate, res[0].Created.Format("2006-01-02T15:04:05.000Z0700"))
+	require.Equal(t, testCreationDate, res[0].CreatedAt.Format("2006-01-02T15:04:05.000Z0700"))
 }

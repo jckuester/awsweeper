@@ -43,7 +43,6 @@ const (
 	Ami                 = "aws_ami"
 	AutoscalingGroup    = "aws_autoscaling_group"
 	CloudformationStack = "aws_cloudformation_stack"
-	CloudWatchLogGroup  = "aws_cloudwatch_log_group"
 	EbsSnapshot         = "aws_ebs_snapshot"
 	EbsVolume           = "aws_ebs_volume"
 	EcsCluster          = "aws_ecs_cluster"
@@ -60,19 +59,16 @@ const (
 	KeyPair             = "aws_key_pair"
 	KmsAlias            = "aws_kms_alias"
 	KmsKey              = "aws_kms_key"
-	LambdaFunction      = "aws_lambda_function"
 	LaunchConfiguration = "aws_launch_configuration"
 	NatGateway          = "aws_nat_gateway"
 	NetworkACL          = "aws_network_acl"
 	NetworkInterface    = "aws_network_interface"
-	DBInstance          = "aws_db_instance"
 	Route53Zone         = "aws_route53_zone"
 	RouteTable          = "aws_route_table"
 	S3Bucket            = "aws_s3_bucket"
 	SecurityGroup       = "aws_security_group"
 	Subnet              = "aws_subnet"
 	CloudTrail          = "aws_cloudtrail"
-	Vpc                 = "aws_vpc"
 	VpcEndpoint         = "aws_vpc_endpoint"
 )
 
@@ -81,7 +77,6 @@ var (
 		Ami:                 "ImageId",
 		AutoscalingGroup:    "AutoScalingGroupName",
 		CloudformationStack: "StackId",
-		CloudWatchLogGroup:  "LogGroupName",
 		EbsSnapshot:         "SnapshotId",
 		EbsVolume:           "VolumeId",
 		// Note: to import a cluster, the name is used as ID
@@ -99,19 +94,16 @@ var (
 		KeyPair:             "KeyName",
 		KmsAlias:            "AliasName",
 		KmsKey:              "KeyId",
-		LambdaFunction:      "FunctionName",
 		LaunchConfiguration: "LaunchConfigurationName",
 		NatGateway:          "NatGatewayId",
 		NetworkACL:          "NetworkAclId",
 		NetworkInterface:    "NetworkInterfaceId",
-		DBInstance:          "DBInstanceIdentifier",
 		Route53Zone:         "Id",
 		RouteTable:          "RouteTableId",
 		S3Bucket:            "Name",
 		SecurityGroup:       "GroupId",
 		Subnet:              "SubnetId",
 		CloudTrail:          "Name",
-		Vpc:                 "VpcId",
 		VpcEndpoint:         "VpcEndpointId",
 	}
 
@@ -119,40 +111,40 @@ var (
 	// since dependent resources need to be deleted before their dependencies
 	// (e.g. aws_subnet before aws_vpc)
 	DependencyOrder = map[string]int{
-		LambdaFunction:      10100,
-		EcsCluster:          10000,
-		AutoscalingGroup:    9990,
-		Instance:            9980,
-		KeyPair:             9970,
-		Elb:                 9960,
-		VpcEndpoint:         9950,
-		NatGateway:          9940,
-		CloudformationStack: 9930,
-		Route53Zone:         9920,
-		EfsFileSystem:       9910,
-		LaunchConfiguration: 9900,
-		Eip:                 9890,
-		InternetGateway:     9880,
-		Subnet:              9870,
-		RouteTable:          9860,
-		SecurityGroup:       9850,
-		NetworkACL:          9840,
-		Vpc:                 9830,
-		DBInstance:          9825,
-		IamPolicy:           9820,
-		IamGroup:            9810,
-		IamUser:             9800,
-		IamRole:             9790,
-		IamInstanceProfile:  9780,
-		S3Bucket:            9750,
-		Ami:                 9740,
-		EbsVolume:           9730,
-		EbsSnapshot:         9720,
-		KmsAlias:            9610,
-		KmsKey:              9600,
-		NetworkInterface:    9000,
-		CloudWatchLogGroup:  8900,
-		CloudTrail:          8800,
+		"aws_lambda_function":      10100,
+		EcsCluster:                 10000,
+		AutoscalingGroup:           9990,
+		Instance:                   9980,
+		KeyPair:                    9970,
+		Elb:                        9960,
+		VpcEndpoint:                9950,
+		NatGateway:                 9940,
+		CloudformationStack:        9930,
+		Route53Zone:                9920,
+		EfsFileSystem:              9910,
+		LaunchConfiguration:        9900,
+		Eip:                        9890,
+		InternetGateway:            9880,
+		Subnet:                     9870,
+		RouteTable:                 9860,
+		SecurityGroup:              9850,
+		NetworkACL:                 9840,
+		"aws_vpc":                  9830,
+		"aws_db_instance":          9825,
+		IamPolicy:                  9820,
+		IamGroup:                   9810,
+		IamUser:                    9800,
+		IamRole:                    9790,
+		IamInstanceProfile:         9780,
+		S3Bucket:                   9750,
+		Ami:                        9740,
+		EbsVolume:                  9730,
+		EbsSnapshot:                9720,
+		KmsAlias:                   9610,
+		KmsKey:                     9600,
+		NetworkInterface:           9000,
+		"aws_cloudwatch_log_group": 8900,
+		CloudTrail:                 8800,
 	}
 
 	tagFieldNames = []string{
@@ -242,8 +234,6 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.autoscalingGroups()
 	case CloudformationStack:
 		return a.cloudFormationStacks()
-	case CloudWatchLogGroup:
-		return a.cloudWatchLogGroups()
 	case EbsSnapshot:
 		return a.ebsSnapshots()
 	case EbsVolume:
@@ -276,8 +266,6 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.KmsAliases()
 	case KmsKey:
 		return a.KmsKeys()
-	case LambdaFunction:
-		return a.lambdaFunctions()
 	case LaunchConfiguration:
 		return a.launchConfigurations()
 	case NatGateway:
@@ -286,8 +274,6 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.networkAcls()
 	case NetworkInterface:
 		return a.networkInterfaces()
-	case DBInstance:
-		return a.rdsInstances()
 	case Route53Zone:
 		return a.route53Zones()
 	case RouteTable:
@@ -300,8 +286,6 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.subnets()
 	case CloudTrail:
 		return a.cloudTrails()
-	case Vpc:
-		return a.vpcs()
 	case VpcEndpoint:
 		return a.vpcEndpoints()
 	default:
@@ -422,14 +406,6 @@ func (a *AWS) cloudFormationStacks() (interface{}, error) {
 	return output.Stacks, nil
 }
 
-func (a *AWS) cloudWatchLogGroups() (interface{}, error) {
-	output, err := a.CloudWatchLogsAPI.DescribeLogGroups(&cloudwatchlogs.DescribeLogGroupsInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.LogGroups, nil
-}
-
 func (a *AWS) route53Zones() (interface{}, error) {
 	output, err := a.ListHostedZones(&route53.ListHostedZonesInput{})
 	if err != nil {
@@ -490,14 +466,6 @@ func (a *AWS) routeTables() (interface{}, error) {
 	return output.RouteTables, nil
 }
 
-func (a *AWS) rdsInstances() (interface{}, error) {
-	output, err := a.DescribeDBInstances(&rds.DescribeDBInstancesInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.DBInstances, nil
-}
-
 func (a *AWS) SecurityGroup() (interface{}, error) {
 	output, err := a.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{})
 	if err != nil {
@@ -512,14 +480,6 @@ func (a *AWS) networkAcls() (interface{}, error) {
 		return nil, err
 	}
 	return output.NetworkAcls, nil
-}
-
-func (a *AWS) vpcs() (interface{}, error) {
-	output, err := a.DescribeVpcs(&ec2.DescribeVpcsInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.Vpcs, nil
 }
 
 func (a *AWS) iamPolicies() (interface{}, error) {
@@ -658,14 +618,6 @@ func (a *AWS) autoscalingGroups() (interface{}, error) {
 		return nil, err
 	}
 	return output.AutoScalingGroups, nil
-}
-
-func (a *AWS) lambdaFunctions() (interface{}, error) {
-	output, err := a.ListFunctions(&lambda.ListFunctionsInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.Functions, nil
 }
 
 func (a *AWS) launchConfigurations() (interface{}, error) {
