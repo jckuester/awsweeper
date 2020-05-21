@@ -31,26 +31,28 @@ func List(filter *resource.Filter, client *resource.AWS, awsClient *awsls.Client
 				log.WithError(err).Fatal("failed to convert raw resources into deletable resources")
 			}
 
-			filteredRes := filter.Apply(rType, deletableResources, rawResources, client)
+			resourcesWithStates := awslsRes.GetStates(deletableResources, provider)
+
+			filteredRes := filter.Apply(rType, resourcesWithStates, rawResources, client)
 			print(filteredRes, outputType)
 
-			resourcesWithStates := awslsRes.GetStates(filteredRes, provider)
-
-			for _, r := range resourcesWithStates {
+			for _, r := range filteredRes {
 				destroyableRes = append(destroyableRes, r.Resource)
 			}
 		} else {
 			resources, err := awsls.ListResourcesByType(awsClient, rType)
 			if err != nil {
 				log.WithError(err).Fatal("failed to list awsls supported resources")
+
+				continue
 			}
 
-			filteredRes := filter.Apply(rType, resources, nil, client)
+			resourcesWithStates := awslsRes.GetStates(resources, provider)
+
+			filteredRes := filter.Apply(rType, resourcesWithStates, nil, client)
 			print(filteredRes, outputType)
 
-			resourcesWithStates := awslsRes.GetStates(filteredRes, provider)
-
-			for _, r := range resourcesWithStates {
+			for _, r := range filteredRes {
 				destroyableRes = append(destroyableRes, r.Resource)
 			}
 		}
@@ -96,7 +98,7 @@ func printString(res []awsls.Resource) {
 		}
 		printStat += "\n"
 		if r.CreatedAt != nil {
-			printStat += fmt.Sprintf("\tCreated:\t%s", r.CreatedAt)
+			printStat += fmt.Sprintf("\t\tCreated:\t%s", r.CreatedAt)
 			printStat += "\n"
 		}
 		fmt.Println(printStat)

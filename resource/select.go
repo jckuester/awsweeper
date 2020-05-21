@@ -1,20 +1,37 @@
 package resource
 
 import (
-	"log"
+	"fmt"
 	"strings"
 
+	"github.com/apex/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
 	awsls "github.com/jckuester/awsls/aws"
+	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/gocty"
 )
 
 // here is where the filtering of resources happens, i.e.
 // the filter entry in the config for a certain resource type
 // is applied to all resources of that type.
 func (f Filter) Apply(resType string, res []awsls.Resource, raw interface{}, aws *AWS) []awsls.Resource {
+	for i, r := range res {
+		tags, err := GetTags(&r)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"type": r.Type,
+				"id":   r.ID,
+			}).WithError(err).Debug("failed to get tags")
+
+			continue
+		}
+
+		res[i].Tags = tags
+	}
+
 	switch resType {
 	case EfsFileSystem:
 		return f.efsFileSystemFilter(res, raw, aws)
@@ -28,6 +45,40 @@ func (f Filter) Apply(resType string, res []awsls.Resource, raw interface{}, aws
 		return f.kmsKeyAliasFilter(res)
 	default:
 		return f.defaultFilter(res)
+	}
+}
+
+func GetTags(r *awsls.Resource) (map[string]string, error) {
+	if r.Resource == nil {
+		return nil, fmt.Errorf("resource is nil")
+	}
+
+	state := r.State()
+
+	if state == nil {
+		return nil, fmt.Errorf("state is nil")
+	}
+
+	if !state.CanIterateElements() {
+		return nil, fmt.Errorf("cannot iterate: %s", *state)
+	}
+
+	attrValue, ok := state.AsValueMap()["tags"]
+	if !ok {
+		return nil, fmt.Errorf("attribute not found: tags")
+	}
+
+	switch attrValue.Type() {
+	case cty.Map(cty.String):
+		var v map[string]string
+		err := gocty.FromCtyValue(attrValue, &v)
+		if err != nil {
+			return nil, err
+		}
+
+		return v, nil
+	default:
+		return nil, fmt.Errorf("currently unhandled type: %s", attrValue.Type().FriendlyName())
 	}
 }
 
@@ -121,7 +172,7 @@ func (f Filter) iamPolicyFilter(res []awsls.Resource, raw interface{}, c *AWS) [
 				PolicyArn: &r.ID,
 			})
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal(err.Error())
 			}
 
 			var roles []string
