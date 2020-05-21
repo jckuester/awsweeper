@@ -34,7 +34,7 @@ func TestAcc_ECSCluster_DeleteByID(t *testing.T) {
 	writeConfigID(t, terraformDir, "aws_ecs_cluster", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n", "-debug")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
 	assertEcsClusterDeleted(t, env, id)

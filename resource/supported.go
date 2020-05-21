@@ -42,6 +42,7 @@ const (
 	Ami              = "aws_ami"
 	AutoscalingGroup = "aws_autoscaling_group"
 	EbsSnapshot      = "aws_ebs_snapshot"
+	EcsCluster       = "aws_ecs_cluster"
 	EfsFileSystem    = "aws_efs_file_system"
 	IamPolicy        = "aws_iam_policy"
 	IamUser          = "aws_iam_user"
@@ -57,6 +58,7 @@ var (
 		Ami:              "ImageId",
 		AutoscalingGroup: "AutoScalingGroupName",
 		// Note: to import a cluster, the name is used as ID
+		EcsCluster:    "ClusterArn",
 		EfsFileSystem: "FileSystemId",
 		IamPolicy:     "Arn",
 		IamUser:       "UserName",
@@ -189,6 +191,8 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.autoscalingGroups()
 	case EbsSnapshot:
 		return a.ebsSnapshots()
+	case EcsCluster:
+		return a.ecsClusters()
 	case EfsFileSystem:
 		return a.efsFileSystems()
 	case IamPolicy:
@@ -252,6 +256,20 @@ func (a *AWS) natGateways() (interface{}, error) {
 		return nil, err
 	}
 	return output.NatGateways, nil
+}
+
+func (a *AWS) ecsClusters() (interface{}, error) {
+	listOutput, err := a.ListClusters(&ecs.ListClustersInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	descOutput, err := a.DescribeClusters(&ecs.DescribeClustersInput{
+		Clusters: listOutput.ClusterArns,
+		Include:  []*string{aws.String("TAGS")},
+	})
+
+	return descOutput.Clusters, nil
 }
 
 func (a *AWS) efsFileSystems() (interface{}, error) {

@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="AWSweeper Logo" src="https://github.com/cloudetc/awsweeper/blob/master/img/logo.png" height="180" />
+  <img alt="AWSweeper" src="https://github.com/cloudetc/awsweeper/blob/master/img/logo.png" height="180" />
   <h3 align="center">AWSweeper</h3>
   <p align="center">A tool for cleaning your AWS account</p>
 </p>
@@ -9,13 +9,31 @@
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
 [![Travis](https://img.shields.io/travis/cloudetc/awsweeper/master.svg?style=for-the-badge)](https://travis-ci.org/cloudetc/awsweeper)
 
-AWSweeper can clean out [over 200 resource types](#supported-resources) in your AWS account. Resources to be deleted
-can be filtered by their type, ID, tags or creation date using [regular expressions](https://golang.org/pkg/regexp/syntax/)
-declared via a filter in a YAML file (see [filter.yml](example/config.yml) as an example).
+AWSweeper is able to clean out [over 200 resource types](#supported-resources) in your AWS account. Resources to be deleted
+can be filtered by their type, ID, tags, or creation date using [regular expressions](https://golang.org/pkg/regexp/syntax/)
+declared in a YAML file (see [filter.yml](example/filter.yml) as an example).
+
+To keep up supporting the continuously growing number of new resources, AWSweeper is standing upon the shoulders of
+delete routines provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
+List operations are borrowed from the [awsls](https://github.com/jckuester/awsls) open-source project and are
+code-generated based on the [model of the AWS API](https://github.com/aws/aws-sdk-go-v2/tree/master/models/apis).
+Not being fully there yet, but the goal is to support every AWS resource that is covered by Terraform (currently over 500)
+without adding and maintaining much code here.
+
+If you run into issues deleting resources, please open an issue or ping me on [Twitter](https://twitter.com/jckuester).
 
 Happy erasing!
 
+## Example
+
 [![AWSweeper tutorial](img/asciinema-tutorial.gif)](https://asciinema.org/a/149097)
+
+## Features
+
+* Nothing will be deleted without your confirmation. AWSweeper always lists all resources first and then waits for
+  your approval (also without the `--dry-run` flag). With the `--dry-run` flag, AWSweeper lists all resources and exits.
+* Using the `-force` flag (dangerous!), AWSweeper can in run an automated fashion without human interaction and approval,
+  for example, as part of a CI pipeline
 
 ## Installation
 
@@ -109,11 +127,10 @@ Here is a more detailed description of the various ways to filter resources:
 
 ##### 3) Delete By ID
 
-   You can narrow down on particular types of resources by filtering on based their IDs.
+   You can filter resources of a particular type based on their IDs.
 
-   To see what the ID of a resource is (could be its name, ARN, a random number),
-   run AWSweeper in dry-run mode: `awsweeper --dry-run all.yml`. This way, nothing is deleted but
-   all the IDs and tags of your resources are printed. Then, use this information to create the YAML config file.
+   To see what the IDs for a type of resource look like (sometimes it's the name, sometimes the ARN, ...), run AWSweeper
+   first in dry-run mode. Then, use this information to create the YAML filter accordingly.
 
    The id filter can be negated by surrounding the regex with `NOT(...)`
 
@@ -139,19 +156,10 @@ Here is a more detailed description of the various ways to filter resources:
      * Space separated, no time zone: `2006-1-2 15:4:5.999999999`
      * Date only: `2006-1-2`
 
-## Dry-run mode
-
- Use `awsweeper --dry-run <filter.yml>` to only show what
-would be deleted. This way, you can fine-tune your YAML filter configuration until it works the way you want it to.
-
 ## Supported resources
 
-AWSweeper can currently delete more than 200 AWS resource types.
-
-Note that the resource types in the list below are [Terraform Types](https://www.terraform.io/docs/providers/aws/index.html),
-which must be used in the YAML configuration to filter resources by their type.
-A technical reason for this is that AWSweeper is build upon the already existing 
-delete routines provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
+Resource types in the list below are [Terraform Types](https://www.terraform.io/docs/providers/aws/index.html),
+which have to be used in the YAML file to filter resources by their type.
 
 | Service / Resource Type | Delete by tag | Delete by creation date
 | :-----------------------------   |:-------------:|:-----------------------:
@@ -462,6 +470,5 @@ or to test the working of AWSweeper for a just single resource, such as `aws_vpc
 
 ## Disclaimer
 
-This tool is thoroughly tested. However, you are using this tool at your own risk!
-I will not take responsibility if you delete any critical resources in your
+You are using this tool at your own risk! I will not take responsibility if you delete any critical resources in your
 production environments.

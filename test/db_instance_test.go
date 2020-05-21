@@ -17,7 +17,7 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Only running from time to time, as this test costs some money.")
+	t.Skip("Only running from time to time, as this test costs money.")
 
 	env := InitEnv(t)
 
@@ -47,6 +47,7 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
+	t.Skip("Only running from time to time, as this test costs money.")
 
 	env := InitEnv(t)
 

@@ -48,15 +48,6 @@ var (
 			},
 		},
 	}
-
-	testLaunchConfigurationName = "test-launch-configuration-name"
-	testLaunchConfiguration     = &autoscaling.DescribeLaunchConfigurationsOutput{
-		LaunchConfigurations: []*autoscaling.LaunchConfiguration{
-			{
-				LaunchConfigurationName: &testLaunchConfigurationName,
-			},
-		},
-	}
 )
 
 /*
@@ -95,23 +86,6 @@ func TestAWS_Resources_AutoScalingGroups(t *testing.T) {
 	assert.Equal(t, *groups[0].AutoScalingGroupName, testAutoscalingGroupName)
 }
 
-func TestAWS_Resources_LaunchConfigurations(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	// given
-	awsMock := createLaunchConfigurationMock(mockCtrl)
-
-	// when
-	resources, err := awsMock.RawResources("aws_launch_configuration")
-	require.NoError(t, err)
-	lc := resources.([]*autoscaling.LaunchConfiguration)
-
-	// then
-	assert.Len(t, lc, 1)
-	assert.Equal(t, *lc[0].LaunchConfigurationName, testLaunchConfigurationName)
-}
-
 /*
 func createAmiMock(mockCtrl *gomock.Controller) *resource.AWS {
 	mockObj := mocks.NewMockEC2API(mockCtrl)
@@ -142,18 +116,6 @@ func createAutoScalingGroupMock(mockCtrl *gomock.Controller) *resource.AWS {
 
 	mockObj.EXPECT().DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{}).Return(
 		testAutoscalingGroup, nil)
-
-	return awsMock
-}
-
-func createLaunchConfigurationMock(mockCtrl *gomock.Controller) *resource.AWS {
-	mockObj := mocks.NewMockAutoScalingAPI(mockCtrl)
-	awsMock := &resource.AWS{
-		AutoScalingAPI: mockObj,
-	}
-
-	mockObj.EXPECT().DescribeLaunchConfigurations(&autoscaling.DescribeLaunchConfigurationsInput{}).Return(
-		testLaunchConfiguration, nil)
 
 	return awsMock
 }
