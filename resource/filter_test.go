@@ -35,19 +35,19 @@ func TestFilter_Validate(t *testing.T) {
 		{
 			name: "valid filter",
 			f: resource.Filter{
-				resource.IamRole:       {},
-				resource.SecurityGroup: {},
-				resource.Instance:      {},
-				"aws_vpc":              {},
+				"aws_iam_role":       {},
+				"aws_security_group": {},
+				resource.Instance:    {},
+				"aws_vpc":            {},
 			},
 		},
 		{
 			name: "valid filter includes awsls supported resources",
 			f: resource.Filter{
-				resource.IamRole:       {},
-				resource.SecurityGroup: {},
-				resource.Instance:      {},
-				"aws_glue_job":         {},
+				"aws_iam_role":       {},
+				"aws_security_group": {},
+				resource.Instance:    {},
+				"aws_glue_job":       {},
 			},
 		},
 	}

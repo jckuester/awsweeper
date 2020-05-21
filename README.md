@@ -160,38 +160,15 @@ A technical reason for this is that AWSweeper is build upon the already existing
 | :-----------------------------   |:-------------:|:-----------------------:
 | aws_ami                          | x             | x
 | aws_autoscaling_group            | x             | x
-| aws_cloudformation_stack         | x             | x
-| aws_cloudtrail             |               |
-| aws_cloudwatch_log_group (*new*) |               | x
+| aws_cloudtrail                   |               |
 | aws_ebs_snapshot                 | x             | x
-| aws_ebs_volume                   | x             | x
-| aws_ecs_cluster (*new*)          | x             |
 | aws_efs_file_system              | x             | x
-| aws_eip                          | x             |
-| aws_elb                          | x             | x
-| aws_iam_group                    | x             | x
-| aws_iam_instance_profile         |               | x
 | aws_iam_policy                   |               | x
-| aws_iam_role                     | x             | x
 | aws_iam_user                     | x             | x
 | aws_instance                     | x             | x
-| aws_internet_gateway             | x             |
-| aws_key_pair                     | x             |
 | aws_kms_alias                    |               |
 | aws_kms_key                      |               |
-| aws_lambda_function (*new*)      |               |
-| aws_launch_configuration         |               | x
 | aws_nat_gateway                  | x             |
-| aws_network_acl                  | x             |
-| aws_network_interface            | x             |
-| aws_rds_instance (*new*)         |               | x
-| aws_route53_zone                 |               |
-| aws_route_table                  | x             |
-| aws_s3_bucket                    |               | x
-| aws_security_group               | x             |
-| aws_subnet                       | x             |
-| aws_vpc                          | x             |
-| aws_vpc_endpoint                 | x             | x
    
 ## Acceptance tests
 

@@ -35,7 +35,7 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	writeConfigID(t, terraformDir, "aws_db_instance", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "--timeout", "5m")
 	require.NoError(t, err)
 
 	assertDBInstanceDeleted(t, env, id)
@@ -64,7 +64,7 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	writeConfigTag(t, terraformDir, "aws_db_instance")
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "--timeout", "5m")
 	require.NoError(t, err)
 
 	assertDBInstanceDeleted(t, env, id)

@@ -103,7 +103,7 @@ func TestAWS_Resources_LaunchConfigurations(t *testing.T) {
 	awsMock := createLaunchConfigurationMock(mockCtrl)
 
 	// when
-	resources, err := awsMock.RawResources(resource.LaunchConfiguration)
+	resources, err := awsMock.RawResources("aws_launch_configuration")
 	require.NoError(t, err)
 	lc := resources.([]*autoscaling.LaunchConfiguration)
 
