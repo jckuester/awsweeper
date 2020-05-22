@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/rds"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +17,7 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Only running from time to time, as this test costs some money.")
+	t.Skip("Only running from time to time, as this test costs money.")
 
 	env := InitEnv(t)
 
@@ -33,10 +32,10 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertDBInstanceExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.DBInstance, id)
+	writeConfigID(t, terraformDir, "aws_db_instance", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "--timeout", "5m")
 	require.NoError(t, err)
 
 	assertDBInstanceDeleted(t, env, id)
@@ -48,7 +47,7 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Tags not supported yet.")
+	t.Skip("Only running from time to time, as this test costs money.")
 
 	env := InitEnv(t)
 
@@ -63,10 +62,10 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertDBInstanceExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.DBInstance)
+	writeConfigTag(t, terraformDir, "aws_db_instance")
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "--timeout", "5m")
 	require.NoError(t, err)
 
 	assertDBInstanceDeleted(t, env, id)

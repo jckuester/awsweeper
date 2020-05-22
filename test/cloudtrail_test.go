@@ -47,7 +47,6 @@ func TestAcc_CloudTrail_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Tags not supported yet.")
 
 	env := InitEnv(t)
 

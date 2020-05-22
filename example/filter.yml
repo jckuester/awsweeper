@@ -1,0 +1,4 @@
+aws_autoscaling_group:
+  - tags:
+      Name: foo
+aws_instance:

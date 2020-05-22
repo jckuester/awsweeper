@@ -33,7 +33,7 @@ test: ## Run unit tests
 .PHONY: test-all
 test-all: ## Run tests (including acceptance and integration tests)
 	go clean -testcache ${PKG_LIST}
-	./bin/go-acc ${PKG_LIST} -- -v $(TESTARGS) -p 1 -race -timeout 30m
+	./bin/go-acc ${PKG_LIST} -- -v $(TESTARGS) -p 1 -race -timeout 60m
 
 .PHONY: build
 build: ## Build binary

@@ -3,10 +3,9 @@ package test
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"testing"
 
-	res "github.com/cloudetc/awsweeper/resource"
-	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,9 +59,9 @@ func TestAcc_DryRun(t *testing.T) {
 			terraform.InitAndApply(t, terraformOptions)
 
 			vpcID := terraform.Output(t, terraformOptions, "id")
-			aws.GetVpcById(t, vpcID, env.AWSRegion)
+			assertVpcExists(t, env, vpcID)
 
-			writeConfigID(t, terraformDir, res.Vpc, vpcID)
+			writeConfigID(t, terraformDir, "aws_vpc", vpcID)
 			defer os.Remove(terraformDir + "/config.yml")
 
 			logBuffer, err := runBinary(t, terraformDir, "YES\n", tc.flags...)
@@ -87,4 +86,38 @@ func TestAcc_DryRun(t *testing.T) {
 			fmt.Println(actualLogs)
 		})
 	}
+}
+
+func TestAcc_Version(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping acceptance test.")
+	}
+
+	logBuffer, err := runBinary(t, "", "", "-version")
+	require.NoError(t, err)
+
+	actualLogs := logBuffer.String()
+
+	assert.Contains(t, actualLogs, fmt.Sprintf(`
+version: dev
+commit: ?
+built at: ?
+using: %s`, runtime.Version()))
+
+	fmt.Println(actualLogs)
+}
+
+func TestAcc_WrongPathToFilter(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping acceptance test.")
+	}
+
+	logBuffer, err := runBinary(t, "/does/not/exist", "")
+	require.Error(t, err)
+
+	actualLogs := logBuffer.String()
+
+	assert.Contains(t, actualLogs, "Error: failed to create resource filter: open /does/not/exist/config.yml: no such file or directory")
+
+	fmt.Println(actualLogs)
 }

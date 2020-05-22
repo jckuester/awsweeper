@@ -1,6 +1,7 @@
 package resource_test
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -13,77 +14,86 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func TestYamlFilter_Validate(t *testing.T) {
-	// given
-	f := &resource.Filter{
-		resource.IamRole:       {},
-		resource.SecurityGroup: {},
-		resource.Instance:      {},
-		resource.Vpc:           {},
+func TestFilter_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		f       resource.Filter
+		wantErr string
+	}{
+		{
+			name: "empty filter",
+			f:    resource.Filter{},
+		},
+		{
+			name: "unsupported type",
+			f: resource.Filter{
+				resource.Instance:    {},
+				"not_supported_type": {},
+			},
+			wantErr: "unsupported resource type: not_supported_type",
+		},
+		{
+			name: "valid filter",
+			f: resource.Filter{
+				"aws_iam_role":       {},
+				"aws_security_group": {},
+				resource.Instance:    {},
+				"aws_vpc":            {},
+			},
+		},
+		{
+			name: "valid filter includes awsls supported resources",
+			f: resource.Filter{
+				"aws_iam_role":       {},
+				"aws_security_group": {},
+				resource.Instance:    {},
+				"aws_glue_job":       {},
+			},
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.f.Validate()
 
-	// when
-	err := f.Validate()
-
-	// then
-	assert.NoError(t, err)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.wantErr)
+			}
+		})
+	}
 }
 
-func TestYamlFilter_Validate_EmptyConfig(t *testing.T) {
-	// given
-	f := &resource.Filter{}
-
-	// when
-	err := f.Validate()
-
-	// then
-	assert.NoError(t, err)
-}
-
-func TestYamlFilter_Validate_UnsupportedType(t *testing.T) {
-	// given
-	f := &resource.Filter{
-		resource.Instance:    {},
-		"not_supported_type": {},
+func TestFilter_Types(t *testing.T) {
+	tests := []struct {
+		name string
+		f    resource.Filter
+		want []string
+	}{
+		{
+			name: "dependency order",
+			f: resource.Filter{
+				"aws_vpc":         {},
+				resource.Instance: {},
+			},
+			want: []string{resource.Instance, "aws_vpc"},
+		},
+		{
+			name: "dependency order not specified",
+			f: resource.Filter{
+				"aws_vpc":      {},
+				"aws_glue_job": {},
+			},
+			want: []string{"aws_vpc", "aws_glue_job"},
+		},
 	}
-
-	// when
-	err := f.Validate()
-
-	// then
-	assert.EqualError(t, err, "unsupported resource type: not_supported_type")
-}
-
-func TestYamlFilter_Types(t *testing.T) {
-	// given
-	f := &resource.Filter{
-		resource.Instance: {},
-		resource.Vpc:      {},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.f.Types(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Types() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-
-	// when
-	resTypes := f.Types()
-
-	// then
-	assert.Len(t, resTypes, 2)
-	assert.Contains(t, resTypes, resource.Vpc)
-	assert.Contains(t, resTypes, resource.Instance)
-}
-
-func TestYamlFilter_Types_DependencyOrder(t *testing.T) {
-	// given
-	f := &resource.Filter{
-		resource.Subnet: {},
-		resource.Vpc:    {},
-	}
-
-	// when
-	resTypes := f.Types()
-
-	// then
-	assert.Len(t, resTypes, 2)
-	assert.Equal(t, resTypes[0], resource.Subnet)
-	assert.Equal(t, resTypes[1], resource.Vpc)
 }
 
 func Test_ParseFile(t *testing.T) {

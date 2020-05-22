@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"time"
 
+	awsls "github.com/jckuester/awsls/aws"
+
 	"github.com/apex/log"
 
 	"github.com/pkg/errors"
@@ -11,8 +13,9 @@ import (
 
 // Resources converts given raw resources for a given resource type
 // into a format that can be deleted by the Terraform API.
-func DeletableResources(resType TerraformResourceType, resources interface{}) (Resources, error) {
-	deletableResources := Resources{}
+func DeletableResources(resType string, resources interface{}) ([]awsls.Resource, error) {
+	var deletableResources []awsls.Resource
+
 	reflectResources := reflect.ValueOf(resources)
 	for i := 0; i < reflectResources.Len(); i++ {
 		deleteID, err := getDeleteID(resType)
@@ -47,11 +50,11 @@ func DeletableResources(resType TerraformResourceType, resources interface{}) (R
 			}
 		}
 
-		deletableResources = append(deletableResources, &Resource{
-			Type:    resType,
-			ID:      deleteIDField.Elem().String(),
-			Tags:    tags,
-			Created: creationTime,
+		deletableResources = append(deletableResources, awsls.Resource{
+			Type:      resType,
+			ID:        deleteIDField.Elem().String(),
+			Tags:      tags,
+			CreatedAt: creationTime,
 		})
 	}
 

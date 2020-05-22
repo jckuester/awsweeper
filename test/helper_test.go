@@ -85,7 +85,7 @@ func runBinary(t *testing.T, terraformDir, userInput string, flags ...string) (*
 	return logBuffer, err
 }
 
-func writeConfigID(t *testing.T, terraformDir string, resType res.TerraformResourceType, id string) {
+func writeConfigID(t *testing.T, terraformDir string, resType string, id string) {
 	config := fmt.Sprintf(`%s:
   - id: %s
 `, resType, id)
@@ -97,7 +97,7 @@ func writeConfigID(t *testing.T, terraformDir string, resType res.TerraformResou
 	}
 }
 
-func writeConfigTag(t *testing.T, terraformDir string, resType res.TerraformResourceType) {
+func writeConfigTag(t *testing.T, terraformDir string, resType string) {
 	config := fmt.Sprintf(`%s:
   - tags:
       awsweeper: test-acc

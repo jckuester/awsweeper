@@ -7,7 +7,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ecs"
 
-	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,10 +31,10 @@ func TestAcc_ECSCluster_DeleteByID(t *testing.T) {
 
 	assertEcsClusterExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.EcsCluster, id)
+	writeConfigID(t, terraformDir, "aws_ecs_cluster", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n", "-debug")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n")
 	require.NoError(t, err)
 
 	assertEcsClusterDeleted(t, env, id)
@@ -62,7 +61,7 @@ func TestAcc_ECSCluster_DeleteByTag(t *testing.T) {
 
 	assertEcsClusterExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.EcsCluster)
+	writeConfigTag(t, terraformDir, "aws_ecs_cluster")
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")

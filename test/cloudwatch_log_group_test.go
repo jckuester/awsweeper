@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	res "github.com/cloudetc/awsweeper/resource"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +29,7 @@ func TestAcc_CloudWatchLogGroup_DeleteByID(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertCloudWatchLogGroupExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.CloudWatchLogGroup, id)
+	writeConfigID(t, terraformDir, "aws_cloudwatch_log_group", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
@@ -45,7 +44,6 @@ func TestAcc_CloudWatchLogGroup_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Tags not supported yet.")
 
 	env := InitEnv(t)
 
@@ -60,7 +58,7 @@ func TestAcc_CloudWatchLogGroup_DeleteByTag(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertCloudWatchLogGroupExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.CloudWatchLogGroup)
+	writeConfigTag(t, terraformDir, "aws_cloudwatch_log_group")
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")

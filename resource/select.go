@@ -1,19 +1,37 @@
 package resource
 
 import (
-	"log"
+	"fmt"
 	"strings"
 
+	"github.com/apex/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
+	awsls "github.com/jckuester/awsls/aws"
+	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/gocty"
 )
 
 // here is where the filtering of resources happens, i.e.
 // the filter entry in the config for a certain resource type
 // is applied to all resources of that type.
-func (f Filter) Apply(resType TerraformResourceType, res Resources, raw interface{}, aws *AWS) []Resources {
+func (f Filter) Apply(resType string, res []awsls.Resource, raw interface{}, aws *AWS) []awsls.Resource {
+	for i, r := range res {
+		tags, err := GetTags(&r)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"type": r.Type,
+				"id":   r.ID,
+			}).WithError(err).Debug("failed to get tags")
+
+			continue
+		}
+
+		res[i].Tags = tags
+	}
+
 	switch resType {
 	case EfsFileSystem:
 		return f.efsFileSystemFilter(res, raw, aws)
@@ -30,33 +48,66 @@ func (f Filter) Apply(resType TerraformResourceType, res Resources, raw interfac
 	}
 }
 
+func GetTags(r *awsls.Resource) (map[string]string, error) {
+	if r.Resource == nil {
+		return nil, fmt.Errorf("resource is nil")
+	}
+
+	state := r.State()
+
+	if state == nil {
+		return nil, fmt.Errorf("state is nil")
+	}
+
+	if !state.CanIterateElements() {
+		return nil, fmt.Errorf("cannot iterate: %s", *state)
+	}
+
+	attrValue, ok := state.AsValueMap()["tags"]
+	if !ok {
+		return nil, fmt.Errorf("attribute not found: tags")
+	}
+
+	switch attrValue.Type() {
+	case cty.Map(cty.String):
+		var v map[string]string
+		err := gocty.FromCtyValue(attrValue, &v)
+		if err != nil {
+			return nil, err
+		}
+
+		return v, nil
+	default:
+		return nil, fmt.Errorf("currently unhandled type: %s", attrValue.Type().FriendlyName())
+	}
+}
+
 // For most resource types, this default filter method can be used.
 // However, for some resource types additional information need to be queried from the AWS API. Filtering for those
 // is handled in special functions below.
-func (f Filter) defaultFilter(res Resources) []Resources {
-	result := Resources{}
+func (f Filter) defaultFilter(res []awsls.Resource) []awsls.Resource {
+	var result []awsls.Resource
 
 	for _, r := range res {
 		if f.Match(r) {
 			result = append(result, r)
 		}
 	}
-	return []Resources{result}
+	return result
 }
 
-func (f Filter) efsFileSystemFilter(res Resources, raw interface{}, c *AWS) []Resources {
-	result := Resources{}
-	resultMt := Resources{}
+func (f Filter) efsFileSystemFilter(res []awsls.Resource, raw interface{}, c *AWS) []awsls.Resource {
+	var result []awsls.Resource
 
 	for _, r := range res {
-		if f.Match(&Resource{Type: r.Type, ID: *raw.([]*efs.FileSystemDescription)[0].Name}) {
+		if f.Match(awsls.Resource{Type: r.Type, ID: *raw.([]*efs.FileSystemDescription)[0].Name}) {
 			res, err := c.DescribeMountTargets(&efs.DescribeMountTargetsInput{
 				FileSystemId: &r.ID,
 			})
 
 			if err == nil {
 				for _, r := range res.MountTargets {
-					resultMt = append(resultMt, &Resource{
+					result = append(result, awsls.Resource{
 						Type: "aws_efs_mount_target",
 						ID:   *r.MountTargetId,
 					})
@@ -65,13 +116,12 @@ func (f Filter) efsFileSystemFilter(res Resources, raw interface{}, c *AWS) []Re
 			result = append(result, r)
 		}
 	}
-	return []Resources{resultMt, result}
+
+	return result
 }
 
-func (f Filter) iamUserFilter(res Resources, c *AWS) []Resources {
-	result := Resources{}
-	resultAttPol := Resources{}
-	resultUserPol := Resources{}
+func (f Filter) iamUserFilter(res []awsls.Resource, c *AWS) []awsls.Resource {
+	var result []awsls.Resource
 
 	for _, r := range res {
 		if f.Match(r) {
@@ -81,7 +131,7 @@ func (f Filter) iamUserFilter(res Resources, c *AWS) []Resources {
 			})
 			if err == nil {
 				for _, up := range ups.PolicyNames {
-					resultUserPol = append(resultUserPol, &Resource{
+					result = append(result, awsls.Resource{
 						Type: "aws_iam_user_policy",
 						ID:   r.ID + ":" + *up,
 					})
@@ -94,13 +144,15 @@ func (f Filter) iamUserFilter(res Resources, c *AWS) []Resources {
 			})
 			if err == nil {
 				for _, upol := range upols.AttachedPolicies {
-					resultAttPol = append(resultAttPol, &Resource{
+					result = append(result, awsls.Resource{
 						Type: "aws_iam_user_policy_attachment",
 						ID:   *upol.PolicyArn,
-						Attrs: map[string]string{
-							"user":       r.ID,
-							"policy_arn": *upol.PolicyArn,
-						},
+						/*
+							Attrs: map[string]string{
+								"user":       r.ID,
+								"policy_arn": *upol.PolicyArn,
+							},
+						*/
 					})
 				}
 			}
@@ -108,25 +160,24 @@ func (f Filter) iamUserFilter(res Resources, c *AWS) []Resources {
 			result = append(result, r)
 		}
 	}
-	return []Resources{resultUserPol, resultAttPol, result}
+	return result
 }
 
-func (f Filter) iamPolicyFilter(res Resources, raw interface{}, c *AWS) []Resources {
-	result := Resources{}
-	resultAtt := Resources{}
+func (f Filter) iamPolicyFilter(res []awsls.Resource, raw interface{}, c *AWS) []awsls.Resource {
+	var result []awsls.Resource
 
-	for i, r := range res {
+	for _, r := range res {
 		if f.Match(r) {
 			es, err := c.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
 				PolicyArn: &r.ID,
 			})
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal(err.Error())
 			}
 
-			roles := []string{}
-			users := []string{}
-			groups := []string{}
+			var roles []string
+			var users []string
+			var groups []string
 
 			for _, u := range es.PolicyUsers {
 				users = append(users, *u.UserName)
@@ -138,27 +189,30 @@ func (f Filter) iamPolicyFilter(res Resources, raw interface{}, c *AWS) []Resour
 				roles = append(roles, *r.RoleName)
 			}
 
-			resultAtt = append(resultAtt, &Resource{
+			result = append(result, awsls.Resource{
 				Type: "aws_iam_policy_attachment",
 				ID:   "none",
-				Attrs: map[string]string{
-					"policy_arn": r.ID,
-					"name":       *raw.([]*iam.Policy)[i].PolicyName,
-					"users":      strings.Join(users, "."),
-					"roles":      strings.Join(roles, "."),
-					"groups":     strings.Join(groups, "."),
-				},
+				/*
+					Attrs: map[string]string{
+						"policy_arn": r.ID,
+						"name":       *raw.([]*iam.Policy)[i].PolicyName,
+						"users":      strings.Join(users, "."),
+						"roles":      strings.Join(roles, "."),
+						"groups":     strings.Join(groups, "."),
+					},
+
+				*/
 			})
 			result = append(result, r)
 		}
 	}
 	// policy attachments are not resources
 	// what happens here, is that policy is detached from groups, users and roles
-	return []Resources{resultAtt, result}
+	return result
 }
 
-func (f Filter) kmsKeysFilter(res Resources, c *AWS) []Resources {
-	result := Resources{}
+func (f Filter) kmsKeysFilter(res []awsls.Resource, c *AWS) []awsls.Resource {
+	var result []awsls.Resource
 
 	for _, r := range res {
 		if f.Match(r) {
@@ -168,7 +222,7 @@ func (f Filter) kmsKeysFilter(res Resources, c *AWS) []Resources {
 			err := req.Send()
 			if err == nil {
 				if *res.KeyMetadata.KeyState != "PendingDeletion" {
-					result = append(result, &Resource{
+					result = append(result, awsls.Resource{
 						Type: "aws_kms_key",
 						ID:   r.ID,
 					})
@@ -176,17 +230,19 @@ func (f Filter) kmsKeysFilter(res Resources, c *AWS) []Resources {
 			}
 		}
 	}
+
 	// associated aliases will also be deleted after waiting period (between 7 to 30 days)
-	return []Resources{result}
+	return result
 }
 
-func (f Filter) kmsKeyAliasFilter(res Resources) []Resources {
-	result := Resources{}
+func (f Filter) kmsKeyAliasFilter(res []awsls.Resource) []awsls.Resource {
+	var result []awsls.Resource
 
 	for _, r := range res {
 		if f.Match(r) && !strings.HasPrefix(r.ID, "alias/aws/") {
 			result = append(result, r)
 		}
 	}
-	return []Resources{result}
+
+	return result
 }

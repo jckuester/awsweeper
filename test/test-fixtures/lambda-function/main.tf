@@ -46,4 +46,8 @@ resource "aws_lambda_function" "test" {
       awsweeper = "test-acc"
     }
   }
+
+  tags = {
+    awsweeper = "test-acc"
+  }
 }
