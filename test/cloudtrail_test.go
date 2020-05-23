@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	res "github.com/cloudetc/awsweeper/resource"
+	res "github.com/cloudetc/awsweeper/pkg/resource"
 )
 
 func TestAcc_CloudTrail_DeleteByID(t *testing.T) {

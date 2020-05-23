@@ -11,7 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	res "github.com/cloudetc/awsweeper/resource"
+	res "github.com/cloudetc/awsweeper/pkg/resource"
 )
 
 func TestAcc_EbsSnapshot_DeleteByID(t *testing.T) {
