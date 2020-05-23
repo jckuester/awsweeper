@@ -44,8 +44,6 @@ const (
 	EbsSnapshot      = "aws_ebs_snapshot"
 	EcsCluster       = "aws_ecs_cluster"
 	EfsFileSystem    = "aws_efs_file_system"
-	IamPolicy        = "aws_iam_policy"
-	IamUser          = "aws_iam_user"
 	Instance         = "aws_instance"
 	KmsAlias         = "aws_kms_alias"
 	KmsKey           = "aws_kms_key"
@@ -60,8 +58,6 @@ var (
 		// Note: to import a cluster, the name is used as ID
 		EcsCluster:    "ClusterArn",
 		EfsFileSystem: "FileSystemId",
-		IamPolicy:     "Arn",
-		IamUser:       "UserName",
 		Instance:      "InstanceId",
 		KmsAlias:      "AliasName",
 		KmsKey:        "KeyId",
@@ -93,9 +89,9 @@ var (
 		"aws_network_acl":          9840,
 		"aws_vpc":                  9830,
 		"aws_db_instance":          9825,
-		IamPolicy:                  9820,
+		"aws_iam_policy":           9820,
 		"aws_iam_group":            9810,
-		IamUser:                    9800,
+		"aws_iam_user":             9800,
 		"aws_iam_role":             9790,
 		"aws_iam_instance_profile": 9780,
 		"aws_s3_bucket":            9750,
@@ -195,10 +191,6 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.ecsClusters()
 	case EfsFileSystem:
 		return a.efsFileSystems()
-	case IamPolicy:
-		return a.iamPolicies()
-	case IamUser:
-		return a.iamUsers()
 	case Instance:
 		return a.instances()
 	case KmsAlias:
@@ -278,22 +270,6 @@ func (a *AWS) efsFileSystems() (interface{}, error) {
 		return nil, err
 	}
 	return output.FileSystems, nil
-}
-
-func (a *AWS) iamPolicies() (interface{}, error) {
-	output, err := a.ListPolicies(&iam.ListPoliciesInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.Policies, nil
-}
-
-func (a *AWS) iamUsers() (interface{}, error) {
-	output, err := a.ListUsers(&iam.ListUsersInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.Users, nil
 }
 
 func (a *AWS) KmsAliases() (interface{}, error) {
