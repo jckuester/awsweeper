@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 
-	"github.com/cloudetc/awsweeper/resource"
+	"github.com/cloudetc/awsweeper/pkg/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

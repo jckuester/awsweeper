@@ -1,4 +1,4 @@
-package command
+package resource
 
 import (
 	"encoding/json"
@@ -7,31 +7,29 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/apex/log"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fatih/color"
-	"github.com/zclconf/go-cty/cty"
-
-	"github.com/apex/log"
-	"github.com/cloudetc/awsweeper/resource"
 	awsls "github.com/jckuester/awsls/aws"
 	awslsRes "github.com/jckuester/awsls/resource"
 	"github.com/jckuester/terradozer/pkg/provider"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
+	"github.com/zclconf/go-cty/cty"
 	"gopkg.in/yaml.v2"
 )
 
-func List(filter *resource.Filter, client *resource.AWS, awsClient *awsls.Client,
+func List(filter *Filter, client *AWS, awsClient *awsls.Client,
 	provider *provider.TerraformProvider, outputType string) []terradozerRes.DestroyableResource {
 	var destroyableRes []terradozerRes.DestroyableResource
 
 	for _, rType := range filter.Types() {
-		if resource.SupportedResourceType(rType) {
+		if SupportedResourceType(rType) {
 			rawResources, err := client.RawResources(rType)
 			if err != nil {
 				log.WithError(err).Fatal("failed to get raw resources")
 			}
 
-			deletableResources, err := resource.DeletableResources(rType, rawResources)
+			deletableResources, err := DeletableResources(rType, rawResources)
 			if err != nil {
 				log.WithError(err).Fatal("failed to convert raw resources into deletable resources")
 			}
@@ -78,7 +76,7 @@ func List(filter *resource.Filter, client *resource.AWS, awsClient *awsls.Client
 	return destroyableRes
 }
 
-func getAttachedUserPolicies(users []awsls.Resource, client *resource.AWS,
+func getAttachedUserPolicies(users []awsls.Resource, client *AWS,
 	provider *provider.TerraformProvider) []awsls.Resource {
 	var result []awsls.Resource
 
@@ -115,7 +113,7 @@ func getAttachedUserPolicies(users []awsls.Resource, client *resource.AWS,
 	return result
 }
 
-func getInlineUserPolicies(users []awsls.Resource, client *resource.AWS,
+func getInlineUserPolicies(users []awsls.Resource, client *AWS,
 	provider *provider.TerraformProvider) []awsls.Resource {
 	var result []awsls.Resource
 

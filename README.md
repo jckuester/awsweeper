@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="AWSweeper" src="https://github.com/cloudetc/awsweeper/blob/master/img/logo.png" height="180" />
+  <img alt="AWSweeper" src="https://github.com/cloudetc/awsweeper/blob/master/img/logo.png" height="120" />
   <h3 align="center">AWSweeper</h3>
   <p align="center">A tool for cleaning your AWS account</p>
 </p>
@@ -11,14 +11,15 @@
 
 AWSweeper is able to clean out [over 200 resource types](#supported-resources) in your AWS account. Resources to be deleted
 can be filtered by their type, ID, tags, or creation date using [regular expressions](https://golang.org/pkg/regexp/syntax/)
-declared in a YAML file (see [filter.yml](example/filter.yml) as an example).
+declared in a YAML file (see [filter.yml](filter.yml) as an example).
 
 To keep up supporting the continuously growing number of new resources, AWSweeper is standing upon the shoulders of
 delete routines provided by the [Terraform AWS provider](https://github.com/terraform-providers/terraform-provider-aws).
 List operations are borrowed from the [awsls](https://github.com/jckuester/awsls) open-source project and are
 code-generated based on the [model of the AWS API](https://github.com/aws/aws-sdk-go-v2/tree/master/models/apis).
-Not being fully there yet, but the goal is to support every AWS resource that is covered by Terraform (currently over 500)
-without adding and maintaining much code here.
+
+Not being fully there yet, but the goal is to support every AWS resource that is covered by Terraform
+(currently over 500) without adding or maintaining much code here.
 
 If you run into issues deleting resources, please open an issue or ping me on [Twitter](https://twitter.com/jckuester).
 
@@ -103,8 +104,7 @@ Here is a more detailed description of the various ways to filter resources:
     aws_iam_role:
     aws_instance:
    
-   Don't forget the `:` at the end of each line. Use the [all.yml](./all.yml), to delete all (currently supported)
-   resources.
+   Don't forget the `:` at the end of each line.
 
 ##### 2) Delete by tags
 

@@ -1,9 +1,9 @@
 package main
 
-//go:generate mockgen -package mocks -destination resource/mocks/autoscaling.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/autoscaling/autoscalingiface/interface.go
-//go:generate mockgen -package mocks -destination resource/mocks/ec2.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/ec2/ec2iface/interface.go
-//go:generate mockgen -package mocks -destination resource/mocks/sts.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/sts/stsiface/interface.go
-//go:generate mockgen -package mocks -destination resource/mocks/rds.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/rds/rdsiface/interface.go
+//go:generate mockgen -package mocks -destination pkg/resource/mocks/autoscaling.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/autoscaling/autoscalingiface/interface.go
+//go:generate mockgen -package mocks -destination pkg/resource/mocks/ec2.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/ec2/ec2iface/interface.go
+//go:generate mockgen -package mocks -destination pkg/resource/mocks/sts.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/sts/stsiface/interface.go
+//go:generate mockgen -package mocks -destination pkg/resource/mocks/rds.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/rds/rdsiface/interface.go
 
 import (
 	"flag"
@@ -18,9 +18,8 @@ import (
 	"github.com/apex/log/handlers/cli"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/cloudetc/awsweeper/command"
 	"github.com/cloudetc/awsweeper/internal"
-	"github.com/cloudetc/awsweeper/resource"
+	"github.com/cloudetc/awsweeper/pkg/resource"
 	"github.com/fatih/color"
 	awsls "github.com/jckuester/awsls/aws"
 	"github.com/jckuester/terradozer/pkg/provider"
@@ -155,7 +154,7 @@ func mainExitCode() int {
 	}
 
 	internal.LogTitle("showing resources that would be deleted (dry run)")
-	resources := command.List(filter, client, awsClient, provider, outputType)
+	resources := resource.List(filter, client, awsClient, provider, outputType)
 
 	if len(resources) == 0 {
 		internal.LogTitle("no resources found to delete")

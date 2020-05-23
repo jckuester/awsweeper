@@ -4,14 +4,11 @@ import (
 	"testing"
 	"time"
 
-	awsls "github.com/jckuester/awsls/aws"
-
 	"github.com/aws/aws-sdk-go/aws"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/cloudetc/awsweeper/resource"
+	"github.com/cloudetc/awsweeper/pkg/resource"
+	awsls "github.com/jckuester/awsls/aws"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {

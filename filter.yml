@@ -1,4 +1,4 @@
 aws_autoscaling_group:
+aws_instance:
   - tags:
       Name: foo
-aws_instance:

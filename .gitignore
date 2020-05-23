@@ -5,3 +5,4 @@ bin/
 .terraform/
 *.tfstate
 coverage.txt
+awsweeper
