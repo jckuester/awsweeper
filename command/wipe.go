@@ -3,8 +3,13 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/fatih/color"
+	"github.com/zclconf/go-cty/cty"
 
 	"github.com/apex/log"
 	"github.com/cloudetc/awsweeper/resource"
@@ -52,6 +57,18 @@ func List(filter *resource.Filter, client *resource.AWS, awsClient *awsls.Client
 			filteredRes := filter.Apply(rType, resourcesWithStates, nil, client)
 			print(filteredRes, outputType)
 
+			switch rType {
+			case "aws_iam_user":
+				policyAttachments := getAttachedUserPolicies(filteredRes, client, provider)
+				print(policyAttachments, outputType)
+
+				inlinePolicies := getInlineUserPolicies(filteredRes, client, provider)
+				print(inlinePolicies, outputType)
+
+				filteredRes = append(filteredRes, policyAttachments...)
+				filteredRes = append(filteredRes, inlinePolicies...)
+			}
+
 			for _, r := range filteredRes {
 				destroyableRes = append(destroyableRes, r.Resource)
 			}
@@ -59,6 +76,78 @@ func List(filter *resource.Filter, client *resource.AWS, awsClient *awsls.Client
 	}
 
 	return destroyableRes
+}
+
+func getAttachedUserPolicies(users []awsls.Resource, client *resource.AWS,
+	provider *provider.TerraformProvider) []awsls.Resource {
+	var result []awsls.Resource
+
+	for _, user := range users {
+		attachedPolicies, err := client.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+			UserName: &user.ID,
+		})
+		if err != nil {
+			fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+			continue
+		}
+
+		for _, attachedPolicy := range attachedPolicies.AttachedPolicies {
+			r := awsls.Resource{
+				Type: "aws_iam_user_policy_attachment",
+				ID:   *attachedPolicy.PolicyArn,
+			}
+
+			r.Resource = terradozerRes.New(r.Type, r.ID, map[string]cty.Value{
+				"user":       cty.StringVal(user.ID),
+				"policy_arn": cty.StringVal(*attachedPolicy.PolicyArn),
+			}, provider)
+
+			err = r.UpdateState()
+			if err != nil {
+				fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+				continue
+			}
+
+			result = append(result, r)
+		}
+	}
+
+	return result
+}
+
+func getInlineUserPolicies(users []awsls.Resource, client *resource.AWS,
+	provider *provider.TerraformProvider) []awsls.Resource {
+	var result []awsls.Resource
+
+	for _, user := range users {
+		inlinePolicies, err := client.ListUserPolicies(&iam.ListUserPoliciesInput{
+			UserName: &user.ID,
+		})
+		if err != nil {
+			fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+			continue
+		}
+
+		for _, inlinePolicy := range inlinePolicies.PolicyNames {
+			r := awsls.Resource{
+				Type: "aws_iam_user_policy",
+				ID:   user.ID + ":" + *inlinePolicy,
+			}
+
+			r.Resource = terradozerRes.New(r.Type, r.ID, nil, provider)
+
+			err = r.UpdateState()
+			if err != nil {
+				fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+				continue
+			}
+
+			result = append(result, r)
+		}
+
+	}
+
+	return result
 }
 
 func print(res []awsls.Resource, outputType string) {

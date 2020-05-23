@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	res "github.com/cloudetc/awsweeper/resource"
 )
 
 func TestAcc_IamUser_DeleteByID(t *testing.T) {
@@ -33,7 +32,7 @@ func TestAcc_IamUser_DeleteByID(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertIamUserExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.IamUser, id)
+	writeConfigID(t, terraformDir, "aws_iam_user", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
@@ -62,7 +61,7 @@ func TestAcc_IamUser_DeleteByTag(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertIamUserExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.IamUser)
+	writeConfigTag(t, terraformDir, "aws_iam_user")
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")

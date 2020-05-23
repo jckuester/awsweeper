@@ -35,9 +35,7 @@ func (f Filter) Apply(resType string, res []awsls.Resource, raw interface{}, aws
 	switch resType {
 	case EfsFileSystem:
 		return f.efsFileSystemFilter(res, raw, aws)
-	case IamUser:
-		return f.iamUserFilter(res, aws)
-	case IamPolicy:
+	case "aws_iam_policy":
 		return f.iamPolicyFilter(res, raw, aws)
 	case KmsKey:
 		return f.kmsKeysFilter(res, aws)
@@ -117,49 +115,6 @@ func (f Filter) efsFileSystemFilter(res []awsls.Resource, raw interface{}, c *AW
 		}
 	}
 
-	return result
-}
-
-func (f Filter) iamUserFilter(res []awsls.Resource, c *AWS) []awsls.Resource {
-	var result []awsls.Resource
-
-	for _, r := range res {
-		if f.Match(r) {
-			// list inline policies, delete with "aws_iam_user_policy" delete routine
-			ups, err := c.ListUserPolicies(&iam.ListUserPoliciesInput{
-				UserName: &r.ID,
-			})
-			if err == nil {
-				for _, up := range ups.PolicyNames {
-					result = append(result, awsls.Resource{
-						Type: "aws_iam_user_policy",
-						ID:   r.ID + ":" + *up,
-					})
-				}
-			}
-
-			// Lists all managed policies that are attached  to user (inline and others)
-			upols, err := c.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
-				UserName: &r.ID,
-			})
-			if err == nil {
-				for _, upol := range upols.AttachedPolicies {
-					result = append(result, awsls.Resource{
-						Type: "aws_iam_user_policy_attachment",
-						ID:   *upol.PolicyArn,
-						/*
-							Attrs: map[string]string{
-								"user":       r.ID,
-								"policy_arn": *upol.PolicyArn,
-							},
-						*/
-					})
-				}
-			}
-
-			result = append(result, r)
-		}
-	}
 	return result
 }
 
