@@ -353,6 +353,8 @@ github.com/jckuester/awsls v0.0.0-20200523105025-fe25c60a9fba h1:fbk5OV5nnwtkElu
 github.com/jckuester/awsls v0.0.0-20200523105025-fe25c60a9fba/go.mod h1:6dqF/j6Ar6b10DmHSV0CRYgKP2jwN8VUsHoFT3szFfA=
 github.com/jckuester/awsls v0.0.0-20200523195606-04f54b8ca1c6 h1:Rbcyj5lTyRRE4QgkJVncOgLbn6ehT6Yp5SdjCprr6FA=
 github.com/jckuester/awsls v0.0.0-20200523195606-04f54b8ca1c6/go.mod h1:hbj1nD8zXLBoZffzkV7WXUmMGarGPKkFeke90U9eehs=
+github.com/jckuester/awsls v0.0.0-20200524112109-93c2a4665746 h1:CCO3Lc/ofOzEwH5WIZpndhoixKwNQRNVPKczVT4IS9w=
+github.com/jckuester/awsls v0.0.0-20200524112109-93c2a4665746/go.mod h1:hbj1nD8zXLBoZffzkV7WXUmMGarGPKkFeke90U9eehs=
 github.com/jckuester/terradozer v0.0.0-20200505071321-36ef87ab4394 h1:7LmuH4Cm81Qsi0trqbnOmZ75xemFDhmzin0OoNL7aM4=
 github.com/jckuester/terradozer v0.0.0-20200505071321-36ef87ab4394/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
 github.com/jckuester/terradozer v0.0.0-20200522202131-ed33ac929141 h1:BowqT+JEJsqjPRWcTH7EOEEJuJlhKoh80MKZouM3pkE=

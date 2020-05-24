@@ -57,14 +57,19 @@ func List(filter *Filter, client *AWS, awsClient *awsls.Client,
 
 			switch rType {
 			case "aws_iam_user":
-				policyAttachments := getAttachedUserPolicies(filteredRes, client, provider)
-				print(policyAttachments, outputType)
+				attachedPolicies := getAttachedUserPolicies(filteredRes, client, provider)
+				print(attachedPolicies, outputType)
 
 				inlinePolicies := getInlineUserPolicies(filteredRes, client, provider)
 				print(inlinePolicies, outputType)
 
-				filteredRes = append(filteredRes, policyAttachments...)
+				filteredRes = append(filteredRes, attachedPolicies...)
 				filteredRes = append(filteredRes, inlinePolicies...)
+			case "aws_iam_policy":
+				policyAttachments := getPolicyAttachments(filteredRes, provider)
+				print(policyAttachments, outputType)
+
+				filteredRes = append(filteredRes, policyAttachments...)
 			}
 
 			for _, r := range filteredRes {
@@ -142,7 +147,38 @@ func getInlineUserPolicies(users []awsls.Resource, client *AWS,
 
 			result = append(result, r)
 		}
+	}
 
+	return result
+}
+
+func getPolicyAttachments(policies []awsls.Resource, provider *provider.TerraformProvider) []awsls.Resource {
+	var result []awsls.Resource
+
+	for _, policy := range policies {
+		arn, err := awslsRes.GetAttribute("arn", &policy)
+		if err != nil {
+			fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+			continue
+		}
+
+		r := awsls.Resource{
+			Type: "aws_iam_policy_attachment",
+			// Note: ID is only set for pretty printing (could be also left empty)
+			ID: policy.ID,
+		}
+
+		r.Resource = terradozerRes.New(r.Type, r.ID, map[string]cty.Value{
+			"policy_arn": cty.StringVal(arn),
+		}, provider)
+
+		err = r.UpdateState()
+		if err != nil {
+			fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+			continue
+		}
+
+		result = append(result, r)
 	}
 
 	return result

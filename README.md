@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="AWSweeper" src="https://github.com/cloudetc/awsweeper/blob/master/img/logo.png" height="120" />
+  <img alt="AWSweeper" src="https://github.com/cloudetc/awsweeper/blob/master/img/logo.png" height="150" />
   <h3 align="center">AWSweeper</h3>
   <p align="center">A tool for cleaning your AWS account</p>
 </p>

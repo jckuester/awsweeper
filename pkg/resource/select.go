@@ -7,7 +7,6 @@ import (
 	"github.com/apex/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/efs"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/kms"
 	awsls "github.com/jckuester/awsls/aws"
 	"github.com/zclconf/go-cty/cty"
@@ -35,8 +34,6 @@ func (f Filter) Apply(resType string, res []awsls.Resource, raw interface{}, aws
 	switch resType {
 	case EfsFileSystem:
 		return f.efsFileSystemFilter(res, raw, aws)
-	case "aws_iam_policy":
-		return f.iamPolicyFilter(res, raw, aws)
 	case KmsKey:
 		return f.kmsKeysFilter(res, aws)
 	case KmsAlias:
@@ -115,54 +112,6 @@ func (f Filter) efsFileSystemFilter(res []awsls.Resource, raw interface{}, c *AW
 		}
 	}
 
-	return result
-}
-
-func (f Filter) iamPolicyFilter(res []awsls.Resource, raw interface{}, c *AWS) []awsls.Resource {
-	var result []awsls.Resource
-
-	for _, r := range res {
-		if f.Match(r) {
-			es, err := c.ListEntitiesForPolicy(&iam.ListEntitiesForPolicyInput{
-				PolicyArn: &r.ID,
-			})
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-
-			var roles []string
-			var users []string
-			var groups []string
-
-			for _, u := range es.PolicyUsers {
-				users = append(users, *u.UserName)
-			}
-			for _, g := range es.PolicyGroups {
-				groups = append(groups, *g.GroupName)
-			}
-			for _, r := range es.PolicyRoles {
-				roles = append(roles, *r.RoleName)
-			}
-
-			result = append(result, awsls.Resource{
-				Type: "aws_iam_policy_attachment",
-				ID:   "none",
-				/*
-					Attrs: map[string]string{
-						"policy_arn": r.ID,
-						"name":       *raw.([]*iam.Policy)[i].PolicyName,
-						"users":      strings.Join(users, "."),
-						"roles":      strings.Join(roles, "."),
-						"groups":     strings.Join(groups, "."),
-					},
-
-				*/
-			})
-			result = append(result, r)
-		}
-	}
-	// policy attachments are not resources
-	// what happens here, is that policy is detached from groups, users and roles
 	return result
 }
 
