@@ -44,7 +44,6 @@ const (
 	EbsSnapshot      = "aws_ebs_snapshot"
 	EcsCluster       = "aws_ecs_cluster"
 	Instance         = "aws_instance"
-	KmsAlias         = "aws_kms_alias"
 	KmsKey           = "aws_kms_key"
 	NatGateway       = "aws_nat_gateway"
 	CloudTrail       = "aws_cloudtrail"
@@ -57,7 +56,6 @@ var (
 		// Note: to import a cluster, the name is used as ID
 		EcsCluster: "ClusterArn",
 		Instance:   "InstanceId",
-		KmsAlias:   "AliasName",
 		KmsKey:     "KeyId",
 		NatGateway: "NatGatewayId",
 		CloudTrail: "Name",
@@ -96,7 +94,7 @@ var (
 		Ami:                        9740,
 		"aws_ebs_volume":           9730,
 		EbsSnapshot:                9720,
-		KmsAlias:                   9610,
+		"aws_kms_alias":            9610,
 		KmsKey:                     9600,
 		"aws_network_interface":    9000,
 		"aws_cloudwatch_log_group": 8900,
@@ -189,8 +187,6 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.ecsClusters()
 	case Instance:
 		return a.instances()
-	case KmsAlias:
-		return a.KmsAliases()
 	case KmsKey:
 		return a.KmsKeys()
 	case NatGateway:
@@ -258,14 +254,6 @@ func (a *AWS) ecsClusters() (interface{}, error) {
 	})
 
 	return descOutput.Clusters, nil
-}
-
-func (a *AWS) KmsAliases() (interface{}, error) {
-	output, err := a.KMSAPI.ListAliases(&kms.ListAliasesInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.Aliases, nil
 }
 
 func (a *AWS) KmsKeys() (interface{}, error) {
