@@ -339,7 +339,6 @@ which have to be used in the YAML file to filter resources by their type.
 | **kinesisanalytics** |
 | aws_kinesis_analytics_application |  x  |  |
 | **kms** |
-| aws_kms_alias | | |
 | aws_kms_external_key |  x  |  |
 | aws_kms_key |  x  |  |
 | **lambda** |

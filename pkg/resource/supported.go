@@ -43,10 +43,7 @@ const (
 	AutoscalingGroup = "aws_autoscaling_group"
 	EbsSnapshot      = "aws_ebs_snapshot"
 	EcsCluster       = "aws_ecs_cluster"
-	EfsFileSystem    = "aws_efs_file_system"
 	Instance         = "aws_instance"
-	KmsAlias         = "aws_kms_alias"
-	KmsKey           = "aws_kms_key"
 	NatGateway       = "aws_nat_gateway"
 	CloudTrail       = "aws_cloudtrail"
 )
@@ -56,13 +53,10 @@ var (
 		Ami:              "ImageId",
 		AutoscalingGroup: "AutoScalingGroupName",
 		// Note: to import a cluster, the name is used as ID
-		EcsCluster:    "ClusterArn",
-		EfsFileSystem: "FileSystemId",
-		Instance:      "InstanceId",
-		KmsAlias:      "AliasName",
-		KmsKey:        "KeyId",
-		NatGateway:    "NatGatewayId",
-		CloudTrail:    "Name",
+		EcsCluster: "ClusterArn",
+		Instance:   "InstanceId",
+		NatGateway: "NatGatewayId",
+		CloudTrail: "Name",
 	}
 
 	// DependencyOrder is the order in which resource types should be deleted,
@@ -79,7 +73,7 @@ var (
 		NatGateway:                 9940,
 		"aws_cloudformation_stack": 9930,
 		"aws_route53_zone":         9920,
-		EfsFileSystem:              9910,
+		"aws_efs_file_system":      9910,
 		"aws_launch_configuration": 9900,
 		"aws_eip":                  9890,
 		"aws_internet_gateway":     9880,
@@ -98,8 +92,8 @@ var (
 		Ami:                        9740,
 		"aws_ebs_volume":           9730,
 		EbsSnapshot:                9720,
-		KmsAlias:                   9610,
-		KmsKey:                     9600,
+		"aws_kms_alias":            9610,
+		"aws_kms_key":              9600,
 		"aws_network_interface":    9000,
 		"aws_cloudwatch_log_group": 8900,
 		CloudTrail:                 8800,
@@ -189,14 +183,8 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.ebsSnapshots()
 	case EcsCluster:
 		return a.ecsClusters()
-	case EfsFileSystem:
-		return a.efsFileSystems()
 	case Instance:
 		return a.instances()
-	case KmsAlias:
-		return a.KmsAliases()
-	case KmsKey:
-		return a.KmsKeys()
 	case NatGateway:
 		return a.natGateways()
 	case CloudTrail:
@@ -262,30 +250,6 @@ func (a *AWS) ecsClusters() (interface{}, error) {
 	})
 
 	return descOutput.Clusters, nil
-}
-
-func (a *AWS) efsFileSystems() (interface{}, error) {
-	output, err := a.DescribeFileSystems(&efs.DescribeFileSystemsInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.FileSystems, nil
-}
-
-func (a *AWS) KmsAliases() (interface{}, error) {
-	output, err := a.KMSAPI.ListAliases(&kms.ListAliasesInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.Aliases, nil
-}
-
-func (a *AWS) KmsKeys() (interface{}, error) {
-	output, err := a.ListKeys(&kms.ListKeysInput{})
-	if err != nil {
-		return nil, err
-	}
-	return output.Keys, nil
 }
 
 func (a *AWS) cloudTrails() (interface{}, error) {

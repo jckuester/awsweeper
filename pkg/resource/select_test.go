@@ -23,7 +23,7 @@ func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	assert.Len(t, result, 0)
@@ -42,7 +42,7 @@ func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	assert.Len(t, result, len(res))
@@ -71,7 +71,7 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 		},
 	}
 
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	require.Len(t, result, 1)
@@ -112,7 +112,7 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	require.Len(t, result, 1)
@@ -151,7 +151,7 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	assert.Len(t, result, 1)
@@ -193,7 +193,7 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	assert.Len(t, result, 1)
@@ -241,7 +241,7 @@ func TestYamlFilter_Apply_Created(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	assert.Len(t, result, 1)
@@ -278,7 +278,7 @@ func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	assert.Len(t, result, 1)
@@ -315,7 +315,7 @@ func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	assert.Len(t, result, 1)
@@ -362,7 +362,7 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	require.Len(t, result, 2)
@@ -403,7 +403,7 @@ func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
 	}
 
 	// when
-	result := f.Apply(resource.Instance, res, testInstance, nil)
+	result := f.Apply(res)
 
 	// then
 	require.Len(t, result, 1)

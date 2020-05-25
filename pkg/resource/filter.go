@@ -65,9 +65,14 @@ func NewFilter(path string) (*Filter, error) {
 
 // Validate checks if all resource types appearing in the config are currently supported.
 func (f Filter) Validate() error {
-	for _, resType := range f.Types() {
-		if !(SupportedResourceType(resType) || resource.IsSupportedType(resType)) {
-			return fmt.Errorf("unsupported resource type: %s", resType)
+	for _, rType := range f.Types() {
+		if !(SupportedResourceType(rType) || resource.IsSupportedType(rType)) {
+			return fmt.Errorf("unsupported resource type: %s", rType)
+		}
+
+		// there is currently a bug that getting the state for aws_key_alias kills the Terraform provider process
+		if rType == "aws_kms_alias" {
+			return fmt.Errorf("unsupported resource type: %s", rType)
 		}
 	}
 	return nil
