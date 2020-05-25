@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/apex/log"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kms"
 	awsls "github.com/jckuester/awsls/aws"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -30,8 +28,6 @@ func (f Filter) Apply(resType string, res []awsls.Resource, raw interface{}, aws
 	}
 
 	switch resType {
-	case KmsKey:
-		return f.kmsKeysFilter(res, aws)
 	default:
 		return f.defaultFilter(res)
 	}
@@ -82,26 +78,5 @@ func (f Filter) defaultFilter(res []awsls.Resource) []awsls.Resource {
 			result = append(result, r)
 		}
 	}
-	return result
-}
-
-func (f Filter) kmsKeysFilter(res []awsls.Resource, c *AWS) []awsls.Resource {
-	var result []awsls.Resource
-
-	for _, r := range res {
-		if f.Match(r) {
-			req, res := c.DescribeKeyRequest(&kms.DescribeKeyInput{
-				KeyId: aws.String(r.ID),
-			})
-			err := req.Send()
-			if err == nil {
-				if *res.KeyMetadata.KeyState != "PendingDeletion" {
-					result = append(result, r)
-				}
-			}
-		}
-	}
-
-	// associated aliases will also be deleted after waiting period (between 7 to 30 days)
 	return result
 }
