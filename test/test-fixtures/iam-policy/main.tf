@@ -12,7 +12,7 @@ terraform {
 }
 
 resource "aws_iam_user" "test" {
-  name       = "awsweeper-test-acc"
+  name        = var.name
 
   tags = {
     awsweeper = "test-acc"
@@ -20,7 +20,7 @@ resource "aws_iam_user" "test" {
 }
 
 resource "aws_iam_role" "test" {
-  name       = "awsweeper-test-acc"
+  name        = var.name
 
   assume_role_policy = <<EOF
 {
@@ -44,11 +44,11 @@ EOF
 }
 
 resource "aws_iam_group" "test" {
-  name       = "awsweeper-test-acc"
+  name        = var.name
 }
 
 resource "aws_iam_policy" "test" {
-  name       = "awsweeper-test-acc"
+  name        = var.name
   description = "A test policy"
 
   policy = <<EOF
@@ -68,7 +68,7 @@ EOF
 }
 
 resource "aws_iam_policy_attachment" "test" {
-  name       = "awsweeper-test-acc"
+  name        = var.name
   users      = [aws_iam_user.test.name]
   roles      = [aws_iam_role.test.name]
   groups     = [aws_iam_group.test.name]
