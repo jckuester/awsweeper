@@ -6,7 +6,6 @@ import (
 
 	"github.com/apex/log"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/kms"
 	awsls "github.com/jckuester/awsls/aws"
 	"github.com/zclconf/go-cty/cty"
@@ -32,8 +31,6 @@ func (f Filter) Apply(resType string, res []awsls.Resource, raw interface{}, aws
 	}
 
 	switch resType {
-	case EfsFileSystem:
-		return f.efsFileSystemFilter(res, raw, aws)
 	case KmsKey:
 		return f.kmsKeysFilter(res, aws)
 	case KmsAlias:
@@ -88,30 +85,6 @@ func (f Filter) defaultFilter(res []awsls.Resource) []awsls.Resource {
 			result = append(result, r)
 		}
 	}
-	return result
-}
-
-func (f Filter) efsFileSystemFilter(res []awsls.Resource, raw interface{}, c *AWS) []awsls.Resource {
-	var result []awsls.Resource
-
-	for _, r := range res {
-		if f.Match(awsls.Resource{Type: r.Type, ID: *raw.([]*efs.FileSystemDescription)[0].Name}) {
-			res, err := c.DescribeMountTargets(&efs.DescribeMountTargetsInput{
-				FileSystemId: &r.ID,
-			})
-
-			if err == nil {
-				for _, r := range res.MountTargets {
-					result = append(result, awsls.Resource{
-						Type: "aws_efs_mount_target",
-						ID:   *r.MountTargetId,
-					})
-				}
-			}
-			result = append(result, r)
-		}
-	}
-
 	return result
 }
 

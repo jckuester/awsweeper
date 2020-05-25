@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/apex/log"
+	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fatih/color"
 	awsls "github.com/jckuester/awsls/aws"
@@ -70,6 +71,12 @@ func List(filter *Filter, client *AWS, awsClient *awsls.Client,
 				print(policyAttachments, outputType)
 
 				filteredRes = append(filteredRes, policyAttachments...)
+
+			case "aws_efs_file_system":
+				mountTargets := getEfsMountTargets(filteredRes, client, provider)
+				print(mountTargets, outputType)
+
+				filteredRes = append(filteredRes, mountTargets...)
 			}
 
 			for _, r := range filteredRes {
@@ -179,6 +186,41 @@ func getPolicyAttachments(policies []awsls.Resource, provider *provider.Terrafor
 		}
 
 		result = append(result, r)
+	}
+
+	return result
+}
+
+func getEfsMountTargets(efsFileSystems []awsls.Resource, client *AWS,
+	provider *provider.TerraformProvider) []awsls.Resource {
+	var result []awsls.Resource
+
+	for _, fs := range efsFileSystems {
+		mountTargets, err := client.DescribeMountTargets(&efs.DescribeMountTargetsInput{
+			FileSystemId: &fs.ID,
+		})
+
+		if err != nil {
+			fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+			continue
+		}
+
+		for _, mountTarget := range mountTargets.MountTargets {
+			r := awsls.Resource{
+				Type: "aws_efs_mount_target",
+				ID:   *mountTarget.MountTargetId,
+			}
+
+			r.Resource = terradozerRes.New(r.Type, r.ID, nil, provider)
+
+			err = r.UpdateState()
+			if err != nil {
+				fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+				continue
+			}
+
+			result = append(result, r)
+		}
 	}
 
 	return result
