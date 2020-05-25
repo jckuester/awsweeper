@@ -37,7 +37,7 @@ func List(filter *Filter, client *AWS, awsClient *awsls.Client,
 
 			resourcesWithStates := awslsRes.GetStates(deletableResources, provider)
 
-			filteredRes := filter.Apply(rType, resourcesWithStates, rawResources, client)
+			filteredRes := filter.Apply(resourcesWithStates)
 			print(filteredRes, outputType)
 
 			for _, r := range filteredRes {
@@ -53,7 +53,7 @@ func List(filter *Filter, client *AWS, awsClient *awsls.Client,
 
 			resourcesWithStates := awslsRes.GetStates(resources, provider)
 
-			filteredRes := filter.Apply(rType, resourcesWithStates, nil, client)
+			filteredRes := filter.Apply(resourcesWithStates)
 			print(filteredRes, outputType)
 
 			switch rType {
