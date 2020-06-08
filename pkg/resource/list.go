@@ -41,7 +41,7 @@ func List(filter *Filter, client *AWS, awsClient *awsls.Client,
 			print(filteredRes, outputType)
 
 			for _, r := range filteredRes {
-				destroyableRes = append(destroyableRes, r.Resource)
+				destroyableRes = append(destroyableRes, terradozerRes.NewWithState(r.Type, r.ID, provider, r.State()))
 			}
 		} else {
 			resources, err := awsls.ListResourcesByType(awsClient, rType)
@@ -80,7 +80,7 @@ func List(filter *Filter, client *AWS, awsClient *awsls.Client,
 			}
 
 			for _, r := range filteredRes {
-				destroyableRes = append(destroyableRes, r.Resource)
+				destroyableRes = append(destroyableRes, terradozerRes.NewWithState(r.Type, r.ID, provider, r.State()))
 			}
 		}
 	}
@@ -107,7 +107,7 @@ func getAttachedUserPolicies(users []awsls.Resource, client *AWS,
 				ID:   *attachedPolicy.PolicyArn,
 			}
 
-			r.Resource = terradozerRes.New(r.Type, r.ID, map[string]cty.Value{
+			r.UpdatableResource = terradozerRes.New(r.Type, r.ID, map[string]cty.Value{
 				"user":       cty.StringVal(user.ID),
 				"policy_arn": cty.StringVal(*attachedPolicy.PolicyArn),
 			}, provider)
@@ -144,7 +144,7 @@ func getInlineUserPolicies(users []awsls.Resource, client *AWS,
 				ID:   user.ID + ":" + *inlinePolicy,
 			}
 
-			r.Resource = terradozerRes.New(r.Type, r.ID, nil, provider)
+			r.UpdatableResource = terradozerRes.New(r.Type, r.ID, nil, provider)
 
 			err = r.UpdateState()
 			if err != nil {
@@ -175,7 +175,7 @@ func getPolicyAttachments(policies []awsls.Resource, provider *provider.Terrafor
 			ID: policy.ID,
 		}
 
-		r.Resource = terradozerRes.New(r.Type, r.ID, map[string]cty.Value{
+		r.UpdatableResource = terradozerRes.New(r.Type, r.ID, map[string]cty.Value{
 			"policy_arn": cty.StringVal(arn),
 		}, provider)
 
@@ -211,7 +211,7 @@ func getEfsMountTargets(efsFileSystems []awsls.Resource, client *AWS,
 				ID:   *mountTarget.MountTargetId,
 			}
 
-			r.Resource = terradozerRes.New(r.Type, r.ID, nil, provider)
+			r.UpdatableResource = terradozerRes.New(r.Type, r.ID, nil, provider)
 
 			err = r.UpdateState()
 			if err != nil {

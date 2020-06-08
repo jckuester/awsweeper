@@ -131,7 +131,7 @@ func mainExitCode() int {
 		return 1
 	}
 
-	provider, err := provider.Init("aws", timeoutDuration)
+	provider, err := provider.Init("aws", "~/.awsweeper", timeoutDuration)
 	if err != nil {
 		log.WithError(err).Error("failed to initialize Terraform AWS Providers")
 		return 1

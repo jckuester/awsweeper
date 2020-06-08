@@ -37,7 +37,7 @@ func (f Filter) Apply(res []awsls.Resource) []awsls.Resource {
 }
 
 func GetTags(r *awsls.Resource) (map[string]string, error) {
-	if r.Resource == nil {
+	if r == nil || r.UpdatableResource == nil {
 		return nil, fmt.Errorf("resource is nil")
 	}
 
