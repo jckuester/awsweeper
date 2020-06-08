@@ -14,7 +14,7 @@ builds:
       - 7
     env:
       - CGO_ENABLED=0
-    ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}}
+    ldflags: -s -w -X github.com/jckuester/awsweeper/internal.version={{.Version}} -X github.com/jckuester/awsweeper/internal.commit={{.ShortCommit}} -X github.com/jckuester/awsweeper/internal.date={{.Date}}
 
 archives:
   - format: tar.gz
