@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/cloudetc/awsweeper/internal"
+	"github.com/jckuester/awsweeper/internal"
 	"github.com/stretchr/testify/assert"
 )
 

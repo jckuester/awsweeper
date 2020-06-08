@@ -6,12 +6,9 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/cloudtrail"
-
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	res "github.com/cloudetc/awsweeper/pkg/resource"
 )
 
 func TestAcc_CloudTrail_DeleteByID(t *testing.T) {
@@ -32,7 +29,7 @@ func TestAcc_CloudTrail_DeleteByID(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertCloudTrailExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.CloudTrail, id)
+	writeConfigID(t, terraformDir, "aws_cloudtrail", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
@@ -61,7 +58,7 @@ func TestAcc_CloudTrail_DeleteByTag(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertCloudTrailExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.CloudTrail)
+	writeConfigTag(t, terraformDir, "aws_cloudtrail")
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")

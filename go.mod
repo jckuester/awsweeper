@@ -1,4 +1,4 @@
-module github.com/cloudetc/awsweeper
+module github.com/jckuester/awsweeper
 
 go 1.13
 
@@ -8,7 +8,6 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/golang/mock v1.4.0
 	github.com/gruntwork-io/terratest v0.24.2
-	github.com/hashicorp/terraform v0.12.24
 	github.com/jckuester/awsls v0.0.0-20200524112109-93c2a4665746
 	github.com/jckuester/terradozer v0.0.0-20200523195146-e66de6fa55f3
 	github.com/onsi/gomega v1.9.0

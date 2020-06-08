@@ -6,9 +6,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/cloudetc/awsweeper/pkg/resource"
-	"github.com/cloudetc/awsweeper/pkg/resource/mocks"
 	"github.com/golang/mock/gomock"
+	"github.com/jckuester/awsweeper/pkg/resource"
+	"github.com/jckuester/awsweeper/pkg/resource/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

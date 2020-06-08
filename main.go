@@ -18,10 +18,10 @@ import (
 	"github.com/apex/log/handlers/cli"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/cloudetc/awsweeper/internal"
-	"github.com/cloudetc/awsweeper/pkg/resource"
 	"github.com/fatih/color"
 	awsls "github.com/jckuester/awsls/aws"
+	"github.com/jckuester/awsweeper/internal"
+	"github.com/jckuester/awsweeper/pkg/resource"
 	"github.com/jckuester/terradozer/pkg/provider"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
 )

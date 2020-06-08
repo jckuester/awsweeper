@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/cloudetc/awsweeper/pkg/resource"
 	awsls "github.com/jckuester/awsls/aws"
+	"github.com/jckuester/awsweeper/pkg/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

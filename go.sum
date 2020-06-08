@@ -105,8 +105,6 @@ github.com/aws/aws-sdk-go v1.27.1/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN
 github.com/aws/aws-sdk-go v1.29.1/go.mod h1:1KvfttTE3SPKMpo8g2c6jL3ZKfXtFvKscTgahTma5Xg=
 github.com/aws/aws-sdk-go v1.30.5 h1:i+sSesaMrSxiUt3NJddOApe2mXK+VNBgfcmRTvNFrXM=
 github.com/aws/aws-sdk-go v1.30.5/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
-github.com/aws/aws-sdk-go-v2 v0.20.0 h1:/yefUjgMrda9PNFwWctBU63nL10CJMdBwkAmaQ4w4Hs=
-github.com/aws/aws-sdk-go-v2 v0.20.0/go.mod h1:2LhT7UgHOXK3UXONKI5OMgIyoQL6zTAw/jwIeX6yqzw=
 github.com/aws/aws-sdk-go-v2 v0.22.0 h1:mlixfS5HVzn7Sf3KVhjAIM2H3bB7uoTbLCtKHvteUfE=
 github.com/aws/aws-sdk-go-v2 v0.22.0/go.mod h1:2LhT7UgHOXK3UXONKI5OMgIyoQL6zTAw/jwIeX6yqzw=
 github.com/aybabtme/rgbterm v0.0.0-20170906152045-cc83f3b3ce59/go.mod h1:q/89r3U2H7sSsE2t6Kca0lfwTK8JdoNGS/yzM/4iH5I=
@@ -347,18 +345,8 @@ github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:
 github.com/imdario/mergo v0.3.5/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/imdario/mergo v0.3.7/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
-github.com/jckuester/awsls v0.0.0-20200516153042-96ea638daeb5 h1:V8YuMycWi094/mWHmVIqbcFVH7L5o8LrgJgAi56yIA8=
-github.com/jckuester/awsls v0.0.0-20200516153042-96ea638daeb5/go.mod h1:6dqF/j6Ar6b10DmHSV0CRYgKP2jwN8VUsHoFT3szFfA=
-github.com/jckuester/awsls v0.0.0-20200523105025-fe25c60a9fba h1:fbk5OV5nnwtkElugQcUTur/B0M4NceHTp4Mr0qAbJvA=
-github.com/jckuester/awsls v0.0.0-20200523105025-fe25c60a9fba/go.mod h1:6dqF/j6Ar6b10DmHSV0CRYgKP2jwN8VUsHoFT3szFfA=
-github.com/jckuester/awsls v0.0.0-20200523195606-04f54b8ca1c6 h1:Rbcyj5lTyRRE4QgkJVncOgLbn6ehT6Yp5SdjCprr6FA=
-github.com/jckuester/awsls v0.0.0-20200523195606-04f54b8ca1c6/go.mod h1:hbj1nD8zXLBoZffzkV7WXUmMGarGPKkFeke90U9eehs=
 github.com/jckuester/awsls v0.0.0-20200524112109-93c2a4665746 h1:CCO3Lc/ofOzEwH5WIZpndhoixKwNQRNVPKczVT4IS9w=
 github.com/jckuester/awsls v0.0.0-20200524112109-93c2a4665746/go.mod h1:hbj1nD8zXLBoZffzkV7WXUmMGarGPKkFeke90U9eehs=
-github.com/jckuester/terradozer v0.0.0-20200505071321-36ef87ab4394 h1:7LmuH4Cm81Qsi0trqbnOmZ75xemFDhmzin0OoNL7aM4=
-github.com/jckuester/terradozer v0.0.0-20200505071321-36ef87ab4394/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
-github.com/jckuester/terradozer v0.0.0-20200522202131-ed33ac929141 h1:BowqT+JEJsqjPRWcTH7EOEEJuJlhKoh80MKZouM3pkE=
-github.com/jckuester/terradozer v0.0.0-20200522202131-ed33ac929141/go.mod h1:fc32wbKuGQHf17dmggX1O51swhUUEr344xb173I6mSA=
 github.com/jckuester/terradozer v0.0.0-20200523195146-e66de6fa55f3 h1:uba9ja+voKyereVEuM7YI6kDQO0W1890W+Y5MBWutI8=
 github.com/jckuester/terradozer v0.0.0-20200523195146-e66de6fa55f3/go.mod h1:KYrRcPbIiXgcRp7hG9fOBdAyvDnUx2aA9cjTqvKa4cI=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=

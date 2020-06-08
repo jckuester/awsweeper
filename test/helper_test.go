@@ -8,25 +8,19 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
-	res "github.com/cloudetc/awsweeper/pkg/resource"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/hashicorp/terraform/helper/resource"
+	res "github.com/jckuester/awsweeper/pkg/resource"
 	"github.com/onsi/gomega/gexec"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	packagePath       = "github.com/cloudetc/awsweeper"
+	packagePath       = "github.com/jckuester/awsweeper"
 	testTfStateBucket = "awsweeper-testacc-tfstate-492043"
-
-	NoSuchEntity     = "NoSuchEntity"
-	NoSuchHostedZone = "NoSuchHostedZone"
 )
 
 // EnvVars contains environment variables for tests.
@@ -130,21 +124,4 @@ func getTerraformOptions(terraformDir string, env EnvVars) *terraform.Options {
 			"encrypt": true,
 		},
 	}
-}
-
-func retryOnAwsCode(code string, f func() (interface{}, error)) (interface{}, error) {
-	var resp interface{}
-	err := resource.Retry(1*time.Minute, func() *resource.RetryError {
-		var err error
-		resp, err = f()
-		if err != nil {
-			awsErr, ok := err.(awserr.Error)
-			if ok && awsErr.Code() == code {
-				return resource.RetryableError(err)
-			}
-			return resource.NonRetryableError(err)
-		}
-		return nil
-	})
-	return resp, err
 }

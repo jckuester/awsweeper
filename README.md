@@ -1,13 +1,13 @@
 <p align="center">
-  <img alt="AWSweeper" src="https://github.com/cloudetc/awsweeper/blob/master/img/logo.png" height="150" />
+  <img alt="AWSweeper" src="https://github.com/jckuester/awsweeper/blob/master/img/logo.png" height="150" />
   <h3 align="center">AWSweeper</h3>
   <p align="center">A tool for cleaning your AWS account</p>
 </p>
 
 ---
-[![Release](https://img.shields.io/github/release/cloudetc/awsweeper.svg?style=for-the-badge)](https://github.com/cloudetc/awsweeper/releases/latest)
+[![Release](https://img.shields.io/github/release/jckuester/awsweeper.svg?style=for-the-badge)](https://github.com/jckuester/awsweeper/releases/latest)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
-[![Travis](https://img.shields.io/travis/cloudetc/awsweeper/master.svg?style=for-the-badge)](https://travis-ci.org/cloudetc/awsweeper)
+[![Travis](https://img.shields.io/travis/jckuester/awsweeper/master.svg?style=for-the-badge)](https://travis-ci.org/jckuester/awsweeper)
 
 AWSweeper is able to clean out [over 200 resource types](#supported-resources) in your AWS account. Resources to be deleted
 can be filtered by their type, ID, tags, or creation date using [regular expressions](https://golang.org/pkg/regexp/syntax/)
@@ -39,13 +39,13 @@ Happy erasing!
 ## Installation
 
 It's recommended to install a specific version of AWSweeper available on the
-[releases page](https://github.com/cloudetc/awsweeper/releases).
+[releases page](https://github.com/jckuester/awsweeper/releases).
 
 Here is the recommended way to install AWSweeper v0.9.0:
 
 ```bash
 # install it into ./bin/
-curl -sSfL https://raw.githubusercontent.com/cloudetc/awsweeper/master/install.sh | sh -s v0.9.0
+curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.9.0
 ```
 
 ## Usage
@@ -455,7 +455,7 @@ which have to be used in the YAML file to filter resources by their type.
 ## Acceptance tests
 
 ***IMPORTANT:*** Acceptance tests create real resources that might cost you money. Also, note that if you contribute a PR, 
-the [Travis build](https://travis-ci.org/github/cloudetc/awsweeper) will always fail since AWS credentials are not 
+the [Travis build](https://travis-ci.org/github/jckuester/awsweeper) will always fail since AWS credentials are not
 injected into the PR build coming from forks for security reasons. You can either run tests locally against your personal 
 AWS account or ask me to run them for you instead.
 

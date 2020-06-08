@@ -5,13 +5,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	res "github.com/cloudetc/awsweeper/pkg/resource"
 )
 
 func TestAcc_EbsSnapshot_DeleteByID(t *testing.T) {
@@ -32,7 +30,7 @@ func TestAcc_EbsSnapshot_DeleteByID(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertEbsSnapshotExists(t, env, id)
 
-	writeConfigID(t, terraformDir, res.EbsSnapshot, id)
+	writeConfigID(t, terraformDir, "aws_ebs_snapshot", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n", "-debug")
@@ -61,7 +59,7 @@ func TestAcc_EbsSnapshot_DeleteByTag(t *testing.T) {
 	id := terraform.Output(t, terraformOptions, "id")
 	assertEbsSnapshotExists(t, env, id)
 
-	writeConfigTag(t, terraformDir, res.EbsSnapshot)
+	writeConfigTag(t, terraformDir, "aws_ebs_snapshot")
 	defer os.Remove(terraformDir + "/config.yml")
 
 	logBuffer, err := runBinary(t, terraformDir, "YES\n")
