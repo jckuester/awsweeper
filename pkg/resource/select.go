@@ -38,17 +38,17 @@ func (f Filter) Apply(res []awsls.Resource) []awsls.Resource {
 
 func GetTags(r *awsls.Resource) (map[string]string, error) {
 	if r == nil || r.UpdatableResource == nil {
-		return nil, fmt.Errorf("resource is nil")
+		return nil, fmt.Errorf("resource is nil: %+v", r)
 	}
 
 	state := r.State()
 
-	if state == nil {
-		return nil, fmt.Errorf("state is nil")
+	if state == nil || state.IsNull() {
+		return nil, fmt.Errorf("state is nil: %+v", state)
 	}
 
 	if !state.CanIterateElements() {
-		return nil, fmt.Errorf("cannot iterate: %s", *state)
+		return nil, fmt.Errorf("cannot iterate: %s", state.GoString())
 	}
 
 	attrValue, ok := state.AsValueMap()["tags"]
