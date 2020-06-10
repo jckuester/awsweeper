@@ -41,11 +41,11 @@ Happy erasing!
 It's recommended to install a specific version of AWSweeper available on the
 [releases page](https://github.com/jckuester/awsweeper/releases).
 
-Here is the recommended way to install AWSweeper v0.9.0:
+Here is the recommended way to install AWSweeper v0.10.0:
 
 ```bash
 # install it into ./bin/
-curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.9.0
+curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.10.0
 ```
 
 ## Usage

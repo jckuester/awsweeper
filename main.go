@@ -1,9 +1,9 @@
 package main
 
-//go:generate mockgen -package mocks -destination pkg/resource/mocks/autoscaling.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/autoscaling/autoscalingiface/interface.go
-//go:generate mockgen -package mocks -destination pkg/resource/mocks/ec2.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/ec2/ec2iface/interface.go
-//go:generate mockgen -package mocks -destination pkg/resource/mocks/sts.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/sts/stsiface/interface.go
-//go:generate mockgen -package mocks -destination pkg/resource/mocks/rds.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.5/service/rds/rdsiface/interface.go
+//go:generate mockgen -package mocks -destination pkg/resource/mocks/autoscaling.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.12/service/autoscaling/autoscalingiface/interface.go
+//go:generate mockgen -package mocks -destination pkg/resource/mocks/ec2.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.12/service/ec2/ec2iface/interface.go
+//go:generate mockgen -package mocks -destination pkg/resource/mocks/sts.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.12/service/sts/stsiface/interface.go
+//go:generate mockgen -package mocks -destination pkg/resource/mocks/rds.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.12/service/rds/rdsiface/interface.go
 
 import (
 	"flag"
