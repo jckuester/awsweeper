@@ -356,6 +356,8 @@ github.com/jckuester/terradozer v0.1.0 h1:dsZHaY1vH0XNDDIAensa4IkoL7+WKUqDpEu7xl
 github.com/jckuester/terradozer v0.1.0/go.mod h1:ZHLoxb3vdsXGCmxeUb7vPy/T6yPzecD0rn1NWdH9aww=
 github.com/jckuester/terradozer v0.1.1 h1:ypKZXvnCPAwbWi4am+OvSA6aW/7JxHGiRjpXSI9ZSpg=
 github.com/jckuester/terradozer v0.1.1/go.mod h1:ZHLoxb3vdsXGCmxeUb7vPy/T6yPzecD0rn1NWdH9aww=
+github.com/jckuester/terradozer v0.1.2 h1:E4oN3pk9aVTJgzmVySMiMr/dEwd6s6LqNTTDpaRh/mc=
+github.com/jckuester/terradozer v0.1.2/go.mod h1:ZHLoxb3vdsXGCmxeUb7vPy/T6yPzecD0rn1NWdH9aww=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
