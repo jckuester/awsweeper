@@ -8,8 +8,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
-	stdlog "log"
 	"os"
 	"strings"
 	"time"
@@ -77,7 +75,7 @@ func mainExitCode() int {
 	}
 
 	// discard TRACE logs of GRPCProvider
-	stdlog.SetOutput(ioutil.Discard)
+	//stdlog.SetOutput(ioutil.Discard)
 
 	if version {
 		fmt.Println(internal.BuildVersionString())
