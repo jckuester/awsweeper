@@ -3,11 +3,10 @@ dist: bionic
 language: go
 
 go:
-  - 1.13.x
+  - 1.14.x
 
 env:
   global:
-    - GO111MODULE=on
     - AWS_PROFILE=awsweeper
     - AWS_DEFAULT_REGION=us-west-2
 
