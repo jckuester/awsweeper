@@ -48,6 +48,14 @@ Here is the recommended way to install AWSweeper v0.10.1:
 curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.10.1
 ```
 
+### Install via `brew`
+
+[Homebrew](https://brew.sh/) users can install by:
+
+```sh
+$ brew install awsweeper
+```
+
 ## Usage
 
     awsweeper [options] <filter.yml>
@@ -64,16 +72,16 @@ Resources are deleted via a filter declared in a YAML file.
         created:
           before: 2018-10-14
           after: 2018-06-28 12:28:39
-            
-      # instance filter part 2   
+
+      # instance filter part 2
       - tags:
           foo: bar
           NOT(owner): .*
-           
+
     aws_security_groups:
 
 The filter snippet above deletes all EC2 instances that ID matches `^foo.*` and that have been created between
- `2018-06-28 12:28:39` and `2018-10-14` UTC (instance filter part 1); additionally, EC2 instances having a tag 
+ `2018-06-28 12:28:39` and `2018-10-14` UTC (instance filter part 1); additionally, EC2 instances having a tag
  `foo: bar` *AND* not a tag key `owner` with any value are deleted (instance filter part 2); last but not least,
  ALL security groups are deleted by this filter.
 
@@ -97,29 +105,29 @@ Here is a more detailed description of the various ways to filter resources:
 
 ##### 1) Delete all resources of a particular type
 
-   [Terraform resource type identifiers](https://www.terraform.io/docs/providers/aws/index.html) are used to delete 
+   [Terraform resource type identifiers](https://www.terraform.io/docs/providers/aws/index.html) are used to delete
    resources by type. The following filter snippet deletes *ALL* security groups, IAM roles, and EC2 instances:
-   
+
     aws_security_group:
     aws_iam_role:
     aws_instance:
-   
+
    Don't forget the `:` at the end of each line.
 
 ##### 2) Delete by tags
 
    If most of your resources have tags, this is probably the best way to filter them
    for deletion. **Be aware**: Not all resources [support tags](#supported-resources) yet and can be filtered this way.
-      
-   The key and the value part of the tag filter can be negated by a surrounding `NOT(...)`. This allows for removing of 
+
+   The key and the value part of the tag filter can be negated by a surrounding `NOT(...)`. This allows for removing of
    all resources not matching some tag key or value. In the example below, all EC2 instances without the `owner: me`
    tag are deleted:
 
     aws_instance:
       - tags:
           NOT(Owner): me
-          
-   The flag `tagged: false` deletes all resources that have no tags. Contrary, resources with any tags can be deleted 
+
+   The flag `tagged: false` deletes all resources that have no tags. Contrary, resources with any tags can be deleted
    with `tagged: true`:
 
     aws_instance:
@@ -454,9 +462,9 @@ which have to be used in the YAML file to filter resources by their type.
 
 ## Acceptance tests
 
-***IMPORTANT:*** Acceptance tests create real resources that might cost you money. Also, note that if you contribute a PR, 
+***IMPORTANT:*** Acceptance tests create real resources that might cost you money. Also, note that if you contribute a PR,
 the [Travis build](https://travis-ci.org/github/jckuester/awsweeper) will always fail since AWS credentials are not
-injected into the PR build coming from forks for security reasons. You can either run tests locally against your personal 
+injected into the PR build coming from forks for security reasons. You can either run tests locally against your personal
 AWS account or ask me to run them for you instead.
 
 Run all acceptance tests with
