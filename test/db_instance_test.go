@@ -1,11 +1,12 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/gruntwork-io/terratest/modules/terraform"
@@ -82,11 +83,12 @@ func assertDBInstanceDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func dbInstanceExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &rds.DescribeDBInstancesInput{
+	req := env.AWSClient.Rdsconn.DescribeDBInstancesRequest(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: &id,
-	}
+	})
 
-	resp, err := env.AWSClient.DescribeDBInstances(opts)
+	resp, err := req.Send(context.Background())
+
 	if err != nil {
 		awsErr, ok := err.(awserr.Error)
 		if !ok {

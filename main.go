@@ -1,12 +1,6 @@
 package main
 
-//go:generate mockgen -package mocks -destination pkg/resource/mocks/autoscaling.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.12/service/autoscaling/autoscalingiface/interface.go
-//go:generate mockgen -package mocks -destination pkg/resource/mocks/ec2.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.12/service/ec2/ec2iface/interface.go
-//go:generate mockgen -package mocks -destination pkg/resource/mocks/sts.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.12/service/sts/stsiface/interface.go
-//go:generate mockgen -package mocks -destination pkg/resource/mocks/rds.go -source=$GOPATH/pkg/mod/github.com/aws/aws-sdk-go@v1.30.12/service/rds/rdsiface/interface.go
-
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	stdlog "log"
@@ -16,14 +10,12 @@ import (
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/fatih/color"
-	awsls "github.com/jckuester/awsls/aws"
+	"github.com/jckuester/awsls/util"
 	"github.com/jckuester/awsweeper/internal"
 	"github.com/jckuester/awsweeper/pkg/resource"
-	"github.com/jckuester/terradozer/pkg/provider"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
+	flag "github.com/spf13/pflag"
 )
 
 func main() {
@@ -50,7 +42,7 @@ func mainExitCode() int {
 	flags.StringVar(&outputType, "output", "string", "The type of output result (String, JSON or YAML)")
 	flags.BoolVar(&dryRun, "dry-run", false, "Don't delete anything, just show what would be deleted")
 	flags.BoolVar(&logDebug, "debug", false, "Enable debug logging")
-	flags.StringVar(&profile, "profile", "", "The AWS named profile to use as credential")
+	flags.StringVar(&profile, "profile", "", "The AWS profile for the account to delete resources in")
 	flags.StringVar(&region, "region", "", "The region to delete resources in")
 	flags.IntVar(&parallel, "parallel", 10, "Limit the number of concurrent delete operations")
 	flags.BoolVar(&version, "version", false, "Show application version")
@@ -118,11 +110,19 @@ func mainExitCode() int {
 			log.WithError(err).Error("failed to set AWS profile")
 		}
 	}
-	if region != "" {
-		err := os.Setenv("AWS_DEFAULT_REGION", region)
-		if err != nil {
-			log.WithError(err).Error("failed to set AWS region")
+
+	var profiles []string
+	var regions []string
+
+	if profile != "" {
+		env, ok := os.LookupEnv("AWS_PROFILE")
+		if ok {
+			profiles = []string{env}
 		}
+	}
+
+	if region != "" {
+		regions = []string{region}
 	}
 
 	timeoutDuration, err := time.ParseDuration(timeout)
@@ -131,30 +131,34 @@ func mainExitCode() int {
 		return 1
 	}
 
-	provider, err := provider.Init("aws", "~/.awsweeper", timeoutDuration)
-	if err != nil {
-		log.WithError(err).Error("failed to initialize Terraform AWS Providers")
-		return 1
-	}
-
-	// TODO remove resource.NewAWS(sess) with awsls.NewClient()
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config:            aws.Config{Region: &region},
-		SharedConfigState: session.SharedConfigEnable,
-		Profile:           profile,
-	}))
-
-	client := resource.NewAWS(sess)
-
-	awsClient, err := awsls.NewClient()
+	clients, err := util.NewAWSClientPool(profiles, regions)
 	if err != nil {
 		fmt.Fprint(os.Stderr, color.RedString("\nError: %s\n", err))
 
 		return 1
 	}
 
+	clientKeys := make([]util.AWSClientKey, 0, len(clients))
+	for k := range clients {
+		clientKeys = append(clientKeys, k)
+	}
+
+	// initialize a Terraform AWS provider for each AWS client with a matching config
+	providers, err := util.NewProviderPool(clientKeys, "2.68.0", "~/.awsweeper", timeoutDuration)
+	if err != nil {
+		fmt.Fprint(os.Stderr, color.RedString("\nError: %s\n", err))
+
+		return 1
+	}
+
+	defer func() {
+		for _, p := range providers {
+			_ = p.Close()
+		}
+	}()
+
 	internal.LogTitle("showing resources that would be deleted (dry run)")
-	resources := resource.List(filter, client, awsClient, provider, outputType)
+	resources := resource.List(filter, clients, providers, outputType)
 
 	if len(resources) == 0 {
 		internal.LogTitle("no resources found to delete")

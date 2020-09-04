@@ -4,10 +4,8 @@ import (
 	"reflect"
 	"time"
 
-	awsls "github.com/jckuester/awsls/aws"
-
 	"github.com/apex/log"
-
+	awsls "github.com/jckuester/awsls/aws"
 	"github.com/pkg/errors"
 )
 

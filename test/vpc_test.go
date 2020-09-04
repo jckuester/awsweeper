@@ -1,16 +1,17 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 func TestAcc_Vpc_DeleteByID(t *testing.T) {
@@ -80,10 +81,13 @@ func assertVpcDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func vpcExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &ec2.DescribeVpcsInput{
-		VpcIds: []*string{&id},
-	}
-	resp, err := env.AWSClient.DescribeVpcs(opts)
+	req := env.AWSClient.Ec2conn.DescribeVpcsRequest(
+		&ec2.DescribeVpcsInput{
+			VpcIds: []string{id},
+		})
+
+	resp, err := req.Send(context.Background())
+
 	if err != nil {
 		ec2err, ok := err.(awserr.Error)
 		if !ok {

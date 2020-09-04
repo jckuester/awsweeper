@@ -1,11 +1,13 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/cloudtrail"
+	"github.com/aws/aws-sdk-go-v2/service/cloudtrail"
+
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,10 +80,11 @@ func assertCloudTrailDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func cloudTrailExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &cloudtrail.DescribeTrailsInput{
-		TrailNameList: []*string{&id},
-	}
-	resp, err := env.AWSClient.DescribeTrails(opts)
+	req := env.AWSClient.Cloudtrailconn.DescribeTrailsRequest(&cloudtrail.DescribeTrailsInput{
+		TrailNameList: []string{id},
+	})
+
+	resp, err := req.Send(context.Background())
 	if err != nil {
 		t.Fatal()
 	}

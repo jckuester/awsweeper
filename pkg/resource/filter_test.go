@@ -27,7 +27,7 @@ func TestFilter_Validate(t *testing.T) {
 		{
 			name: "unsupported type",
 			f: resource.Filter{
-				resource.Instance:    {},
+				"aws_instance":       {},
 				"not_supported_type": {},
 			},
 			wantErr: "unsupported resource type: not_supported_type",
@@ -37,7 +37,7 @@ func TestFilter_Validate(t *testing.T) {
 			f: resource.Filter{
 				"aws_iam_role":       {},
 				"aws_security_group": {},
-				resource.Instance:    {},
+				"aws_instance":       {},
 				"aws_vpc":            {},
 			},
 		},
@@ -46,7 +46,7 @@ func TestFilter_Validate(t *testing.T) {
 			f: resource.Filter{
 				"aws_iam_role":       {},
 				"aws_security_group": {},
-				resource.Instance:    {},
+				"aws_instance":       {},
 				"aws_glue_job":       {},
 			},
 		},
@@ -73,10 +73,10 @@ func TestFilter_Types(t *testing.T) {
 		{
 			name: "dependency order",
 			f: resource.Filter{
-				"aws_vpc":         {},
-				resource.Instance: {},
+				"aws_vpc":      {},
+				"aws_instance": {},
 			},
-			want: []string{resource.Instance, "aws_vpc"},
+			want: []string{"aws_instance", "aws_vpc"},
 		},
 		{
 			name: "dependency order not specified",
@@ -109,23 +109,23 @@ func Test_ParseFile(t *testing.T) {
 	var cfg resource.Filter
 	err := yaml.UnmarshalStrict(input, &cfg)
 	require.NoError(t, err)
-	require.NotNil(t, cfg[resource.Instance])
-	require.Len(t, cfg[resource.Instance], 2)
-	require.NotNil(t, cfg[resource.Instance][0].ID)
-	assert.Equal(t, "^foo.*", cfg[resource.Instance][0].ID.Pattern)
-	assert.True(t, cfg[resource.Instance][0].ID.Negate)
-	require.NotNil(t, cfg[resource.Instance][0].Created.Before)
-	assert.True(t, cfg[resource.Instance][0].Created.Before.Before(time.Now().UTC().AddDate(0, 0, -4)))
-	assert.True(t, cfg[resource.Instance][0].Created.Before.After(time.Now().UTC().AddDate(0, 0, -6)))
-	require.NotNil(t, cfg[resource.Instance][0].Created.After)
-	assert.Equal(t, resource.CreatedTime{Time: time.Date(2018, 10, 28, 12, 28, 39, 0000, time.UTC)}, *cfg[resource.Instance][0].Created.After)
-	require.NotNil(t, cfg[resource.Instance][1].ID)
-	assert.Equal(t, "^foo.*", cfg[resource.Instance][1].ID.Pattern)
-	assert.False(t, cfg[resource.Instance][1].ID.Negate)
-	require.NotNil(t, cfg[resource.Instance][1].Created.Before)
-	assert.True(t, cfg[resource.Instance][1].Created.Before.Before(time.Now().UTC().Add(-22*time.Hour)))
-	assert.True(t, cfg[resource.Instance][1].Created.Before.After(time.Now().UTC().Add(-24*time.Hour)))
-	require.Nil(t, cfg[resource.Instance][1].Created.After)
+	require.NotNil(t, cfg["aws_instance"])
+	require.Len(t, cfg["aws_instance"], 2)
+	require.NotNil(t, cfg["aws_instance"][0].ID)
+	assert.Equal(t, "^foo.*", cfg["aws_instance"][0].ID.Pattern)
+	assert.True(t, cfg["aws_instance"][0].ID.Negate)
+	require.NotNil(t, cfg["aws_instance"][0].Created.Before)
+	assert.True(t, cfg["aws_instance"][0].Created.Before.Before(time.Now().UTC().AddDate(0, 0, -4)))
+	assert.True(t, cfg["aws_instance"][0].Created.Before.After(time.Now().UTC().AddDate(0, 0, -6)))
+	require.NotNil(t, cfg["aws_instance"][0].Created.After)
+	assert.Equal(t, resource.CreatedTime{Time: time.Date(2018, 10, 28, 12, 28, 39, 0000, time.UTC)}, *cfg["aws_instance"][0].Created.After)
+	require.NotNil(t, cfg["aws_instance"][1].ID)
+	assert.Equal(t, "^foo.*", cfg["aws_instance"][1].ID.Pattern)
+	assert.False(t, cfg["aws_instance"][1].ID.Negate)
+	require.NotNil(t, cfg["aws_instance"][1].Created.Before)
+	assert.True(t, cfg["aws_instance"][1].Created.Before.Before(time.Now().UTC().Add(-22*time.Hour)))
+	assert.True(t, cfg["aws_instance"][1].Created.Before.After(time.Now().UTC().Add(-24*time.Hour)))
+	require.Nil(t, cfg["aws_instance"][1].Created.After)
 }
 
 func TestTypeFilter_MatchTagged(t *testing.T) {

@@ -1,12 +1,14 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,11 +81,13 @@ func assertElbDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func elbExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &elb.DescribeLoadBalancersInput{
-		LoadBalancerNames: []*string{&id},
-	}
+	req := env.AWSClient.Elasticloadbalancingconn.DescribeLoadBalancersRequest(
+		&elasticloadbalancing.DescribeLoadBalancersInput{
+			LoadBalancerNames: []string{id},
+		})
 
-	resp, err := env.AWSClient.ELBAPI.DescribeLoadBalancers(opts)
+	resp, err := req.Send(context.Background())
+
 	if err != nil {
 		elbErr, ok := err.(awserr.Error)
 		if !ok {

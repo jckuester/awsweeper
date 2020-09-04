@@ -1,12 +1,14 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,11 +81,13 @@ func assertEbsSnapshotDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func ebsSnapshotExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &ec2.DescribeSnapshotsInput{
-		SnapshotIds: []*string{&id},
-	}
+	req := env.AWSClient.Ec2conn.DescribeSnapshotsRequest(
+		&ec2.DescribeSnapshotsInput{
+			SnapshotIds: []string{id},
+		})
 
-	resp, err := env.AWSClient.DescribeSnapshots(opts)
+	resp, err := req.Send(context.Background())
+
 	if err != nil {
 		ec2err, ok := err.(awserr.Error)
 		if !ok {
