@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	awsls "github.com/jckuester/awsls/aws"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -15,32 +17,26 @@ import (
 var (
 	testImageId              = "test-ami"
 	testAutoscalingGroupName = "test-auto-scaling-group"
-	testTags                 = map[string]string{
-		"test-tag-key": "test-tag-value",
-	}
 )
 
 func TestDeletableResources_CreationDateIsTypeTime(t *testing.T) {
 	// given
-	testLaunchTime := aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC))
-
+	testCreationDate := aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC))
 	rawResources := []*autoscaling.AutoScalingGroup{
 		{
 			AutoScalingGroupName: &testAutoscalingGroupName,
-			Tags:                 convertTags(testTags),
-			CreatedTime:          testLaunchTime,
+			CreatedTime:          testCreationDate,
 		},
 	}
 
 	// when
-	res, err := resource.DeletableResources(resource.AutoscalingGroup, rawResources)
+	res, err := resource.DeletableResources(resource.AutoscalingGroup, rawResources, awsls.Client{})
 	require.NoError(t, err)
 	require.Len(t, res, 1)
 
 	// then
 	assert.Equal(t, testAutoscalingGroupName, res[0].ID)
-	assert.Equal(t, testTags, res[0].Tags)
-	assert.Equal(t, testLaunchTime, res[0].CreatedAt)
+	assert.Equal(t, testCreationDate, res[0].CreatedAt)
 }
 
 func TestDeletableResources_CreationDateIsTypeString(t *testing.T) {
@@ -54,22 +50,10 @@ func TestDeletableResources_CreationDateIsTypeString(t *testing.T) {
 	}
 
 	// when
-	res, err := resource.DeletableResources(resource.Ami, rawResources)
+	res, err := resource.DeletableResources(resource.Ami, rawResources, awsls.Client{})
 	require.NoError(t, err)
 
 	// then
 	require.Len(t, res, 1)
 	require.Equal(t, testCreationDate, res[0].CreatedAt.Format("2006-01-02T15:04:05.000Z0700"))
-}
-
-func convertTags(tags map[string]string) []autoscaling.TagDescription {
-	var tagDescriptions = make([]autoscaling.TagDescription, 0, len(tags))
-
-	for key, value := range tags {
-		tagDescriptions = append(tagDescriptions, autoscaling.TagDescription{
-			Key:   aws.String(key),
-			Value: aws.String(value),
-		})
-	}
-	return tagDescriptions
 }

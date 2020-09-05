@@ -71,11 +71,6 @@ var (
 		CloudTrail:                 8800,
 	}
 
-	tagFieldNames = []string{
-		"Tags",
-		"TagSet",
-	}
-
 	// creationTimeFieldNames are a list field names that are used to find the creation date of a resource.
 	creationTimeFieldNames = []string{
 		"LaunchTime",

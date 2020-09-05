@@ -39,7 +39,7 @@ func List(filter *Filter, clients map[util.AWSClientKey]awsls.Client,
 					log.WithError(err).Fatal("failed to get raw resources")
 				}
 
-				deletableResources, err := DeletableResources(rType, rawResources)
+				deletableResources, err := DeletableResources(rType, rawResources, client)
 				if err != nil {
 					log.WithError(err).Fatal("failed to convert raw resources into deletable resources")
 				}
@@ -229,7 +229,7 @@ func getEfsMountTargets(efsFileSystems []awsls.Resource, client awsls.Client,
 	var result []awsls.Resource
 
 	for _, fs := range efsFileSystems {
-		// TODO result is paginated, but not there paginator API function
+		// TODO result is paginated, but there is no paginator API function
 		req := client.Efsconn.DescribeMountTargetsRequest(&efs.DescribeMountTargetsInput{
 			FileSystemId: &fs.ID,
 		})

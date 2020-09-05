@@ -44,7 +44,9 @@ func InitEnv(t *testing.T) EnvVars {
 		t.Fatal("env variable AWS_DEFAULT_REGION needs to be set for tests")
 	}
 
-	client, err := awsls.NewClient(external.WithRegion(region))
+	client, err := awsls.NewClient(
+		external.WithSharedConfigProfile(profile),
+		external.WithRegion(region))
 	require.NoError(t, err)
 
 	return EnvVars{

@@ -42,8 +42,8 @@ func mainExitCode() int {
 	flags.StringVar(&outputType, "output", "string", "The type of output result (String, JSON or YAML)")
 	flags.BoolVar(&dryRun, "dry-run", false, "Don't delete anything, just show what would be deleted")
 	flags.BoolVar(&logDebug, "debug", false, "Enable debug logging")
-	flags.StringVar(&profile, "profile", "", "The AWS profile for the account to delete resources in")
-	flags.StringVar(&region, "region", "", "The region to delete resources in")
+	flags.StringVarP(&profile, "profile", "p", "", "The AWS profile for the account to delete resources in")
+	flags.StringVarP(&region, "region", "r", "", "The region to delete resources in")
 	flags.IntVar(&parallel, "parallel", 10, "Limit the number of concurrent delete operations")
 	flags.BoolVar(&version, "version", false, "Show application version")
 	flags.BoolVar(&force, "force", false, "Delete without asking for confirmation")
@@ -104,17 +104,12 @@ func mainExitCode() int {
 		return 1
 	}
 
-	if profile != "" {
-		err := os.Setenv("AWS_PROFILE", profile)
-		if err != nil {
-			log.WithError(err).Error("failed to set AWS profile")
-		}
-	}
-
 	var profiles []string
 	var regions []string
 
 	if profile != "" {
+		profiles = []string{profile}
+	} else {
 		env, ok := os.LookupEnv("AWS_PROFILE")
 		if ok {
 			profiles = []string{env}

@@ -4,14 +4,13 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/apex/log"
 	awsls "github.com/jckuester/awsls/aws"
 	"github.com/pkg/errors"
 )
 
 // Resources converts given raw resources for a given resource type
 // into a format that can be deleted by the Terraform API.
-func DeletableResources(resType string, resources interface{}) ([]awsls.Resource, error) {
+func DeletableResources(resType string, resources interface{}, client awsls.Client) ([]awsls.Resource, error) {
 	var deletableResources []awsls.Resource
 
 	reflectResources := reflect.ValueOf(resources)
@@ -24,11 +23,6 @@ func DeletableResources(resType string, resources interface{}) ([]awsls.Resource
 		deleteIDField, err := getField(deleteID, reflect.Indirect(reflectResources.Index(i)))
 		if err != nil {
 			return nil, errors.Wrapf(err, "Field with delete ID required for deleting resource")
-		}
-
-		tags, err := findTags(reflectResources.Index(i))
-		if err != nil {
-			log.WithError(err).Debug("failed to find tags")
 		}
 
 		var creationTime *time.Time
@@ -51,8 +45,10 @@ func DeletableResources(resType string, resources interface{}) ([]awsls.Resource
 		deletableResources = append(deletableResources, awsls.Resource{
 			Type:      resType,
 			ID:        deleteIDField.Elem().String(),
-			Tags:      tags,
 			CreatedAt: creationTime,
+			Region:    client.Region,
+			Profile:   client.Profile,
+			AccountID: client.AccountID,
 		})
 	}
 
@@ -76,22 +72,4 @@ func findField(names []string, v reflect.Value) (reflect.Value, error) {
 		}
 	}
 	return reflect.Value{}, errors.Errorf("Fields not found: %s", names)
-}
-
-// findTags finds findTags via reflection in the describe output.
-func findTags(res reflect.Value) (map[string]string, error) {
-	tags := map[string]string{}
-
-	ts, err := findField(tagFieldNames, reflect.Indirect(res))
-	if err != nil {
-		return nil, errors.Wrap(err, "No tags found")
-	}
-
-	for i := 0; i < ts.Len(); i++ {
-		key := reflect.Indirect(ts.Index(i)).FieldByName("Key").Elem()
-		value := reflect.Indirect(ts.Index(i)).FieldByName("Value").Elem()
-		tags[key.String()] = value.String()
-	}
-
-	return tags, nil
 }
