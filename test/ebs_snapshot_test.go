@@ -6,9 +6,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +34,7 @@ func TestAcc_EbsSnapshot_DeleteByID(t *testing.T) {
 	writeConfigID(t, terraformDir, "aws_ebs_snapshot", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n", "-debug")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "--debug")
 	require.NoError(t, err)
 
 	assertEbsSnapshotDeleted(t, env, id)

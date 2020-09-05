@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/jckuester/awsweeper/pkg/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +24,7 @@ func TestDeletableResources_CreationDateIsTypeTime(t *testing.T) {
 	// given
 	testLaunchTime := aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC))
 
-	rawResources := []*autoscaling.Group{
+	rawResources := []*autoscaling.AutoScalingGroup{
 		{
 			AutoScalingGroupName: &testAutoscalingGroupName,
 			Tags:                 convertTags(testTags),
@@ -62,11 +62,11 @@ func TestDeletableResources_CreationDateIsTypeString(t *testing.T) {
 	require.Equal(t, testCreationDate, res[0].CreatedAt.Format("2006-01-02T15:04:05.000Z0700"))
 }
 
-func convertTags(tags map[string]string) []*autoscaling.TagDescription {
-	var tagDescriptions = make([]*autoscaling.TagDescription, 0, len(tags))
+func convertTags(tags map[string]string) []autoscaling.TagDescription {
+	var tagDescriptions = make([]autoscaling.TagDescription, 0, len(tags))
 
 	for key, value := range tags {
-		tagDescriptions = append(tagDescriptions, &autoscaling.TagDescription{
+		tagDescriptions = append(tagDescriptions, autoscaling.TagDescription{
 			Key:   aws.String(key),
 			Value: aws.String(value),
 		})

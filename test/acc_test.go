@@ -93,7 +93,7 @@ func TestAcc_Version(t *testing.T) {
 		t.Skip("Skipping acceptance test.")
 	}
 
-	logBuffer, err := runBinary(t, "", "", "-version")
+	logBuffer, err := runBinary(t, "", "", "--version")
 	require.NoError(t, err)
 
 	actualLogs := logBuffer.String()

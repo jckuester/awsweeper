@@ -5,14 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zclconf/go-cty/cty"
-
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awsls "github.com/jckuester/awsls/aws"
 	"github.com/jckuester/awsweeper/pkg/resource"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zclconf/go-cty/cty"
 )
 
 func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
