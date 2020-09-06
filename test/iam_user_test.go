@@ -1,17 +1,16 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/iam"
-
+	"github.com/aws/aws-sdk-go-v2/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 func TestAcc_IamUser_DeleteByID(t *testing.T) {
@@ -81,11 +80,12 @@ func assertIamUserDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func iamUserExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &iam.GetUserInput{
+	req := env.AWSClient.Iamconn.GetUserRequest(&iam.GetUserInput{
 		UserName: &id,
-	}
+	})
 
-	_, err := env.AWSClient.GetUser(opts)
+	_, err := req.Send(context.Background())
+
 	if err != nil {
 		ec2err, ok := err.(awserr.Error)
 		if !ok {

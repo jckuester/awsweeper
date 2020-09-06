@@ -1,40 +1,15 @@
 package resource
 
 import (
-	"log"
+	"context"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
-	"github.com/aws/aws-sdk-go/service/cloudtrail"
-	"github.com/aws/aws-sdk-go/service/cloudtrail/cloudtrailiface"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
-	"github.com/aws/aws-sdk-go/service/efs"
-	"github.com/aws/aws-sdk-go/service/efs/efsiface"
-	"github.com/aws/aws-sdk-go/service/elb"
-	"github.com/aws/aws-sdk-go/service/elb/elbiface"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/aws/aws-sdk-go/service/lambda"
-	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
-	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/route53/route53iface"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudtrail"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	awsls "github.com/jckuester/awsls/aws"
 	"github.com/pkg/errors"
 )
 
@@ -43,8 +18,6 @@ const (
 	AutoscalingGroup = "aws_autoscaling_group"
 	EbsSnapshot      = "aws_ebs_snapshot"
 	EcsCluster       = "aws_ecs_cluster"
-	Instance         = "aws_instance"
-	NatGateway       = "aws_nat_gateway"
 	CloudTrail       = "aws_cloudtrail"
 )
 
@@ -52,10 +25,9 @@ var (
 	deleteIDs = map[string]string{
 		Ami:              "ImageId",
 		AutoscalingGroup: "AutoScalingGroupName",
+		EbsSnapshot:      "SnapshotId",
 		// Note: to import a cluster, the name is used as ID
 		EcsCluster: "ClusterArn",
-		Instance:   "InstanceId",
-		NatGateway: "NatGatewayId",
 		CloudTrail: "Name",
 	}
 
@@ -66,11 +38,11 @@ var (
 		"aws_lambda_function":      10100,
 		"aws_ecs_cluster":          10000,
 		AutoscalingGroup:           9990,
-		Instance:                   9980,
+		"aws_instance":             9980,
 		"aws_key_pair":             9970,
 		"aws_elb":                  9960,
 		"aws_vpc_endpoint":         9950,
-		NatGateway:                 9940,
+		"aws_nat_gateway":          9940,
 		"aws_cloudformation_stack": 9930,
 		"aws_route53_zone":         9920,
 		"aws_efs_file_system":      9910,
@@ -97,11 +69,6 @@ var (
 		"aws_network_interface":    9000,
 		"aws_cloudwatch_log_group": 8900,
 		CloudTrail:                 8800,
-	}
-
-	tagFieldNames = []string{
-		"Tags",
-		"TagSet",
 	}
 
 	// creationTimeFieldNames are a list field names that are used to find the creation date of a resource.
@@ -133,47 +100,10 @@ func getDeleteID(resType string) (string, error) {
 }
 
 // AWS wraps the AWS API
-type AWS struct {
-	autoscalingiface.AutoScalingAPI
-	cloudformationiface.CloudFormationAPI
-	cloudtrailiface.CloudTrailAPI
-	cloudwatchlogsiface.CloudWatchLogsAPI
-	ec2iface.EC2API
-	ecsiface.ECSAPI
-	efsiface.EFSAPI
-	elbiface.ELBAPI
-	iamiface.IAMAPI
-	kmsiface.KMSAPI
-	lambdaiface.LambdaAPI
-	rdsiface.RDSAPI
-	route53iface.Route53API
-	s3iface.S3API
-	stsiface.STSAPI
-}
-
-// NewAWS creates an AWS instance
-func NewAWS(s *session.Session) *AWS {
-	return &AWS{
-		AutoScalingAPI:    autoscaling.New(s),
-		CloudFormationAPI: cloudformation.New(s),
-		CloudTrailAPI:     cloudtrail.New(s),
-		CloudWatchLogsAPI: cloudwatchlogs.New(s),
-		EC2API:            ec2.New(s),
-		ECSAPI:            ecs.New(s),
-		EFSAPI:            efs.New(s),
-		ELBAPI:            elb.New(s),
-		IAMAPI:            iam.New(s),
-		KMSAPI:            kms.New(s),
-		LambdaAPI:         lambda.New(s),
-		Route53API:        route53.New(s),
-		RDSAPI:            rds.New(s),
-		S3API:             s3.New(s),
-		STSAPI:            sts.New(s),
-	}
-}
+type AWS awsls.Client
 
 // RawResources lists all resources of a particular type
-func (a *AWS) RawResources(resType string) (interface{}, error) {
+func (a AWS) RawResources(resType string) (interface{}, error) {
 	switch resType {
 	case Ami:
 		return a.amis()
@@ -183,10 +113,6 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 		return a.ebsSnapshots()
 	case EcsCluster:
 		return a.ecsClusters()
-	case Instance:
-		return a.instances()
-	case NatGateway:
-		return a.natGateways()
 	case CloudTrail:
 		return a.cloudTrails()
 	default:
@@ -194,121 +120,106 @@ func (a *AWS) RawResources(resType string) (interface{}, error) {
 	}
 }
 
-func (a *AWS) instances() (interface{}, error) {
-	output, err := a.DescribeInstances(&ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			{
-				Name: aws.String("instance-state-name"),
-				Values: []*string{
-					aws.String("pending"), aws.String("running"),
-					aws.String("stopping"), aws.String("stopped"),
-				},
-			},
-		},
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	var instances []*ec2.Instance
-	for _, r := range output.Reservations {
-		instances = append(instances, r.Instances...)
-	}
-
-	return instances, nil
-}
-
-// TODO support findTags
-func (a *AWS) natGateways() (interface{}, error) {
-	output, err := a.DescribeNatGateways(&ec2.DescribeNatGatewaysInput{
-		Filter: []*ec2.Filter{
-			{
-				Name: aws.String("state"),
-				Values: []*string{
-					aws.String("available"),
-				},
-			},
-		},
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return output.NatGateways, nil
-}
-
 func (a *AWS) ecsClusters() (interface{}, error) {
-	listOutput, err := a.ListClusters(&ecs.ListClustersInput{})
+	listClustersRequest := a.Ecsconn.ListClustersRequest(&ecs.ListClustersInput{})
+
+	var clusterARNs []string
+
+	pg := ecs.NewListClustersPaginator(listClustersRequest)
+	for pg.Next(context.Background()) {
+		page := pg.CurrentPage()
+
+		clusterARNs = append(clusterARNs, page.ClusterArns...)
+	}
+
+	if err := pg.Err(); err != nil {
+		return nil, err
+	}
+
+	// TODO is paginated, but not paginator API
+	req := a.Ecsconn.DescribeClustersRequest(&ecs.DescribeClustersInput{
+		Clusters: clusterARNs,
+		Include:  []ecs.ClusterField{"TAGS"},
+	})
+
+	resp, err := req.Send(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	descOutput, err := a.DescribeClusters(&ecs.DescribeClustersInput{
-		Clusters: listOutput.ClusterArns,
-		Include:  []*string{aws.String("TAGS")},
-	})
-
-	return descOutput.Clusters, nil
+	return resp.Clusters, nil
 }
 
 func (a *AWS) cloudTrails() (interface{}, error) {
-	output, err := a.DescribeTrails(&cloudtrail.DescribeTrailsInput{})
+	req := a.Cloudtrailconn.DescribeTrailsRequest(&cloudtrail.DescribeTrailsInput{})
+
+	resp, err := req.Send(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	return output.TrailList, nil
+
+	return resp.TrailList, nil
 }
 
 func (a *AWS) ebsSnapshots() (interface{}, error) {
-	output, err := a.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
-		Filters: []*ec2.Filter{
+	req := a.Ec2conn.DescribeSnapshotsRequest(&ec2.DescribeSnapshotsInput{
+		Filters: []ec2.Filter{
 			{
 				Name: aws.String("owner-id"),
-				Values: []*string{
-					a.callerIdentity(),
+				Values: []string{
+					a.AccountID,
 				},
 			},
 		},
 	})
 
-	if err != nil {
-		return nil, err
+	var snapshots []ec2.Snapshot
+
+	pg := ec2.NewDescribeSnapshotsPaginator(req)
+	for pg.Next(context.Background()) {
+		page := pg.CurrentPage()
+
+		snapshots = append(snapshots, page.Snapshots...)
 	}
-	return output.Snapshots, nil
+
+	return snapshots, nil
 }
 
 func (a *AWS) amis() (interface{}, error) {
-	output, err := a.DescribeImages(&ec2.DescribeImagesInput{
-		Filters: []*ec2.Filter{
+	req := a.Ec2conn.DescribeImagesRequest(&ec2.DescribeImagesInput{
+		Filters: []ec2.Filter{
 			{
 				Name: aws.String("owner-id"),
-				Values: []*string{
-					a.callerIdentity(),
+				Values: []string{
+					a.AccountID,
 				},
 			},
 		},
 	})
 
+	resp, err := req.Send(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	return output.Images, nil
+
+	return resp.Images, nil
 }
 
 func (a *AWS) autoscalingGroups() (interface{}, error) {
-	output, err := a.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{})
-	if err != nil {
+	req := a.Autoscalingconn.DescribeAutoScalingGroupsRequest(&autoscaling.DescribeAutoScalingGroupsInput{})
+
+	var autoScalingGroups []autoscaling.AutoScalingGroup
+
+	pg := autoscaling.NewDescribeAutoScalingGroupsPaginator(req)
+	for pg.Next(context.Background()) {
+		page := pg.CurrentPage()
+
+		autoScalingGroups = append(autoScalingGroups, page.AutoScalingGroups...)
+	}
+
+	if err := pg.Err(); err != nil {
 		return nil, err
 	}
-	return output.AutoScalingGroups, nil
-}
 
-// callerIdentity returns the account ID of the AWS account for the currently used credentials
-func (a *AWS) callerIdentity() *string {
-	res, err := a.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return res.Account
+	return autoScalingGroups, nil
 }

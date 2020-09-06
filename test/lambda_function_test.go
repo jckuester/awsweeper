@@ -1,14 +1,14 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 
-	"github.com/aws/aws-sdk-go/service/lambda"
-
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,11 +83,13 @@ func assertLambdaFunctionDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func lambdaFunctionExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &lambda.GetFunctionInput{
-		FunctionName: &id,
-	}
+	req := env.AWSClient.Lambdaconn.GetFunctionRequest(
+		&lambda.GetFunctionInput{
+			FunctionName: &id,
+		})
 
-	_, err := env.AWSClient.GetFunction(opts)
+	_, err := req.Send(context.Background())
+
 	if err != nil {
 		awsErr, ok := err.(awserr.Error)
 		if !ok {

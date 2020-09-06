@@ -1,11 +1,12 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
@@ -81,11 +82,12 @@ func assertEcsClusterDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func ecsClusterExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &ecs.DescribeClustersInput{
-		Clusters: []*string{&id},
-	}
+	req := env.AWSClient.Ecsconn.DescribeClustersRequest(
+		&ecs.DescribeClustersInput{
+			Clusters: []string{id},
+		})
 
-	resp, err := env.AWSClient.DescribeClusters(opts)
+	resp, err := req.Send(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

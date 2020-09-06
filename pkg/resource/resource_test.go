@@ -4,55 +4,42 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	awsls "github.com/jckuester/awsls/aws"
 
-	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/jckuester/awsweeper/pkg/resource"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDeletableResources(t *testing.T) {
+var (
+	testImageId              = "test-ami"
+	testAutoscalingGroupName = "test-auto-scaling-group"
+)
+
+func TestDeletableResources_CreationDateIsTypeTime(t *testing.T) {
 	// given
-	rawResources := []*autoscaling.Group{
+	testCreationDate := aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC))
+	rawResources := []*autoscaling.AutoScalingGroup{
 		{
 			AutoScalingGroupName: &testAutoscalingGroupName,
-			Tags:                 convertTags(testTags),
+			CreatedTime:          testCreationDate,
 		},
 	}
 
 	// when
-	res, err := resource.DeletableResources(resource.AutoscalingGroup, rawResources)
+	res, err := resource.DeletableResources(resource.AutoscalingGroup, rawResources, awsls.Client{})
 	require.NoError(t, err)
+	require.Len(t, res, 1)
 
 	// then
-	require.Len(t, res, 1)
-	require.Equal(t, testAutoscalingGroupName, res[0].ID)
-	require.Equal(t, testTags, res[0].Tags)
+	assert.Equal(t, testAutoscalingGroupName, res[0].ID)
+	assert.Equal(t, testCreationDate, res[0].CreatedAt)
 }
 
-func TestDeletableResources_Created(t *testing.T) {
-	// given
-	testLaunchTime := aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC))
-	rawResources := []*ec2.Instance{
-		{
-			InstanceId: &testInstanceID,
-			LaunchTime: testLaunchTime,
-		},
-	}
-
-	// when
-	res, err := resource.DeletableResources(resource.Instance, rawResources)
-	require.NoError(t, err)
-
-	// then
-	require.Len(t, res, 1)
-	require.Equal(t, testInstanceID, res[0].ID)
-	require.Equal(t, testLaunchTime, res[0].CreatedAt)
-
-}
-
-func TestDeletableResources_CreatedFieldIsTypeString(t *testing.T) {
+func TestDeletableResources_CreationDateIsTypeString(t *testing.T) {
 	// given
 	testCreationDate := "2018-12-16T19:40:28.000Z"
 	rawResources := []*ec2.Image{
@@ -63,7 +50,7 @@ func TestDeletableResources_CreatedFieldIsTypeString(t *testing.T) {
 	}
 
 	// when
-	res, err := resource.DeletableResources(resource.Ami, rawResources)
+	res, err := resource.DeletableResources(resource.Ami, rawResources, awsls.Client{})
 	require.NoError(t, err)
 
 	// then

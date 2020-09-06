@@ -5,14 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zclconf/go-cty/cty"
-
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awsls "github.com/jckuester/awsls/aws"
 	"github.com/jckuester/awsweeper/pkg/resource"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zclconf/go-cty/cty"
 )
 
 func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
@@ -21,7 +20,7 @@ func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "foo",
 		},
 	}
@@ -36,11 +35,11 @@ func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {},
+		"aws_instance": {},
 	}
 	res := []awsls.Resource{
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "foo",
 		},
 	}
@@ -56,7 +55,7 @@ func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				ID: &resource.StringFilter{Pattern: "^select"},
 			},
@@ -66,11 +65,11 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 	// when
 	res := []awsls.Resource{
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "select-this",
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this",
 		},
 	}
@@ -85,7 +84,7 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar"},
@@ -96,21 +95,21 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "select-this",
 			Tags: map[string]string{
 				"foo": "bar-bab",
 			},
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this",
 			Tags: map[string]string{
 				"foo": "blub",
 			},
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this-either",
 		},
 	}
@@ -126,7 +125,7 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				Tags: map[string]resource.StringFilter{
 					"foo": {Pattern: "^bar"},
@@ -138,7 +137,7 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "select-this",
 			Tags: map[string]string{
 				"foo": "bar-bab",
@@ -146,7 +145,7 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 			},
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this",
 			Tags: map[string]string{
 				"foo": "bar-bab",
@@ -165,7 +164,7 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				ID: &resource.StringFilter{Pattern: "^foo"},
 				Tags: map[string]resource.StringFilter{
@@ -177,21 +176,21 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "foo",
 			Tags: map[string]string{
 				"foo": "bar",
 			},
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this",
 			Tags: map[string]string{
 				"foo": "bar",
 			},
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "this-neither",
 		},
 	}
@@ -207,7 +206,7 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 func TestYamlFilter_Apply_Created(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				Created: &resource.Created{
 					After:  &resource.CreatedTime{Time: time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)},
@@ -219,27 +218,27 @@ func TestYamlFilter_Apply_Created(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type:      resource.Instance,
+			Type:      "aws_instance",
 			ID:        "foo",
 			CreatedAt: aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC)),
 		},
 		{
-			Type:      resource.Instance,
+			Type:      "aws_instance",
 			ID:        "do-not-select-this1",
 			CreatedAt: aws.Time(time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)),
 		},
 		{
-			Type:      resource.Instance,
+			Type:      "aws_instance",
 			ID:        "do-not-select-this2",
 			CreatedAt: aws.Time(time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)),
 		},
 		{
-			Type:      resource.Instance,
+			Type:      "aws_instance",
 			ID:        "do-not-select-this3",
 			CreatedAt: aws.Time(time.Date(2018, 11, 22, 0, 0, 0, 0, time.UTC)),
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this2",
 		},
 	}
@@ -255,7 +254,7 @@ func TestYamlFilter_Apply_Created(t *testing.T) {
 func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				Created: &resource.Created{
 					Before: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
@@ -266,17 +265,17 @@ func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type:      resource.Instance,
+			Type:      "aws_instance",
 			ID:        "foo",
 			CreatedAt: aws.Time(time.Date(2018, 11, 17, 5, 0, 0, 0, time.UTC)),
 		},
 		{
-			Type:      resource.Instance,
+			Type:      "aws_instance",
 			ID:        "do-not-select-this",
 			CreatedAt: aws.Time(time.Date(2018, 11, 22, 0, 0, 0, 0, time.UTC)),
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this2",
 		},
 	}
@@ -292,7 +291,7 @@ func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
 func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				Created: &resource.Created{
 					After: &resource.CreatedTime{Time: time.Date(2018, 11, 20, 0, 0, 0, 0, time.UTC)},
@@ -303,17 +302,17 @@ func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type:      resource.Instance,
+			Type:      "aws_instance",
 			ID:        "foo",
 			CreatedAt: aws.Time(time.Date(2018, 11, 22, 5, 0, 0, 0, time.UTC)),
 		},
 		{
-			Type:      resource.Instance,
+			Type:      "aws_instance",
 			ID:        "do-not-select-this",
 			CreatedAt: aws.Time(time.Date(2018, 11, 17, 0, 0, 0, 0, time.UTC)),
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this2",
 		},
 	}
@@ -329,7 +328,7 @@ func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
 func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				ID: &resource.StringFilter{Pattern: "^select"},
 			},
@@ -343,21 +342,21 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "select-this",
 			Tags: map[string]string{
 				"foo": "bar-bab",
 			},
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "select-this-too",
 			Tags: map[string]string{
 				"bla": "blub",
 			},
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "do-not-select-this",
 			Tags: map[string]string{
 				"bla": "blub",
@@ -377,7 +376,7 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
 	//given
 	f := &resource.Filter{
-		resource.Instance: {
+		"aws_instance": {
 			{
 				ID: &resource.StringFilter{Pattern: "^select", Negate: true},
 			},
@@ -391,14 +390,14 @@ func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
 
 	res := []awsls.Resource{
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "select-this-not",
 			Tags: map[string]string{
 				"foo": "bar-bab",
 			},
 		},
 		{
-			Type: resource.Instance,
+			Type: "aws_instance",
 			ID:   "select-this",
 			Tags: map[string]string{
 				"foo": "baz",
@@ -428,7 +427,7 @@ func TestGetTags(t *testing.T) {
 		{
 			name:    "embedded updatable resource is nil",
 			arg:     &awsls.Resource{},
-			wantErr: "resource is nil: &{Type: ID: Region: Tags:map[] CreatedAt:<nil> UpdatableResource:<nil>}",
+			wantErr: "resource is nil: &{Type: ID: Region: Profile: AccountID: Tags:map[] CreatedAt:<nil> UpdatableResource:<nil>}",
 		},
 		{
 			name: "state is nil",

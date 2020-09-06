@@ -1,12 +1,13 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ func TestAcc_EbsSnapshot_DeleteByID(t *testing.T) {
 	writeConfigID(t, terraformDir, "aws_ebs_snapshot", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n", "-debug")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "--debug")
 	require.NoError(t, err)
 
 	assertEbsSnapshotDeleted(t, env, id)
@@ -79,11 +80,13 @@ func assertEbsSnapshotDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func ebsSnapshotExists(t *testing.T, env EnvVars, id string) bool {
-	opts := &ec2.DescribeSnapshotsInput{
-		SnapshotIds: []*string{&id},
-	}
+	req := env.AWSClient.Ec2conn.DescribeSnapshotsRequest(
+		&ec2.DescribeSnapshotsInput{
+			SnapshotIds: []string{id},
+		})
 
-	resp, err := env.AWSClient.DescribeSnapshots(opts)
+	resp, err := req.Send(context.Background())
+
 	if err != nil {
 		ec2err, ok := err.(awserr.Error)
 		if !ok {

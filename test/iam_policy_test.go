@@ -1,12 +1,14 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws/awserr"
+
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,11 +54,12 @@ func assertIamPolicyDeleted(t *testing.T, env EnvVars, arn string) {
 }
 
 func iamPolicyExists(t *testing.T, env EnvVars, arn string) bool {
-	opts := &iam.GetPolicyInput{
+	req := env.AWSClient.Iamconn.GetPolicyRequest(&iam.GetPolicyInput{
 		PolicyArn: &arn,
-	}
+	})
 
-	_, err := env.AWSClient.IAMAPI.GetPolicy(opts)
+	_, err := req.Send(context.Background())
+
 	if err != nil {
 		ec2err, ok := err.(awserr.Error)
 		if !ok {

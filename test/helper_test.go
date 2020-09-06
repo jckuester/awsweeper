@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws/external"
+	awsls "github.com/jckuester/awsls/aws"
+
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	res "github.com/jckuester/awsweeper/pkg/resource"
 	"github.com/onsi/gomega/gexec"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +27,7 @@ const (
 type EnvVars struct {
 	AWSRegion  string
 	AWSProfile string
-	AWSClient  *res.AWS
+	AWSClient  *awsls.Client
 }
 
 // InitEnv sets environment variables for acceptance tests.
@@ -44,15 +44,15 @@ func InitEnv(t *testing.T) EnvVars {
 		t.Fatal("env variable AWS_DEFAULT_REGION needs to be set for tests")
 	}
 
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config:            aws.Config{Region: aws.String(region)},
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+	client, err := awsls.NewClient(
+		external.WithSharedConfigProfile(profile),
+		external.WithRegion(region))
+	require.NoError(t, err)
 
 	return EnvVars{
 		AWSProfile: profile,
 		AWSRegion:  region,
-		AWSClient:  res.NewAWS(sess),
+		AWSClient:  client,
 	}
 }
 
