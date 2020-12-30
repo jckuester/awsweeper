@@ -44,7 +44,7 @@ You can download a specific version of AWSweeper on the [releases page](https://
 install it the following way to `./bin/`:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.8.0
+curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.11.0
 ```
 
 ### Homebrew
@@ -185,11 +185,14 @@ which have to be used in the YAML file to filter resources by their type.
 | aws_api_gateway_vpc_link |  x  |  |
 | **apigatewayv2** |
 | aws_apigatewayv2_api |  x  |  |
+| aws_apigatewayv2_domain_name |  x  |  |
+| aws_apigatewayv2_vpc_link |  x  |  |
 | **appmesh** |
 | aws_appmesh_mesh |  x  |  |
 | **appsync** |
 | aws_appsync_graphql_api |  x  |  |
 | **athena** |
+| aws_athena_named_query |  |  |
 | aws_athena_workgroup |  x  |  x  |
 | **autoscaling** |
 | aws_autoscaling_group |  x  |  x  |
@@ -198,28 +201,35 @@ which have to be used in the YAML file to filter resources by their type.
 | aws_backup_plan |  x  |  x  |
 | aws_backup_vault |  x  |  x  |
 | **batch** |
-| aws_batch_compute_environment |  |  |
-| aws_batch_job_definition |  |  |
-| aws_batch_job_queue |  |  |
+| aws_batch_compute_environment |  x  |  |
+| aws_batch_job_definition |  x  |  |
+| aws_batch_job_queue |  x  |  |
 | **cloudformation** |
 | aws_cloudformation_stack |  x  |  x  |
 | aws_cloudformation_stack_set |  x  |  |
 | **cloudhsmv2** |
 | aws_cloudhsm_v2_cluster |  x  |  |
 | **cloudtrail** |
-| aws_cloudtrail |  |  |
+| aws_cloudtrail |  x  |  |
 | **cloudwatch** |
 | aws_cloudwatch_dashboard |  |  |
 | **cloudwatchevents** |
-| aws_cloudwatch_event_rule |  x  |  |
+| aws_cloudwatch_event_bus |  x  |  |
 | **cloudwatchlogs** |
 | aws_cloudwatch_log_destination |  |  x  |
 | aws_cloudwatch_log_group |  x  |  x  |
 | aws_cloudwatch_log_resource_policy |  |  |
+| **codeartifact** |
+| aws_codeartifact_domain |  x  |  x  |
+| aws_codeartifact_repository |  x  |  |
 | **codebuild** |
+| aws_codebuild_project |  x  |  |
+| aws_codebuild_report_group |  x  |  |
 | aws_codebuild_source_credential |  |  |
 | **codecommit** |
 | aws_codecommit_repository |  x  |  |
+| **codedeploy** |
+| aws_codedeploy_deployment_config |  |  |
 | **codepipeline** |
 | aws_codepipeline_webhook |  x  |  |
 | **codestarnotifications** |
@@ -256,23 +266,25 @@ which have to be used in the YAML file to filter resources by their type.
 | aws_dlm_lifecycle_policy |  x  |  |
 | **dynamodb** |
 | aws_dynamodb_global_table |  |  |
+| aws_dynamodb_table |  x  |  |
 | **ec2** |
 | aws_ami |  x  |  x  |
-| aws_customer_gateway |  x  |  |
 | aws_ebs_snapshot |  x  |  x  |
 | aws_ebs_volume |  x  |  x  |
 | aws_ec2_capacity_reservation |  x  |  x  |
 | aws_ec2_client_vpn_endpoint |  x  |  x  |
 | aws_ec2_fleet |  x  |  x  |
+| aws_ec2_local_gateway_route_table_vpc_association |  x  |  |
 | aws_ec2_traffic_mirror_filter |  x  |  |
 | aws_ec2_traffic_mirror_session |  x  |  |
 | aws_ec2_traffic_mirror_target |  x  |  |
 | aws_ec2_transit_gateway |  x  |  x  |
+| aws_ec2_transit_gateway_peering_attachment |  x  |  x  |
 | aws_ec2_transit_gateway_route_table |  x  |  x  |
 | aws_ec2_transit_gateway_vpc_attachment |  x  |  x  |
 | aws_egress_only_internet_gateway |  x  |  |
 | aws_eip |  x  |  |
-| aws_instance | x | x |
+| aws_instance |  x  |  x  |
 | aws_internet_gateway |  x  |  |
 | aws_key_pair |  x  |  |
 | aws_launch_template |  x  |  x  |
@@ -295,8 +307,12 @@ which have to be used in the YAML file to filter resources by their type.
 | aws_ecr_repository |  x  |  |
 | **ecs** |
 | aws_ecs_cluster |  x  |  |
+| aws_ecs_task_definition |  x  |  |
 | **efs** |
+| aws_efs_access_point |  x  |  |
 | aws_efs_file_system |  x  |  x  |
+| **eks** |
+| aws_eks_cluster |  x  |  |
 | **elasticache** |
 | aws_elasticache_replication_group |  x  |  |
 | **elasticbeanstalk** |
@@ -307,28 +323,38 @@ which have to be used in the YAML file to filter resources by their type.
 | aws_elb |  x  |  x  |
 | **elasticloadbalancingv2** |
 | aws_alb_target_group |  x  |  |
+| aws_lb |  x  |  x  |
 | aws_lb_target_group |  x  |  |
 | **elastictranscoder** |
 | aws_elastictranscoder_pipeline |  |  |
 | aws_elastictranscoder_preset |  |  |
 | **emr** |
 | aws_emr_security_configuration |  |  |
+| **firehose** |
+| aws_kinesis_firehose_delivery_stream |  x  |  |
 | **fsx** |
 | aws_fsx_lustre_file_system |  x  |  x  |
 | aws_fsx_windows_file_system |  x  |  x  |
 | **gamelift** |
 | aws_gamelift_alias |  x  |  x  |
 | aws_gamelift_build |  x  |  x  |
+| aws_gamelift_fleet |  x  |  |
 | aws_gamelift_game_session_queue |  x  |  |
 | **globalaccelerator** |
 | aws_globalaccelerator_accelerator |  x  |  x  |
 | **glue** |
 | aws_glue_crawler |  x  |  x  |
+| aws_glue_dev_endpoint |  x  |  |
 | aws_glue_job |  x  |  |
+| aws_glue_ml_transform |  x  |  |
 | aws_glue_security_configuration |  |  |
 | aws_glue_trigger |  x  |  |
+| aws_glue_workflow |  x  |  |
+| **guardduty** |
+| aws_guardduty_detector |  x  |  |
 | **iam** |
 | aws_iam_access_key |  |  x  |
+| aws_iam_account_alias |  |  |
 | aws_iam_group |  |  x  |
 | aws_iam_instance_profile |  |  x  |
 | aws_iam_policy |  |  x  |
@@ -336,23 +362,36 @@ which have to be used in the YAML file to filter resources by their type.
 | aws_iam_server_certificate |  |  |
 | aws_iam_service_linked_role |  |  x  |
 | aws_iam_user |  x  |  x  |
+| **imagebuilder** |
+| aws_imagebuilder_component |  x  |  |
+| aws_imagebuilder_distribution_configuration |  x  |  |
+| aws_imagebuilder_infrastructure_configuration |  x  |  |
 | **iot** |
 | aws_iot_certificate |  |  x  |
 | aws_iot_policy |  |  |
+| aws_iot_role_alias |  |  |
 | aws_iot_thing |  |  |
 | aws_iot_thing_type |  |  |
-| aws_iot_topic_rule |  |  |
+| aws_iot_topic_rule |  x  |  |
 | **kafka** |
 | aws_msk_cluster |  x  |  x  |
 | aws_msk_configuration |  |  x  |
+| **kinesis** |
+| aws_kinesis_stream |  x  |  |
 | **kinesisanalytics** |
 | aws_kinesis_analytics_application |  x  |  |
+| **kinesisanalyticsv2** |
+| aws_kinesisanalyticsv2_application |  x  |  |
 | **kms** |
 | aws_kms_external_key |  x  |  |
 | aws_kms_key |  x  |  |
 | **lambda** |
 | aws_lambda_event_source_mapping |  |  |
 | aws_lambda_function |  x  |  |
+| **lexmodelbuildingservice** |
+| aws_lex_bot |  |  |
+| aws_lex_intent |  |  |
+| aws_lex_slot_type |  |  |
 | **licensemanager** |
 | aws_licensemanager_license_configuration |  x  |  |
 | **lightsail** |
@@ -380,14 +419,22 @@ which have to be used in the YAML file to filter resources by their type.
 | aws_db_event_subscription |  x  |  |
 | aws_db_instance |  x  |  x  |
 | aws_db_parameter_group |  x  |  |
+| aws_db_proxy |  x  |  |
 | aws_db_security_group |  x  |  |
+| aws_db_snapshot |  x  |  x  |
 | aws_db_subnet_group |  x  |  |
+| aws_rds_cluster |  x  |  |
+| aws_rds_cluster_endpoint |  x  |  |
+| aws_rds_cluster_parameter_group |  x  |  |
 | aws_rds_global_cluster |  |  |
 | **redshift** |
 | aws_redshift_cluster |  x  |  |
 | aws_redshift_event_subscription |  x  |  |
+| aws_redshift_parameter_group |  x  |  |
+| aws_redshift_security_group |  |  |
 | aws_redshift_snapshot_copy_grant |  x  |  |
 | aws_redshift_snapshot_schedule |  x  |  |
+| aws_redshift_subnet_group |  x  |  |
 | **route53** |
 | aws_route53_health_check |  x  |  |
 | aws_route53_zone |  x  |  |
@@ -398,34 +445,45 @@ which have to be used in the YAML file to filter resources by their type.
 | **s3** |
 | aws_s3_bucket |  x  |  x  |
 | **sagemaker** |
+| aws_sagemaker_code_repository |  |  x  |
 | aws_sagemaker_endpoint |  x  |  x  |
 | aws_sagemaker_model |  x  |  x  |
 | **secretsmanager** |
 | aws_secretsmanager_secret |  x  |  |
+| **securityhub** |
+| aws_securityhub_action_target |  |  |
 | **servicecatalog** |
 | aws_servicecatalog_portfolio |  x  |  x  |
 | **servicediscovery** |
-| aws_service_discovery_service |  |  x  |
+| aws_service_discovery_service |  x  |  x  |
 | **ses** |
 | aws_ses_active_receipt_rule_set |  |  |
 | aws_ses_configuration_set |  |  |
+| aws_ses_domain_identity |  |  |
+| aws_ses_email_identity |  |  |
 | aws_ses_receipt_filter |  |  |
 | aws_ses_receipt_rule_set |  |  |
 | aws_ses_template |  |  |
 | **sfn** |
 | aws_sfn_activity |  x  |  x  |
 | aws_sfn_state_machine |  x  |  x  |
+| **simpledb** |
+| aws_simpledb_domain |  |  |
 | **sns** |
 | aws_sns_platform_application |  |  |
 | aws_sns_topic |  x  |  |
 | aws_sns_topic_subscription |  |  |
+| **sqs** |
+| aws_sqs_queue |  x  |  |
 | **ssm** |
 | aws_ssm_activation |  x  |  |
 | aws_ssm_association |  |  |
 | aws_ssm_document |  x  |  |
 | aws_ssm_maintenance_window |  x  |  |
+| aws_ssm_parameter |  x  |  |
 | aws_ssm_patch_baseline |  x  |  |
 | aws_ssm_patch_group |  |  |
+| aws_ssm_resource_data_sync |  |  |
 | **storagegateway** |
 | aws_storagegateway_gateway |  x  |  |
 | **transfer** |
@@ -456,10 +514,16 @@ which have to be used in the YAML file to filter resources by their type.
 | aws_wafregional_sql_injection_match_set |  |  |
 | aws_wafregional_web_acl |  x  |  |
 | aws_wafregional_xss_match_set |  |  |
+| **wafv2** |
+| aws_wafv2_web_acl_logging_configuration |  |  |
 | **worklink** |
 | aws_worklink_fleet |  |  x  |
 | **workspaces** |
+| aws_workspaces_directory |  x  |  |
 | aws_workspaces_ip_group |  x  |  |
+| aws_workspaces_workspace |  x  |  |
+| **xray** |
+| aws_xray_group |  x  |  |
 
 ## Acceptance tests
 
