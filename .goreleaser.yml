@@ -4,11 +4,10 @@ builds:
       - windows
       - linux
       - freebsd
-      - arm64
-      - arm
     goarch:
       - amd64
-      - 386
+      - arm64
+      - arm
     goarm:
       - 6
       - 7
@@ -22,3 +21,21 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+
+brews:
+  - tap:
+      owner: jckuester
+      name: homebrew-tap
+    homepage: "https://github.com/jckuester/awsweeper"
+    description: "A tool for cleaning your AWS account"
+    folder: Formula
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

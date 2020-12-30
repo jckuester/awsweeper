@@ -38,23 +38,24 @@ Happy erasing!
 
 ## Installation
 
-It's recommended to install a specific version of AWSweeper available on the
-[releases page](https://github.com/jckuester/awsweeper/releases).
+### Binary Releases
 
-Here is the recommended way to install AWSweeper v0.10.1:
+You can download a specific version of AWSweeper on the [releases page](https://github.com/jckuester/awsweeper/releases) or
+install it the following way to `./bin/`:
 
 ```bash
-# install it into ./bin/
-curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.10.1
+curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.8.0
 ```
 
-### Install via `brew`
+### Homebrew
 
-[Homebrew](https://brew.sh/) users can install by:
+Homebrew users can install by:
 
-```sh
-$ brew install awsweeper
+```bash
+brew install jckuester/tap/awsweeper
 ```
+
+For more information on Homebrew taps please see the [tap documentation](https://docs.brew.sh/Taps).
 
 ## Usage
 
