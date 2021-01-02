@@ -26,82 +26,51 @@ func List(filter *Filter, clients map[util.AWSClientKey]awsls.Client,
 	var destroyableRes []terradozerRes.DestroyableResource
 
 	for _, rType := range filter.Types() {
-		if SupportedResourceType(rType) {
-			for key, client := range clients {
-				err := client.SetAccountID()
-				if err != nil {
-					log.WithError(err).Fatal("failed to set account ID")
-					continue
-				}
-
-				rawResources, err := AWS(client).RawResources(rType)
-				if err != nil {
-					log.WithError(err).Fatal("failed to get raw resources")
-				}
-
-				deletableResources, err := DeletableResources(rType, rawResources, client)
-				if err != nil {
-					log.WithError(err).Fatal("failed to convert raw resources into deletable resources")
-				}
-
-				resourcesWithStates := awslsRes.GetStates(deletableResources, providers)
-
-				filteredRes := filter.Apply(resourcesWithStates)
-				print(filteredRes, outputType)
-
-				p := providers[key]
-
-				for _, r := range filteredRes {
-					destroyableRes = append(destroyableRes, terradozerRes.NewWithState(r.Type, r.ID, &p, r.State()))
-				}
+		for key, client := range clients {
+			err := client.SetAccountID()
+			if err != nil {
+				log.WithError(err).Fatal("failed to set account ID")
+				continue
 			}
-		} else {
-			for key, client := range clients {
-				err := client.SetAccountID()
-				if err != nil {
-					log.WithError(err).Fatal("failed to set account ID")
-					continue
-				}
 
-				resources, err := awsls.ListResourcesByType(&client, rType)
-				if err != nil {
-					log.WithError(err).Fatal("failed to list awsls supported resources")
-					continue
-				}
+			resources, err := awsls.ListResourcesByType(&client, rType)
+			if err != nil {
+				log.WithError(err).Fatal("failed to list awsls supported resources")
+				continue
+			}
 
-				resourcesWithStates := awslsRes.GetStates(resources, providers)
+			resourcesWithStates := awslsRes.GetStates(resources, providers)
 
-				filteredRes := filter.Apply(resourcesWithStates)
-				print(filteredRes, outputType)
+			filteredRes := filter.Apply(resourcesWithStates)
+			print(filteredRes, outputType)
 
-				p := providers[key]
+			p := providers[key]
 
-				switch rType {
-				case "aws_iam_user":
-					attachedPolicies := getAttachedUserPolicies(filteredRes, client, &p)
-					print(attachedPolicies, outputType)
+			switch rType {
+			case "aws_iam_user":
+				attachedPolicies := getAttachedUserPolicies(filteredRes, client, &p)
+				print(attachedPolicies, outputType)
 
-					inlinePolicies := getInlineUserPolicies(filteredRes, client, &p)
-					print(inlinePolicies, outputType)
+				inlinePolicies := getInlineUserPolicies(filteredRes, client, &p)
+				print(inlinePolicies, outputType)
 
-					filteredRes = append(filteredRes, attachedPolicies...)
-					filteredRes = append(filteredRes, inlinePolicies...)
-				case "aws_iam_policy":
-					policyAttachments := getPolicyAttachments(filteredRes, &p)
-					print(policyAttachments, outputType)
+				filteredRes = append(filteredRes, attachedPolicies...)
+				filteredRes = append(filteredRes, inlinePolicies...)
+			case "aws_iam_policy":
+				policyAttachments := getPolicyAttachments(filteredRes, &p)
+				print(policyAttachments, outputType)
 
-					filteredRes = append(filteredRes, policyAttachments...)
+				filteredRes = append(filteredRes, policyAttachments...)
 
-				case "aws_efs_file_system":
-					mountTargets := getEfsMountTargets(filteredRes, client, &p)
-					print(mountTargets, outputType)
+			case "aws_efs_file_system":
+				mountTargets := getEfsMountTargets(filteredRes, client, &p)
+				print(mountTargets, outputType)
 
-					filteredRes = append(filteredRes, mountTargets...)
-				}
+				filteredRes = append(filteredRes, mountTargets...)
+			}
 
-				for _, r := range filteredRes {
-					destroyableRes = append(destroyableRes, terradozerRes.NewWithState(r.Type, r.ID, &p, r.State()))
-				}
+			for _, r := range filteredRes {
+				destroyableRes = append(destroyableRes, terradozerRes.NewWithState(r.Type, r.ID, &p, r.State()))
 			}
 		}
 	}

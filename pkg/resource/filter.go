@@ -10,10 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jckuester/awsls/resource"
-
 	"github.com/apex/log"
 	awsls "github.com/jckuester/awsls/aws"
+	"github.com/jckuester/awsls/resource"
 	"gopkg.in/yaml.v2"
 )
 
@@ -66,7 +65,7 @@ func NewFilter(path string) (*Filter, error) {
 // Validate checks if all resource types appearing in the config are currently supported.
 func (f Filter) Validate() error {
 	for _, rType := range f.Types() {
-		if !(SupportedResourceType(rType) || resource.IsSupportedType(rType)) {
+		if !resource.IsSupportedType(rType) {
 			return fmt.Errorf("unsupported resource type: %s", rType)
 		}
 

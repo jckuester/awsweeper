@@ -34,15 +34,8 @@ type EnvVars struct {
 func InitEnv(t *testing.T) EnvVars {
 	t.Helper()
 
-	profile := os.Getenv("AWS_PROFILE")
-	if profile == "" {
-		t.Fatal("env variable AWS_PROFILE needs to be set for tests")
-	}
-
-	region := os.Getenv("AWS_DEFAULT_REGION")
-	if region == "" {
-		t.Fatal("env variable AWS_DEFAULT_REGION needs to be set for tests")
-	}
+	profile := getEnvOrDefault(t, "AWS_PROFILE", "myaccount1")
+	region := getEnvOrDefault(t, "AWS_DEFAULT_REGION", "us-west-2")
 
 	client, err := awsls.NewClient(
 		external.WithSharedConfigProfile(profile),
@@ -54,6 +47,17 @@ func InitEnv(t *testing.T) EnvVars {
 		AWSRegion:  region,
 		AWSClient:  client,
 	}
+}
+
+func getEnvOrDefault(t *testing.T, envName, defaultValue string) string {
+	varValue := os.Getenv(envName)
+	if varValue == "" {
+		varValue = defaultValue
+
+		t.Logf("env %s not set, therefore using the following default value: %s",
+			envName, defaultValue)
+	}
+	return varValue
 }
 
 func runBinary(t *testing.T, terraformDir, userInput string, flags ...string) (*bytes.Buffer, error) {

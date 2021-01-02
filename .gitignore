@@ -4,5 +4,6 @@ bin/
 .terradozer/
 .terraform/
 *.tfstate
+*tfstate.backup
 coverage.txt
 awsweeper
