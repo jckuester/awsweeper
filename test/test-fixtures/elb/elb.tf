@@ -30,5 +30,5 @@ resource "aws_elb" "test" {
 }
 
 resource "aws_default_subnet" "test" {
-  availability_zone = "us-west-2c"
+  availability_zone = "${var.region}c"
 }
