@@ -44,7 +44,7 @@ You can download a specific version of AWSweeper on the [releases page](https://
 install it the following way to `./bin/`:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.11.0
+curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.11.1
 ```
 
 ### Homebrew
