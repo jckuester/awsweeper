@@ -9,8 +9,9 @@
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
 [![Travis](https://img.shields.io/travis/jckuester/awsweeper/master.svg?style=for-the-badge)](https://travis-ci.org/jckuester/awsweeper)
 
-AWSweeper is able to clean out [over 200 resource types](#supported-resources) in your AWS account. Resources to be deleted
-can be filtered by their type, ID, tags, or creation date using [regular expressions](https://golang.org/pkg/regexp/syntax/)
+AWSweeper is able to clean out [over 200 resource types](#supported-resources) in your AWS account. Resources to be
+deleted can be filtered by their type, ID, tags, or creation date
+using [regular expressions](https://golang.org/pkg/regexp/syntax/)
 declared in a YAML file (see [filter.yml](filter.yml) as an example).
 
 To keep up supporting the continuously growing number of new resources, AWSweeper is standing upon the shoulders of
@@ -24,6 +25,10 @@ Not being fully there yet, but the goal is to support every AWS resource that is
 If you run into issues deleting resources, please open an issue or ping me on [Twitter](https://twitter.com/jckuester).
 
 Happy erasing!
+
+**New**: [`awsrm`](https://github.com/jckuester/awsrm) got released! It's a Unix-like `rm` to simplify
+deleting AWS resources across multiple accounts + regions and integrates well with other Unix-like tools, such
+as `grep` for filtering resources by tags or other attributes. Go and check it out!
 
 ## Example
 
@@ -40,8 +45,8 @@ Happy erasing!
 
 ### Binary Releases
 
-You can download a specific version of AWSweeper on the [releases page](https://github.com/jckuester/awsweeper/releases) or
-install it the following way to `./bin/`:
+You can download a specific version of AWSweeper on the [releases page](https://github.com/jckuester/awsweeper/releases)
+or install it the following way to `./bin/`:
 
 ```bash
 curl -sSfL https://raw.githubusercontent.com/jckuester/awsweeper/master/install.sh | sh -s v0.11.1
@@ -167,8 +172,8 @@ Here is a more detailed description of the various ways to filter resources:
 
 ## Supported resources
 
-Resource types in the list below are [Terraform Types](https://www.terraform.io/docs/providers/aws/index.html),
-which have to be used in the YAML file to filter resources by their type.
+Resource types in the list below are [Terraform Types](https://www.terraform.io/docs/providers/aws/index.html), which
+have to be used in the YAML file to filter resources by their type.
 
 | Service / Resource Type | Delete by tag | Delete by creation date
 | :-----------------------------   |:-------------:|:-----------------------:
@@ -527,10 +532,10 @@ which have to be used in the YAML file to filter resources by their type.
 
 ## Acceptance tests
 
-***IMPORTANT:*** Acceptance tests create real resources that might cost you money. Also, note that if you contribute a PR,
-the [Travis build](https://travis-ci.org/github/jckuester/awsweeper) will always fail since AWS credentials are not
-injected into the PR build coming from forks for security reasons. You can either run tests locally against your personal
-AWS account or ask me to run them for you instead.
+***IMPORTANT:*** Acceptance tests create real resources that might cost you money. Also, note that if you contribute a
+PR, the [Travis build](https://travis-ci.org/github/jckuester/awsweeper) will always fail since AWS credentials are not
+injected into the PR build coming from forks for security reasons. You can either run tests locally against your
+personal AWS account or ask me to run them for you instead.
 
 Run all acceptance tests with
 
