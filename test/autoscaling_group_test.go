@@ -87,17 +87,17 @@ func assertAutoscalingGroupDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func autoscalingGroupExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Autoscalingconn.DescribeAutoScalingGroupsRequest(
+	req, err := env.AWSClient.Autoscalingconn.DescribeAutoScalingGroups(
+		context.Background(),
 		&autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: []string{id},
 		})
 
-	resp, err := req.Send(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(resp.AutoScalingGroups) == 0 {
+	if len(req.AutoScalingGroups) == 0 {
 		return false
 	}
 

@@ -14,32 +14,43 @@ import (
 	"github.com/fatih/color"
 	awsls "github.com/jckuester/awsls/aws"
 	awslsRes "github.com/jckuester/awsls/resource"
-	"github.com/jckuester/awsls/util"
+	"github.com/jckuester/awstools-lib/aws"
+	"github.com/jckuester/awstools-lib/terraform"
 	"github.com/jckuester/terradozer/pkg/provider"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
 	"github.com/zclconf/go-cty/cty"
 	"gopkg.in/yaml.v2"
 )
 
-func List(filter *Filter, clients map[util.AWSClientKey]awsls.Client,
-	providers map[util.AWSClientKey]provider.TerraformProvider, outputType string) []terradozerRes.DestroyableResource {
+// DestroyableResources contains resources which can be destroyed via Terraform AWS Provider.
+// Failed updates are logged in the Errors array.
+type DestroyableResources struct {
+	Resources []terraform.Resource
+	Errors    []error
+}
+
+func List(ctx context.Context, filter *Filter, clients map[aws.ClientKey]aws.Client,
+	providers map[aws.ClientKey]provider.TerraformProvider, outputType string) []terradozerRes.DestroyableResource {
 	var destroyableRes []terradozerRes.DestroyableResource
 
 	for _, rType := range filter.Types() {
 		for key, client := range clients {
-			err := client.SetAccountID()
+			err := client.SetAccountID(ctx)
 			if err != nil {
 				log.WithError(err).Fatal("failed to set account ID")
 				continue
 			}
 
-			resources, err := awsls.ListResourcesByType(&client, rType)
+			resources, err := awsls.ListResourcesByType(ctx, &client, rType)
 			if err != nil {
 				log.WithError(err).Fatal("failed to list awsls supported resources")
 				continue
 			}
 
-			resourcesWithStates := awslsRes.GetStates(resources, providers)
+			resourcesWithStates, errs := terraform.UpdateStates(resources, providers, 10, true)
+			for _, err := range errs {
+				fmt.Fprint(os.Stderr, color.RedString("Error %s: %s\n", rType, err))
+			}
 
 			filteredRes := filter.Apply(resourcesWithStates)
 			print(filteredRes, outputType)
@@ -48,10 +59,10 @@ func List(filter *Filter, clients map[util.AWSClientKey]awsls.Client,
 
 			switch rType {
 			case "aws_iam_user":
-				attachedPolicies := getAttachedUserPolicies(filteredRes, client, &p)
+				attachedPolicies := getAttachedUserPolicies(ctx, filteredRes, client, &p)
 				print(attachedPolicies, outputType)
 
-				inlinePolicies := getInlineUserPolicies(filteredRes, client, &p)
+				inlinePolicies := getInlineUserPolicies(ctx, filteredRes, client, &p)
 				print(inlinePolicies, outputType)
 
 				filteredRes = append(filteredRes, attachedPolicies...)
@@ -63,7 +74,7 @@ func List(filter *Filter, clients map[util.AWSClientKey]awsls.Client,
 				filteredRes = append(filteredRes, policyAttachments...)
 
 			case "aws_efs_file_system":
-				mountTargets := getEfsMountTargets(filteredRes, client, &p)
+				mountTargets := getEfsMountTargets(ctx, filteredRes, client, &p)
 				print(mountTargets, outputType)
 
 				filteredRes = append(filteredRes, mountTargets...)
@@ -78,21 +89,24 @@ func List(filter *Filter, clients map[util.AWSClientKey]awsls.Client,
 	return destroyableRes
 }
 
-func getAttachedUserPolicies(users []awsls.Resource, client awsls.Client,
-	provider *provider.TerraformProvider) []awsls.Resource {
-	var result []awsls.Resource
+func getAttachedUserPolicies(ctx context.Context, users []terraform.Resource, client aws.Client,
+	provider *provider.TerraformProvider) []terraform.Resource {
+	var result []terraform.Resource
 
 	for _, user := range users {
-		req := client.Iamconn.ListAttachedUserPoliciesRequest(&iam.ListAttachedUserPoliciesInput{
+		pg := iam.NewListAttachedUserPoliciesPaginator(client.Iamconn, &iam.ListAttachedUserPoliciesInput{
 			UserName: &user.ID,
 		})
 
-		pg := iam.NewListAttachedUserPoliciesPaginator(req)
-		for pg.Next(context.Background()) {
-			page := pg.CurrentPage()
+		for pg.HasMorePages() {
+			page, err := pg.NextPage(ctx)
+			if err != nil {
+				fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+				continue
+			}
 
 			for _, attachedPolicy := range page.AttachedPolicies {
-				r := awsls.Resource{
+				r := terraform.Resource{
 					Type: "aws_iam_user_policy_attachment",
 					ID:   *attachedPolicy.PolicyArn,
 				}
@@ -111,31 +125,29 @@ func getAttachedUserPolicies(users []awsls.Resource, client awsls.Client,
 				result = append(result, r)
 			}
 		}
-
-		if err := pg.Err(); err != nil {
-			fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
-			continue
-		}
 	}
 
 	return result
 }
 
-func getInlineUserPolicies(users []awsls.Resource, client awsls.Client,
-	provider *provider.TerraformProvider) []awsls.Resource {
-	var result []awsls.Resource
+func getInlineUserPolicies(ctx context.Context, users []terraform.Resource, client aws.Client,
+	provider *provider.TerraformProvider) []terraform.Resource {
+	var result []terraform.Resource
 
 	for _, user := range users {
-		req := client.Iamconn.ListUserPoliciesRequest(&iam.ListUserPoliciesInput{
+		pg := iam.NewListUserPoliciesPaginator(client.Iamconn, &iam.ListUserPoliciesInput{
 			UserName: &user.ID,
 		})
 
-		pg := iam.NewListUserPoliciesPaginator(req)
-		for pg.Next(context.Background()) {
-			page := pg.CurrentPage()
+		for pg.HasMorePages() {
+			page, err := pg.NextPage(ctx)
+			if err != nil {
+				fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
+				continue
+			}
 
 			for _, inlinePolicy := range page.PolicyNames {
-				r := awsls.Resource{
+				r := terraform.Resource{
 					Type: "aws_iam_user_policy",
 					ID:   user.ID + ":" + inlinePolicy,
 				}
@@ -151,18 +163,13 @@ func getInlineUserPolicies(users []awsls.Resource, client awsls.Client,
 				result = append(result, r)
 			}
 		}
-
-		if err := pg.Err(); err != nil {
-			fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
-			continue
-		}
 	}
 
 	return result
 }
 
-func getPolicyAttachments(policies []awsls.Resource, provider *provider.TerraformProvider) []awsls.Resource {
-	var result []awsls.Resource
+func getPolicyAttachments(policies []terraform.Resource, provider *provider.TerraformProvider) []terraform.Resource {
+	var result []terraform.Resource
 
 	for _, policy := range policies {
 		arn, err := awslsRes.GetAttribute("arn", &policy)
@@ -171,7 +178,7 @@ func getPolicyAttachments(policies []awsls.Resource, provider *provider.Terrafor
 			continue
 		}
 
-		r := awsls.Resource{
+		r := terraform.Resource{
 			Type: "aws_iam_policy_attachment",
 			// Note: ID is only set for pretty printing (could be also left empty)
 			ID: policy.ID,
@@ -193,24 +200,23 @@ func getPolicyAttachments(policies []awsls.Resource, provider *provider.Terrafor
 	return result
 }
 
-func getEfsMountTargets(efsFileSystems []awsls.Resource, client awsls.Client,
-	provider *provider.TerraformProvider) []awsls.Resource {
-	var result []awsls.Resource
+func getEfsMountTargets(ctx context.Context, efsFileSystems []terraform.Resource, client aws.Client,
+	provider *provider.TerraformProvider) []terraform.Resource {
+	var result []terraform.Resource
 
 	for _, fs := range efsFileSystems {
 		// TODO result is paginated, but there is no paginator API function
-		req := client.Efsconn.DescribeMountTargetsRequest(&efs.DescribeMountTargetsInput{
+		req, err := client.Efsconn.DescribeMountTargets(ctx, &efs.DescribeMountTargetsInput{
 			FileSystemId: &fs.ID,
 		})
 
-		resp, err := req.Send(context.Background())
 		if err != nil {
 			fmt.Fprint(os.Stderr, color.RedString("Error: %s\n", err))
 			continue
 		}
 
-		for _, mountTarget := range resp.MountTargets {
-			r := awsls.Resource{
+		for _, mountTarget := range req.MountTargets {
+			r := terraform.Resource{
 				Type: "aws_efs_mount_target",
 				ID:   *mountTarget.MountTargetId,
 			}
@@ -230,7 +236,7 @@ func getEfsMountTargets(efsFileSystems []awsls.Resource, client awsls.Client,
 	return result
 }
 
-func print(res []awsls.Resource, outputType string) {
+func print(res []terraform.Resource, outputType string) {
 	if len(res) == 0 {
 		return
 	}
@@ -247,7 +253,7 @@ func print(res []awsls.Resource, outputType string) {
 	}
 }
 
-func printString(res []awsls.Resource) {
+func printString(res []terraform.Resource) {
 	fmt.Printf("\n\t---\n\tType: %s\n\tFound: %d\n\n", res[0].Type, len(res))
 
 	for _, r := range res {
@@ -275,7 +281,7 @@ func printString(res []awsls.Resource) {
 	fmt.Print("\t---\n\n")
 }
 
-func printJson(res []awsls.Resource) {
+func printJson(res []terraform.Resource) {
 	b, err := json.Marshal(res)
 	if err != nil {
 		log.WithError(err).Fatal("failed to marshal resources into JSON")
@@ -284,7 +290,7 @@ func printJson(res []awsls.Resource) {
 	fmt.Print(string(b))
 }
 
-func printYaml(res []awsls.Resource) {
+func printYaml(res []terraform.Resource) {
 	b, err := yaml.Marshal(res)
 	if err != nil {
 		log.WithError(err).Fatal("failed to marshal resources into YAML")

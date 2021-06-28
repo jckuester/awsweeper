@@ -6,8 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws/awserr"
-
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
@@ -81,25 +79,17 @@ func assertVpcDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func vpcExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Ec2conn.DescribeVpcsRequest(
+	req, err := env.AWSClient.Ec2conn.DescribeVpcs(
+		context.Background(),
 		&ec2.DescribeVpcsInput{
 			VpcIds: []string{id},
 		})
 
-	resp, err := req.Send(context.Background())
-
 	if err != nil {
-		ec2err, ok := err.(awserr.Error)
-		if !ok {
-			t.Fatal()
-		}
-		if ec2err.Code() == "InvalidVpcID.NotFound" {
-			return false
-		}
-		t.Fatal()
+		t.Fatal(err)
 	}
 
-	if len(resp.Vpcs) == 0 {
+	if len(req.Vpcs) == 0 {
 		return false
 	}
 

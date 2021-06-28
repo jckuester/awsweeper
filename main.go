@@ -1,17 +1,21 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	stdlog "log"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 	"github.com/fatih/color"
-	"github.com/jckuester/awsls/util"
+	"github.com/jckuester/awstools-lib/aws"
+	"github.com/jckuester/awstools-lib/terraform"
 	"github.com/jckuester/awsweeper/internal"
 	"github.com/jckuester/awsweeper/pkg/resource"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
@@ -48,11 +52,11 @@ func mainExitCode() int {
 	flags.BoolVar(&version, "version", false, "Show application version")
 	flags.BoolVar(&force, "force", false, "Delete without asking for confirmation")
 	flags.StringVar(&timeout, "timeout", "30s", "Amount of time to wait for a destroy of a resource to finish")
-	//maxRetries := set.Int("max-retries", 25, "The maximum number of times an AWS API request is being executed")
 
 	err := flags.Parse(os.Args[1:])
 	if err != nil {
-		// the Parse function prints already an error + help message, so we don't want to output it here again
+		// the Parse() function prints already an error + help message,
+		// so we don't want to output it here again
 		log.WithError(err).Debug("failed to parse command line arguments")
 		return 1
 	}
@@ -126,23 +130,44 @@ func mainExitCode() int {
 		return 1
 	}
 
-	clients, err := util.NewAWSClientPool(profiles, regions)
+	ctx := context.Background()
+
+	clients, err := aws.NewClientPool(ctx, profiles, regions)
 	if err != nil {
 		fmt.Fprint(os.Stderr, color.RedString("\nError: %s\n", err))
 
 		return 1
 	}
 
-	clientKeys := make([]util.AWSClientKey, 0, len(clients))
+	// trap Ctrl+C and call cancel on the context
+	ctx, cancel := context.WithCancel(ctx)
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, ignoreSignals...)
+	signal.Notify(signalCh, forwardSignals...)
+	defer func() {
+		signal.Stop(signalCh)
+		cancel()
+	}()
+	go func() {
+		select {
+		case <-signalCh:
+			fmt.Fprint(os.Stderr, color.RedString("\nAborting...\n"))
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	clientKeys := make([]aws.ClientKey, 0, len(clients))
 	for k := range clients {
 		clientKeys = append(clientKeys, k)
 	}
 
 	// initialize a Terraform AWS provider for each AWS client with a matching config
-	providers, err := util.NewProviderPool(clientKeys, "v3.16.0", "~/.awsweeper", timeoutDuration)
+	providers, err := terraform.NewProviderPool(ctx, clientKeys, "v3.42.0", "~/.awsweeper", timeoutDuration)
 	if err != nil {
-		fmt.Fprint(os.Stderr, color.RedString("\nError: %s\n", err))
-
+		if !errors.Is(err, context.Canceled) {
+			fmt.Fprint(os.Stderr, color.RedString("\nError: %s\n", err))
+		}
 		return 1
 	}
 
@@ -153,7 +178,18 @@ func mainExitCode() int {
 	}()
 
 	internal.LogTitle("showing resources that would be deleted (dry run)")
-	resources := resource.List(filter, clients, providers, outputType)
+	var resources []terradozerRes.DestroyableResource
+
+	resourcesCh := make(chan []terradozerRes.DestroyableResource, 1)
+	go func() {
+		resourcesCh <- resource.List(context.Background(), filter, clients, providers, outputType)
+	}()
+	select {
+	case <-ctx.Done():
+		return 1
+	case result := <-resourcesCh:
+		resources = result
+	}
 
 	if len(resources) == 0 {
 		internal.LogTitle("no resources found to delete")

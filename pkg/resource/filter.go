@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/apex/log"
-	awsls "github.com/jckuester/awsls/aws"
 	"github.com/jckuester/awsls/resource"
+	"github.com/jckuester/awstools-lib/terraform"
 	"gopkg.in/yaml.v2"
 )
 
@@ -125,7 +125,7 @@ func (f TypeFilter) MatchTagged(tags map[string]string) bool {
 	return false
 }
 
-// MatchesTags checks whether a resource's tag set matches the filter.
+// MatchTags checks whether a resource's tag set matches the filter.
 func (f TypeFilter) MatchTags(tags map[string]string) bool {
 	return f.matchIncludedTags(tags) && f.matchExcludedTags(tags)
 }
@@ -238,7 +238,7 @@ func (f TypeFilter) matchCreated(creationTime *time.Time) bool {
 }
 
 // Match checks whether a resource matches the filter criteria.
-func (f Filter) Match(r awsls.Resource) bool {
+func (f Filter) Match(r terraform.Resource) bool {
 	resTypeFilters, found := f[r.Type]
 	if !found {
 		return false

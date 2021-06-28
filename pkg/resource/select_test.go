@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsls "github.com/jckuester/awsls/aws"
+	"github.com/jckuester/awstools-lib/terraform"
 	"github.com/jckuester/awsweeper/pkg/resource"
 	terradozerRes "github.com/jckuester/terradozer/pkg/resource"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,7 @@ func TestYamlFilter_Apply_EmptyConfig(t *testing.T) {
 	//given
 	f := &resource.Filter{}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type: "aws_instance",
 			ID:   "foo",
@@ -37,7 +37,7 @@ func TestYamlFilter_Apply_FilterAll(t *testing.T) {
 	f := &resource.Filter{
 		"aws_instance": {},
 	}
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type: "aws_instance",
 			ID:   "foo",
@@ -63,7 +63,7 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 	}
 
 	// when
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type: "aws_instance",
 			ID:   "select-this",
@@ -93,7 +93,7 @@ func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 		},
 	}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type: "aws_instance",
 			ID:   "select-this",
@@ -135,7 +135,7 @@ func TestYamlFilter_Apply_FilterByMultipleTags(t *testing.T) {
 		},
 	}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type: "aws_instance",
 			ID:   "select-this",
@@ -174,7 +174,7 @@ func TestYamlFilter_Apply_FilterByIDandTag(t *testing.T) {
 		},
 	}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type: "aws_instance",
 			ID:   "foo",
@@ -216,7 +216,7 @@ func TestYamlFilter_Apply_Created(t *testing.T) {
 		},
 	}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type:      "aws_instance",
 			ID:        "foo",
@@ -263,7 +263,7 @@ func TestYamlFilter_Apply_CreatedBefore(t *testing.T) {
 		},
 	}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type:      "aws_instance",
 			ID:        "foo",
@@ -300,7 +300,7 @@ func TestYamlFilter_Apply_CreatedAfter(t *testing.T) {
 		},
 	}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type:      "aws_instance",
 			ID:        "foo",
@@ -340,7 +340,7 @@ func TestYamlFilter_Apply_MultipleFiltersPerResourceType(t *testing.T) {
 		},
 	}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type: "aws_instance",
 			ID:   "select-this",
@@ -388,7 +388,7 @@ func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
 		},
 	}
 
-	res := []awsls.Resource{
+	res := []terraform.Resource{
 		{
 			Type: "aws_instance",
 			ID:   "select-this-not",
@@ -416,7 +416,7 @@ func TestYamlFilter_Apply_NegatedStringFilter(t *testing.T) {
 func TestGetTags(t *testing.T) {
 	tests := []struct {
 		name    string
-		arg     *awsls.Resource
+		arg     *terraform.Resource
 		want    map[string]string
 		wantErr string
 	}{
@@ -426,26 +426,26 @@ func TestGetTags(t *testing.T) {
 		},
 		{
 			name:    "embedded updatable resource is nil",
-			arg:     &awsls.Resource{},
+			arg:     &terraform.Resource{},
 			wantErr: "resource is nil: &{Type: ID: Region: Profile: AccountID: Tags:map[] CreatedAt:<nil> UpdatableResource:<nil>}",
 		},
 		{
 			name: "state is nil",
-			arg: &awsls.Resource{
+			arg: &terraform.Resource{
 				UpdatableResource: &terradozerRes.Resource{},
 			},
 			wantErr: "state is nil: <nil>",
 		},
 		{
 			name: "state is nil value",
-			arg: &awsls.Resource{
+			arg: &terraform.Resource{
 				UpdatableResource: terradozerRes.NewWithState("aws_foo", "1234", nil, &cty.NilVal),
 			},
 			wantErr: "state is nil: &{ty:{typeImpl:<nil>} v:<nil>}",
 		},
 		{
 			name: "null map",
-			arg: &awsls.Resource{
+			arg: &terraform.Resource{
 				UpdatableResource: terradozerRes.NewWithState("aws_foo", "1234",
 					nil, ctyValuePtr(cty.NullVal(cty.Map(cty.String)))),
 			},
@@ -453,7 +453,7 @@ func TestGetTags(t *testing.T) {
 		},
 		{
 			name: "unhandled type",
-			arg: &awsls.Resource{
+			arg: &terraform.Resource{
 				UpdatableResource: terradozerRes.NewWithState("aws_foo", "1234",
 					nil, ctyValuePtr(cty.ObjectVal(map[string]cty.Value{
 						"tags": cty.StringVal("foo"),
@@ -463,7 +463,7 @@ func TestGetTags(t *testing.T) {
 		},
 		{
 			name: "tags attribute not found",
-			arg: &awsls.Resource{
+			arg: &terraform.Resource{
 				UpdatableResource: terradozerRes.NewWithState("aws_foo", "1234",
 					nil, ctyValuePtr(cty.ObjectVal(map[string]cty.Value{
 						"tag": cty.StringVal("foo"),
@@ -473,7 +473,7 @@ func TestGetTags(t *testing.T) {
 		},
 		{
 			name: "cannot iterate element",
-			arg: &awsls.Resource{
+			arg: &terraform.Resource{
 				UpdatableResource: terradozerRes.NewWithState("aws_foo", "1234",
 					nil, ctyValuePtr(cty.StringVal("foo"))),
 			},
@@ -481,7 +481,7 @@ func TestGetTags(t *testing.T) {
 		},
 		{
 			name: "empty map of tags",
-			arg: &awsls.Resource{
+			arg: &terraform.Resource{
 				UpdatableResource: terradozerRes.NewWithState("aws_foo", "1234",
 					nil, ctyValuePtr(cty.ObjectVal(map[string]cty.Value{
 						"tags": cty.MapValEmpty(cty.String),
@@ -491,7 +491,7 @@ func TestGetTags(t *testing.T) {
 		},
 		{
 			name: "some tags",
-			arg: &awsls.Resource{
+			arg: &terraform.Resource{
 				UpdatableResource: terradozerRes.NewWithState("aws_foo", "1234",
 					nil, ctyValuePtr(cty.ObjectVal(map[string]cty.Value{
 						"tags": cty.MapVal(map[string]cty.Value{"foo": cty.StringVal("bar")}),

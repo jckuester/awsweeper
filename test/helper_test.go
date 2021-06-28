@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,11 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws/external"
-	awsls "github.com/jckuester/awsls/aws"
-
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/jckuester/awstools-lib/aws"
 	"github.com/onsi/gomega/gexec"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +27,7 @@ const (
 type EnvVars struct {
 	AWSRegion  string
 	AWSProfile string
-	AWSClient  *awsls.Client
+	AWSClient  *aws.Client
 }
 
 // InitEnv sets environment variables for acceptance tests.
@@ -37,9 +37,10 @@ func InitEnv(t *testing.T) EnvVars {
 	profile := getEnvOrDefault(t, "AWS_PROFILE", "myaccount1")
 	region := getEnvOrDefault(t, "AWS_DEFAULT_REGION", "us-west-2")
 
-	client, err := awsls.NewClient(
-		external.WithSharedConfigProfile(profile),
-		external.WithRegion(region))
+	client, err := aws.NewClient(
+		context.Background(),
+		config.WithSharedConfigProfile(profile),
+		config.WithRegion(region))
 	require.NoError(t, err)
 
 	return EnvVars{

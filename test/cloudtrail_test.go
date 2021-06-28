@@ -79,16 +79,16 @@ func assertCloudTrailDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func cloudTrailExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Cloudtrailconn.DescribeTrailsRequest(&cloudtrail.DescribeTrailsInput{
-		TrailNameList: []string{id},
-	})
+	req, err := env.AWSClient.Cloudtrailconn.DescribeTrails(context.Background(),
+		&cloudtrail.DescribeTrailsInput{
+			TrailNameList: []string{id},
+		})
 
-	resp, err := req.Send(context.Background())
 	if err != nil {
 		t.Fatal()
 	}
 
-	if len(resp.TrailList) == 0 {
+	if len(req.TrailList) == 0 {
 		return false
 	}
 

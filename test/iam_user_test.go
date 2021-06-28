@@ -2,11 +2,13 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/service/iam/types"
+
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
@@ -80,21 +82,18 @@ func assertIamUserDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func iamUserExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Iamconn.GetUserRequest(&iam.GetUserInput{
-		UserName: &id,
-	})
-
-	_, err := req.Send(context.Background())
+	_, err := env.AWSClient.Iamconn.GetUser(
+		context.Background(),
+		&iam.GetUserInput{
+			UserName: &id,
+		})
 
 	if err != nil {
-		ec2err, ok := err.(awserr.Error)
-		if !ok {
-			t.Fatal()
-		}
-		if ec2err.Code() == "NoSuchEntity" {
+		var awsErr *types.NoSuchEntityException
+		if errors.As(err, &awsErr) {
 			return false
 		}
-		t.Fatal()
+		t.Fatal(err)
 	}
 
 	return true

@@ -7,9 +7,9 @@
 ---
 [![Release](https://img.shields.io/github/release/jckuester/awsweeper.svg?style=for-the-badge)](https://github.com/jckuester/awsweeper/releases/latest)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
-[![Travis](https://img.shields.io/travis/jckuester/awsweeper/master.svg?style=for-the-badge)](https://travis-ci.org/jckuester/awsweeper)
+[![Travis](https://img.shields.io/travis/jckuester/awsweeper/master.svg?style=for-the-badge)](https://travis-ci.com/jckuester/awsweeper)
 
-AWSweeper is able to clean out [over 200 resource types](#supported-resources) in your AWS account. Resources to be
+AWSweeper is able to clean out [over 290 resource types](#supported-resources) in your AWS account. Resources to be
 deleted can be filtered by their type, ID, tags, or creation date
 using [regular expressions](https://golang.org/pkg/regexp/syntax/)
 declared in a YAML file (see [filter.yml](filter.yml) as an example).
@@ -172,8 +172,8 @@ Here is a more detailed description of the various ways to filter resources:
 
 ## Supported resources
 
-Resource types in the list below are [Terraform Types](https://www.terraform.io/docs/providers/aws/index.html), which
-have to be used in the YAML file to filter resources by their type.
+The list below shows the 297 supported (Terraform) [resource types](https://www.terraform.io/docs/providers/aws/index.html),
+which have to be used in the YAML file to filter resources by their type.
 
 | Service / Resource Type | Delete by tag | Delete by creation date
 | :-----------------------------   |:-------------:|:-----------------------:
@@ -208,10 +208,10 @@ have to be used in the YAML file to filter resources by their type.
 | **batch** |
 | aws_batch_compute_environment |  x  |  |
 | aws_batch_job_definition |  x  |  |
-| aws_batch_job_queue |  x  |  |
 | **cloudformation** |
 | aws_cloudformation_stack |  x  |  x  |
 | aws_cloudformation_stack_set |  x  |  |
+| aws_cloudformation_type |  |  |
 | **cloudhsmv2** |
 | aws_cloudhsm_v2_cluster |  x  |  |
 | **cloudtrail** |
@@ -219,11 +219,13 @@ have to be used in the YAML file to filter resources by their type.
 | **cloudwatch** |
 | aws_cloudwatch_dashboard |  |  |
 | **cloudwatchevents** |
+| aws_cloudwatch_event_archive |  |  x  |
 | aws_cloudwatch_event_bus |  x  |  |
 | **cloudwatchlogs** |
 | aws_cloudwatch_log_destination |  |  x  |
 | aws_cloudwatch_log_group |  x  |  x  |
 | aws_cloudwatch_log_resource_policy |  |  |
+| aws_cloudwatch_query_definition |  |  |
 | **codeartifact** |
 | aws_codeartifact_domain |  x  |  x  |
 | aws_codeartifact_repository |  x  |  |
@@ -237,16 +239,21 @@ have to be used in the YAML file to filter resources by their type.
 | aws_codedeploy_deployment_config |  |  |
 | **codepipeline** |
 | aws_codepipeline_webhook |  x  |  |
+| **codestarconnections** |
+| aws_codestarconnections_connection |  x  |  |
+| aws_codestarconnections_host |  |  |
 | **codestarnotifications** |
 | aws_codestarnotifications_notification_rule |  x  |  |
 | **configservice** |
 | aws_config_config_rule |  x  |  |
+| aws_config_configuration_aggregator |  x  |  x  |
 | aws_config_configuration_recorder |  |  |
+| aws_config_conformance_pack |  |  |
 | aws_config_delivery_channel |  |  |
 | **costandusagereportservice** |
 | aws_cur_report_definition |  |  |
 | **databasemigrationservice** |
-| aws_dms_certificate |  |  |
+| aws_dms_certificate |  x  |  |
 | aws_dms_endpoint |  x  |  |
 | aws_dms_replication_subnet_group |  x  |  |
 | aws_dms_replication_task |  x  |  |
@@ -277,9 +284,11 @@ have to be used in the YAML file to filter resources by their type.
 | aws_ebs_snapshot |  x  |  x  |
 | aws_ebs_volume |  x  |  x  |
 | aws_ec2_capacity_reservation |  x  |  x  |
+| aws_ec2_carrier_gateway |  x  |  |
 | aws_ec2_client_vpn_endpoint |  x  |  x  |
 | aws_ec2_fleet |  x  |  x  |
 | aws_ec2_local_gateway_route_table_vpc_association |  x  |  |
+| aws_ec2_managed_prefix_list |  x  |  |
 | aws_ec2_traffic_mirror_filter |  x  |  |
 | aws_ec2_traffic_mirror_session |  x  |  |
 | aws_ec2_traffic_mirror_target |  x  |  |
@@ -310,6 +319,8 @@ have to be used in the YAML file to filter resources by their type.
 | aws_vpn_gateway |  x  |  |
 | **ecr** |
 | aws_ecr_repository |  x  |  |
+| **ecrpublic** |
+| aws_ecrpublic_repository |  |  |
 | **ecs** |
 | aws_ecs_cluster |  x  |  |
 | aws_ecs_task_definition |  x  |  |
@@ -319,24 +330,27 @@ have to be used in the YAML file to filter resources by their type.
 | **eks** |
 | aws_eks_cluster |  x  |  |
 | **elasticache** |
+| aws_elasticache_global_replication_group |  |  |
 | aws_elasticache_replication_group |  x  |  |
 | **elasticbeanstalk** |
 | aws_elastic_beanstalk_application |  x  |  |
 | aws_elastic_beanstalk_application_version |  x  |  |
 | aws_elastic_beanstalk_environment |  x  |  |
-| **elasticloadbalancing** |
-| aws_elb |  x  |  x  |
-| **elasticloadbalancingv2** |
-| aws_alb_target_group |  x  |  |
-| aws_lb |  x  |  x  |
-| aws_lb_target_group |  x  |  |
 | **elastictranscoder** |
 | aws_elastictranscoder_pipeline |  |  |
 | aws_elastictranscoder_preset |  |  |
+| **elb** |
+| aws_elb |  x  |  x  |
+| **elbv2** |
+| aws_alb_target_group |  x  |  |
+| aws_lb |  x  |  x  |
+| aws_lb_target_group |  x  |  |
 | **emr** |
 | aws_emr_security_configuration |  |  |
 | **firehose** |
 | aws_kinesis_firehose_delivery_stream |  x  |  |
+| **fms** |
+| aws_fms_policy |  |  |
 | **fsx** |
 | aws_fsx_lustre_file_system |  x  |  x  |
 | aws_fsx_windows_file_system |  x  |  x  |
@@ -352,6 +366,8 @@ have to be used in the YAML file to filter resources by their type.
 | aws_glue_dev_endpoint |  x  |  |
 | aws_glue_job |  x  |  |
 | aws_glue_ml_transform |  x  |  |
+| aws_glue_registry |  x  |  x  |
+| aws_glue_schema |  x  |  x  |
 | aws_glue_security_configuration |  |  |
 | aws_glue_trigger |  x  |  |
 | aws_glue_workflow |  x  |  |
@@ -361,15 +377,18 @@ have to be used in the YAML file to filter resources by their type.
 | aws_iam_access_key |  |  x  |
 | aws_iam_account_alias |  |  |
 | aws_iam_group |  |  x  |
-| aws_iam_instance_profile |  |  x  |
-| aws_iam_policy |  |  x  |
+| aws_iam_instance_profile |  x  |  x  |
+| aws_iam_policy |  x  |  x  |
 | aws_iam_role |  x  |  x  |
-| aws_iam_server_certificate |  |  |
+| aws_iam_server_certificate |  x  |  |
 | aws_iam_service_linked_role |  |  x  |
 | aws_iam_user |  x  |  x  |
 | **imagebuilder** |
 | aws_imagebuilder_component |  x  |  |
 | aws_imagebuilder_distribution_configuration |  x  |  |
+| aws_imagebuilder_image |  x  |  |
+| aws_imagebuilder_image_pipeline |  x  |  |
+| aws_imagebuilder_image_recipe |  x  |  |
 | aws_imagebuilder_infrastructure_configuration |  x  |  |
 | **iot** |
 | aws_iot_certificate |  |  x  |
@@ -391,6 +410,7 @@ have to be used in the YAML file to filter resources by their type.
 | aws_kms_external_key |  x  |  |
 | aws_kms_key |  x  |  |
 | **lambda** |
+| aws_lambda_code_signing_config |  |  |
 | aws_lambda_event_source_mapping |  |  |
 | aws_lambda_function |  x  |  |
 | **lexmodelbuildingservice** |
@@ -404,6 +424,10 @@ have to be used in the YAML file to filter resources by their type.
 | aws_lightsail_instance |  x  |  |
 | aws_lightsail_key_pair |  |  |
 | aws_lightsail_static_ip |  |  |
+| **macie2** |
+| aws_macie2_classification_job |  x  |  |
+| aws_macie2_custom_data_identifier |  x  |  |
+| aws_macie2_findings_filter |  x  |  |
 | **mediaconvert** |
 | aws_media_convert_queue |  x  |  |
 | **mediapackage** |
@@ -413,8 +437,14 @@ have to be used in the YAML file to filter resources by their type.
 | **mq** |
 | aws_mq_broker |  x  |  |
 | aws_mq_configuration |  x  |  |
+| **mwaa** |
+| aws_mwaa_environment |  x  |  |
 | **neptune** |
 | aws_neptune_event_subscription |  x  |  |
+| **networkfirewall** |
+| aws_networkfirewall_firewall |  x  |  |
+| aws_networkfirewall_firewall_policy |  x  |  |
+| aws_networkfirewall_rule_group |  x  |  |
 | **opsworks** |
 | aws_opsworks_stack |  x  |  |
 | aws_opsworks_user_profile |  |  |
@@ -445,20 +475,30 @@ have to be used in the YAML file to filter resources by their type.
 | aws_route53_zone |  x  |  |
 | **route53resolver** |
 | aws_route53_resolver_endpoint |  x  |  x  |
-| aws_route53_resolver_rule |  x  |  |
+| aws_route53_resolver_query_log_config |  x  |  x  |
+| aws_route53_resolver_query_log_config_association |  |  x  |
+| aws_route53_resolver_rule |  x  |  x  |
 | aws_route53_resolver_rule_association |  |  |
 | **s3** |
 | aws_s3_bucket |  x  |  x  |
+| **s3outposts** |
+| aws_s3outposts_endpoint |  |  x  |
 | **sagemaker** |
+| aws_sagemaker_app_image_config |  |  x  |
 | aws_sagemaker_code_repository |  |  x  |
 | aws_sagemaker_endpoint |  x  |  x  |
+| aws_sagemaker_feature_group |  x  |  x  |
 | aws_sagemaker_model |  x  |  x  |
+| aws_sagemaker_model_package_group |  x  |  x  |
 | **secretsmanager** |
 | aws_secretsmanager_secret |  x  |  |
 | **securityhub** |
 | aws_securityhub_action_target |  |  |
+| aws_securityhub_insight |  |  |
 | **servicecatalog** |
 | aws_servicecatalog_portfolio |  x  |  x  |
+| aws_servicecatalog_service_action |  |  |
+| aws_servicecatalog_tag_option |  |  |
 | **servicediscovery** |
 | aws_service_discovery_service |  x  |  x  |
 | **ses** |
@@ -472,8 +512,9 @@ have to be used in the YAML file to filter resources by their type.
 | **sfn** |
 | aws_sfn_activity |  x  |  x  |
 | aws_sfn_state_machine |  x  |  x  |
-| **simpledb** |
-| aws_simpledb_domain |  |  |
+| **signer** |
+| aws_signer_signing_job |  |  |
+| aws_signer_signing_profile |  x  |  |
 | **sns** |
 | aws_sns_platform_application |  |  |
 | aws_sns_topic |  x  |  |
@@ -487,10 +528,14 @@ have to be used in the YAML file to filter resources by their type.
 | aws_ssm_maintenance_window |  x  |  |
 | aws_ssm_parameter |  x  |  |
 | aws_ssm_patch_baseline |  x  |  |
-| aws_ssm_patch_group |  |  |
 | aws_ssm_resource_data_sync |  |  |
 | **storagegateway** |
 | aws_storagegateway_gateway |  x  |  |
+| aws_storagegateway_tape_pool |  x  |  |
+| **synthetics** |
+| aws_synthetics_canary |  x  |  |
+| **timestreamwrite** |
+| aws_timestreamwrite_database |  x  |  x  |
 | **transfer** |
 | aws_transfer_server |  x  |  |
 | **waf** |
