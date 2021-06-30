@@ -2,11 +2,13 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/smithy-go"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -86,6 +88,13 @@ func ebsSnapshotExists(t *testing.T, env EnvVars, id string) bool {
 		})
 
 	if err != nil {
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "InvalidSnapshot.NotFound" {
+				return false
+			}
+			t.Fatal(err)
+		}
 		t.Fatal(err)
 	}
 

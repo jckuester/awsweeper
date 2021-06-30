@@ -7,9 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/service/iam/types"
-
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/smithy-go"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -89,9 +88,12 @@ func iamUserExists(t *testing.T, env EnvVars, id string) bool {
 		})
 
 	if err != nil {
-		var awsErr *types.NoSuchEntityException
-		if errors.As(err, &awsErr) {
-			return false
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "NoSuchEntity" {
+				return false
+			}
+			t.Fatal(err)
 		}
 		t.Fatal(err)
 	}

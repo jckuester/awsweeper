@@ -16,6 +16,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/iam v1.1.1
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.1.1
 	github.com/aws/aws-sdk-go-v2/service/rds v1.1.1
+	github.com/aws/smithy-go v1.4.0
 	github.com/fatih/color v1.10.0
 	github.com/gruntwork-io/terratest v0.24.2
 	github.com/jckuester/awsls v0.11.0
