@@ -1,5 +1,5 @@
 provider "aws" {
-  version = "~> 2.0"
+  version = "~> 3.0"
 
   profile = var.profile
   region  = var.region
@@ -20,6 +20,8 @@ resource "aws_db_instance" "test" {
   username             = "foo"
   password             = "foobarbaz"
   parameter_group_name = "default.mysql5.7"
+  skip_final_snapshot  = true
+  apply_immediately    = true
 
   tags = {
     awsweeper = "test-acc"
