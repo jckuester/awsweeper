@@ -16,11 +16,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/iam v1.1.1
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.1.1
 	github.com/aws/aws-sdk-go-v2/service/rds v1.1.1
-	github.com/aws/smithy-go v1.4.0
+	github.com/aws/smithy-go v1.9.1
 	github.com/fatih/color v1.10.0
 	github.com/gruntwork-io/terratest v0.24.2
-	github.com/jckuester/awsls v0.11.0
-	github.com/jckuester/awstools-lib v0.0.0-20210613203943-40f73ed13902
+	github.com/jckuester/awsls v0.11.1-0.20211024194801-688a8938b1b3
+	github.com/jckuester/awstools-lib v0.0.0-20210524191941-23f0e367139d
 	github.com/jckuester/terradozer v0.1.4-0.20210524190016-3e6d42479316
 	github.com/onsi/gomega v1.9.0
 	github.com/spf13/pflag v1.0.5

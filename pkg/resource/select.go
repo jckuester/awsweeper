@@ -56,6 +56,10 @@ func GetTags(r *terraform.Resource) (map[string]string, error) {
 		return nil, fmt.Errorf("attribute not found: tags")
 	}
 
+	if attrValue.IsNull() {
+		return nil, fmt.Errorf("attribute is null value")
+	}
+
 	switch attrValue.Type() {
 	case cty.Map(cty.String):
 		var v map[string]string

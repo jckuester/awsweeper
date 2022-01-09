@@ -22,13 +22,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// DestroyableResources contains resources which can be destroyed via Terraform AWS Provider.
-// Failed updates are logged in the Errors array.
-type DestroyableResources struct {
-	Resources []terraform.Resource
-	Errors    []error
-}
-
 func List(ctx context.Context, filter *Filter, clients map[aws.ClientKey]aws.Client,
 	providers map[aws.ClientKey]provider.TerraformProvider, outputType string) []terradozerRes.DestroyableResource {
 	var destroyableRes []terradozerRes.DestroyableResource

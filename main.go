@@ -191,16 +191,36 @@ func mainExitCode() int {
 		resources = result
 	}
 
+	doneDelete := make(chan bool, 1)
+	go func() {
+		delete(resources, force, dryRun, parallel, doneDelete)
+	}()
+	select {
+	case <-ctx.Done():
+		return 0
+	case <-doneDelete:
+	}
+
+	return 0
+}
+
+func delete(resources []terradozerRes.DestroyableResource, force bool, dryRun bool, parallel int, done chan bool) {
 	if len(resources) == 0 {
 		internal.LogTitle("no resources found to delete")
-		return 0
+		done <- true
+		return
 	}
 
 	internal.LogTitle(fmt.Sprintf("total number of resources that would be deleted: %d", len(resources)))
 
 	if !dryRun {
-		if !internal.UserConfirmedDeletion(os.Stdin, force) {
-			return 0
+		if !force {
+			if !internal.UserConfirmedDeletion(os.Stdin) {
+				done <- true
+				return
+			}
+		} else {
+			internal.LogTitle("Proceeding with deletion and skipping confirmation (force)")
 		}
 
 		internal.LogTitle("Starting to delete resources")
@@ -210,7 +230,7 @@ func mainExitCode() int {
 		internal.LogTitle(fmt.Sprintf("total number of deleted resources: %d", numDeletedResources))
 	}
 
-	return 0
+	done <- true
 }
 
 func printHelp(fs *flag.FlagSet) {
