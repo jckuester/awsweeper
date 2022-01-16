@@ -8,12 +8,7 @@ import (
 )
 
 // UserConfirmedDeletion asks the user to confirm deletion of resources
-func UserConfirmedDeletion(r io.Reader, force bool) bool {
-	if force {
-		LogTitle("user will not be asked for confirmation (force mode)")
-		return true
-	}
-
+func UserConfirmedDeletion(r io.Reader) bool {
 	log.Info("Are you sure you want to delete these resources (cannot be undone)? Only YES will be accepted.")
 	fmt.Print(fmt.Sprintf("%23v", "Enter a value: "))
 

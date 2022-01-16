@@ -2,13 +2,13 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws/awserr"
-
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/smithy-go"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,19 +54,19 @@ func assertIamPolicyDeleted(t *testing.T, env EnvVars, arn string) {
 }
 
 func iamPolicyExists(t *testing.T, env EnvVars, arn string) bool {
-	req := env.AWSClient.Iamconn.GetPolicyRequest(&iam.GetPolicyInput{
-		PolicyArn: &arn,
-	})
-
-	_, err := req.Send(context.Background())
+	_, err := env.AWSClient.Iamconn.GetPolicy(
+		context.Background(),
+		&iam.GetPolicyInput{
+			PolicyArn: &arn,
+		})
 
 	if err != nil {
-		ec2err, ok := err.(awserr.Error)
-		if !ok {
-			t.Fatal()
-		}
-		if ec2err.Code() == "NoSuchEntity" {
-			return false
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "NoSuchEntity" {
+				return false
+			}
+			t.Fatal(err)
 		}
 		t.Fatal(err)
 	}

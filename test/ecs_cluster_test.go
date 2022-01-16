@@ -82,21 +82,21 @@ func assertEcsClusterDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func ecsClusterExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Ecsconn.DescribeClustersRequest(
+	req, err := env.AWSClient.Ecsconn.DescribeClusters(
+		context.Background(),
 		&ecs.DescribeClustersInput{
 			Clusters: []string{id},
 		})
 
-	resp, err := req.Send(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(resp.Clusters) == 0 {
+	if len(req.Clusters) == 0 {
 		return false
 	}
 
-	if *resp.Clusters[0].Status == "INACTIVE" {
+	if *req.Clusters[0].Status == "INACTIVE" {
 		return false
 	}
 

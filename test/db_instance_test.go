@@ -2,13 +2,13 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws/awserr"
-
 	"github.com/aws/aws-sdk-go-v2/service/rds"
+	"github.com/aws/smithy-go"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,7 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Only running from time to time, as this test costs money.")
+	t.Skip("Only running manually from time to time, as this test costs money.")
 
 	env := InitEnv(t)
 
@@ -36,7 +36,7 @@ func TestAcc_DBInstance_DeleteByID(t *testing.T) {
 	writeConfigID(t, terraformDir, "aws_db_instance", id)
 	defer os.Remove(terraformDir + "/config.yml")
 
-	logBuffer, err := runBinary(t, terraformDir, "YES\n", "--timeout", "5m")
+	logBuffer, err := runBinary(t, terraformDir, "YES\n", "--timeout", "10m")
 	require.NoError(t, err)
 
 	assertDBInstanceDeleted(t, env, id)
@@ -48,7 +48,7 @@ func TestAcc_DBInstance_DeleteByTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping acceptance test.")
 	}
-	t.Skip("Only running from time to time, as this test costs money.")
+	t.Skip("Only running manually from time to time, as this test costs money.")
 
 	env := InitEnv(t)
 
@@ -83,24 +83,23 @@ func assertDBInstanceDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func dbInstanceExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Rdsconn.DescribeDBInstancesRequest(&rds.DescribeDBInstancesInput{
-		DBInstanceIdentifier: &id,
-	})
-
-	resp, err := req.Send(context.Background())
+	req, err := env.AWSClient.Rdsconn.DescribeDBInstances(context.Background(),
+		&rds.DescribeDBInstancesInput{
+			DBInstanceIdentifier: &id,
+		})
 
 	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if !ok {
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "DBInstanceNotFound" {
+				return false
+			}
 			t.Fatal(err)
-		}
-		if awsErr.Code() == "DBInstanceNotFound" {
-			return false
 		}
 		t.Fatal(err)
 	}
 
-	if len(resp.DBInstances) == 0 {
+	if len(req.DBInstances) == 0 {
 		return false
 	}
 

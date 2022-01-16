@@ -2,13 +2,13 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws/awserr"
-
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,19 +83,15 @@ func assertLambdaFunctionDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func lambdaFunctionExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Lambdaconn.GetFunctionRequest(
+	_, err := env.AWSClient.Lambdaconn.GetFunction(
+		context.Background(),
 		&lambda.GetFunctionInput{
 			FunctionName: &id,
 		})
 
-	_, err := req.Send(context.Background())
-
 	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if !ok {
-			t.Fatal(err)
-		}
-		if awsErr.Code() == "ResourceNotFoundException" {
+		var awsErr *types.ResourceNotFoundException
+		if errors.As(err, &awsErr) {
 			return false
 		}
 		t.Fatal(err)

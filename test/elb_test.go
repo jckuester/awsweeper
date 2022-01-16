@@ -2,13 +2,13 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws/awserr"
-
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
+	"github.com/aws/smithy-go"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,25 +81,24 @@ func assertElbDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func elbExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Elasticloadbalancingconn.DescribeLoadBalancersRequest(
+	req, err := env.AWSClient.Elasticloadbalancingconn.DescribeLoadBalancers(
+		context.Background(),
 		&elasticloadbalancing.DescribeLoadBalancersInput{
 			LoadBalancerNames: []string{id},
 		})
 
-	resp, err := req.Send(context.Background())
-
 	if err != nil {
-		elbErr, ok := err.(awserr.Error)
-		if !ok {
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "LoadBalancerNotFound" {
+				return false
+			}
 			t.Fatal(err)
-		}
-		if elbErr.Code() == "LoadBalancerNotFound" {
-			return false
 		}
 		t.Fatal(err)
 	}
 
-	if len(resp.LoadBalancerDescriptions) == 0 {
+	if len(req.LoadBalancerDescriptions) == 0 {
 		return false
 	}
 

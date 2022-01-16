@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
-
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -80,17 +79,17 @@ func assertCloudWatchLogGroupDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func cloudWatchLogGroupExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Cloudwatchlogsconn.DescribeLogGroupsRequest(
+	req, err := env.AWSClient.Cloudwatchlogsconn.DescribeLogGroups(
+		context.Background(),
 		&cloudwatchlogs.DescribeLogGroupsInput{
 			LogGroupNamePrefix: &id,
 		})
 
-	resp, err := req.Send(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(resp.LogGroups) == 0 {
+	if len(req.LogGroups) == 0 {
 		return false
 	}
 

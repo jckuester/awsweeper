@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	"github.com/apex/log"
-	awsls "github.com/jckuester/awsls/aws"
+	"github.com/jckuester/awstools-lib/terraform"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
 // Apply applies the filter to the given resources.
-func (f Filter) Apply(res []awsls.Resource) []awsls.Resource {
+func (f Filter) Apply(res []terraform.Resource) []terraform.Resource {
 	for i, r := range res {
 		tags, err := GetTags(&r)
 		if err != nil {
@@ -25,7 +25,7 @@ func (f Filter) Apply(res []awsls.Resource) []awsls.Resource {
 		res[i].Tags = tags
 	}
 
-	var result []awsls.Resource
+	var result []terraform.Resource
 
 	for _, r := range res {
 		if f.Match(r) {
@@ -36,7 +36,7 @@ func (f Filter) Apply(res []awsls.Resource) []awsls.Resource {
 	return result
 }
 
-func GetTags(r *awsls.Resource) (map[string]string, error) {
+func GetTags(r *terraform.Resource) (map[string]string, error) {
 	if r == nil || r.UpdatableResource == nil {
 		return nil, fmt.Errorf("resource is nil: %+v", r)
 	}
@@ -54,6 +54,10 @@ func GetTags(r *awsls.Resource) (map[string]string, error) {
 	attrValue, ok := state.AsValueMap()["tags"]
 	if !ok {
 		return nil, fmt.Errorf("attribute not found: tags")
+	}
+
+	if attrValue.IsNull() {
+		return nil, fmt.Errorf("attribute is null value")
 	}
 
 	switch attrValue.Type() {

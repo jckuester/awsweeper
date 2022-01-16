@@ -2,12 +2,13 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/smithy-go"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -80,25 +81,24 @@ func assertEbsSnapshotDeleted(t *testing.T, env EnvVars, id string) {
 }
 
 func ebsSnapshotExists(t *testing.T, env EnvVars, id string) bool {
-	req := env.AWSClient.Ec2conn.DescribeSnapshotsRequest(
+	req, err := env.AWSClient.Ec2conn.DescribeSnapshots(
+		context.Background(),
 		&ec2.DescribeSnapshotsInput{
 			SnapshotIds: []string{id},
 		})
 
-	resp, err := req.Send(context.Background())
-
 	if err != nil {
-		ec2err, ok := err.(awserr.Error)
-		if !ok {
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "InvalidSnapshot.NotFound" {
+				return false
+			}
 			t.Fatal(err)
-		}
-		if ec2err.Code() == "InvalidSnapshot.NotFound" {
-			return false
 		}
 		t.Fatal(err)
 	}
 
-	if len(resp.Snapshots) == 0 {
+	if len(req.Snapshots) == 0 {
 		return false
 	}
 
