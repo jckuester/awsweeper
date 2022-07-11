@@ -1,0 +1,3 @@
+aws_autoscaling_group:
+  - tags:
+      awsweeper: test-acc
