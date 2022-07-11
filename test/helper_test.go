@@ -19,34 +19,51 @@ import (
 )
 
 const (
-	packagePath       = "github.com/jckuester/awsweeper"
+	packagePath = "github.com/jckuester/awsweeper"
+
+	// tfstateBucket is the S3 bucket that stores all Terraform states of acceptance tests.
+	// Note: the bucket must be located in "profile1" and "region1".
 	testTfStateBucket = "awsweeper-testacc-tfstate-492043"
+	// profile1 is used as profile for the 1st test account if not overwritten by TEST_AWS_PROFILE1.
+	profile1 = "myaccount1"
+	// region1 is used as the 1st test region if not overwritten by TEST_AWS_REGION1.
+	region1 = "us-west-2"
+	// profile2 is used as profile for the 2nd test account if not overwritten by TEST_AWS_PROFILE2.
+	profile2 = "myaccount2"
+	// region1 is used as the 2nd test region if not overwritten by TEST_AWS_REGION2.
+	region2 = "us-east-1"
 )
 
 // EnvVars contains environment variables for tests.
 type EnvVars struct {
-	AWSRegion  string
-	AWSProfile string
-	AWSClient  *aws.Client
+	AWSProfile1 string
+	AWSProfile2 string
+	AWSRegion1  string
+	AWSRegion2  string
+	AWSClient   *aws.Client
 }
 
 // InitEnv sets environment variables for acceptance tests.
 func InitEnv(t *testing.T) EnvVars {
 	t.Helper()
 
-	profile := getEnvOrDefault(t, "AWS_PROFILE", "myaccount1")
-	region := getEnvOrDefault(t, "AWS_DEFAULT_REGION", "us-west-2")
+	profile1 := getEnvOrDefault(t, "TEST_AWS_PROFILE1", profile1)
+	profile2 := getEnvOrDefault(t, "TEST_AWS_PROFILE2", profile2)
+	region1 := getEnvOrDefault(t, "TEST_AWS_REGION1", region1)
+	region2 := getEnvOrDefault(t, "TEST_AWS_REGION2", region2)
 
 	client, err := aws.NewClient(
 		context.Background(),
-		config.WithSharedConfigProfile(profile),
-		config.WithRegion(region))
+		config.WithSharedConfigProfile(profile1),
+		config.WithRegion(region1))
 	require.NoError(t, err)
 
 	return EnvVars{
-		AWSProfile: profile,
-		AWSRegion:  region,
-		AWSClient:  client,
+		AWSProfile1: profile1,
+		AWSRegion1:  region1,
+		AWSProfile2: profile2,
+		AWSRegion2:  region2,
+		AWSClient:   client,
 	}
 }
 
@@ -109,23 +126,29 @@ func writeConfigTag(t *testing.T, terraformDir string, resType string) {
 	}
 }
 
-func getTerraformOptions(terraformDir string, env EnvVars) *terraform.Options {
+func getTerraformOptions(terraformDir string, env EnvVars, overrideVars ...map[string]interface{}) *terraform.Options {
 	name := "awsweeper-testacc-" + strings.ToLower(random.UniqueId())
+
+	vars := map[string]interface{}{
+		"profile": env.AWSProfile1,
+		"region":  env.AWSRegion1,
+		"name":    name,
+	}
+
+	if len(overrideVars) > 0 {
+		vars = overrideVars[0]
+	}
 
 	return &terraform.Options{
 		TerraformDir: terraformDir,
 		NoColor:      true,
-		Vars: map[string]interface{}{
-			"region":  env.AWSRegion,
-			"profile": env.AWSProfile,
-			"name":    name,
-		},
+		Vars:         vars,
 		// BackendConfig defines where to store the Terraform state files of tests
 		BackendConfig: map[string]interface{}{
 			"bucket":  testTfStateBucket,
-			"key":     fmt.Sprintf("%s/%s.tfstate", terraformDir, name),
-			"region":  env.AWSRegion,
-			"profile": env.AWSProfile,
+			"key":     fmt.Sprintf("%s.tfstate", name),
+			"profile": env.AWSProfile1,
+			"region":  env.AWSRegion1,
 			"encrypt": true,
 		},
 	}

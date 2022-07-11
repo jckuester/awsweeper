@@ -403,3 +403,34 @@ func TestTypeFilter_MatchNoTags(t *testing.T) {
 		})
 	}
 }
+
+func TestTypeFilter_MatchRegion(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter resource.TypeFilter
+		region string
+		want   bool
+	}{
+		{
+			name:   "no region field in config",
+			filter: resource.TypeFilter{},
+			region: "us-west-2",
+			want:   true,
+		},
+		{
+			name: "region in config matches",
+			filter: resource.TypeFilter{
+				Region: &resource.StringFilter{Pattern: "us-west-2", Negate: false},
+			},
+			region: "us-west-2",
+			want:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.filter.MatchRegion(tt.region); got != tt.want {
+				t.Errorf("MatchRegion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

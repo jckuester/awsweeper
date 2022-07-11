@@ -81,6 +81,35 @@ func TestYamlFilter_Apply_FilterByID(t *testing.T) {
 	assert.Equal(t, "select-this", result[0].ID)
 }
 
+func TestYamlFilter_Apply_FilterByRegion(t *testing.T) {
+	//given
+	f := &resource.Filter{
+		"aws_instance": {
+			{
+				Region: &resource.StringFilter{Pattern: "us-west-*"},
+			},
+		},
+	}
+
+	// when
+	res := []terraform.Resource{
+		{
+			Type:   "aws_instance",
+			Region: "us-west-2",
+		},
+		{
+			Type:   "aws_instance",
+			Region: "us-east-1",
+		},
+	}
+
+	result := f.Apply(res)
+
+	// then
+	require.Len(t, result, 1)
+	assert.Equal(t, "us-west-2", result[0].Region)
+}
+
 func TestYamlFilter_Apply_FilterByTag(t *testing.T) {
 	//given
 	f := &resource.Filter{

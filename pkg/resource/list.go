@@ -250,7 +250,14 @@ func printString(res []terraform.Resource) {
 	fmt.Printf("\n\t---\n\tType: %s\n\tFound: %d\n\n", res[0].Type, len(res))
 
 	for _, r := range res {
+		profile := `N/A`
+		if r.Profile != "" {
+			profile = r.Profile
+		}
+
 		printStat := fmt.Sprintf("\t\tId:\t\t%s", r.ID)
+		printStat += fmt.Sprintf("\n\t\tProfile:\t%s", profile)
+		printStat += fmt.Sprintf("\n\t\tRegion:\t\t%s", r.Region)
 		if r.Tags != nil {
 			if len(r.Tags) > 0 {
 				var keys []string

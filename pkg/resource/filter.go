@@ -25,6 +25,7 @@ type TypeFilter struct {
 	Tagged  *bool                   `yaml:",omitempty"`
 	Tags    map[string]StringFilter `yaml:",omitempty"`
 	Created *Created                `yaml:",omitempty"`
+	Region  *StringFilter           `yaml:",omitempty"`
 }
 
 type StringMatcher interface {
@@ -237,6 +238,22 @@ func (f TypeFilter) matchCreated(creationTime *time.Time) bool {
 	return createdAfter && createdBefore
 }
 
+// MatchRegion checks whether a resource Region matches the filter.
+func (f TypeFilter) MatchRegion(region string) bool {
+	if f.Region == nil {
+		return true
+	}
+
+	if ok, err := f.Region.matches(region); ok {
+		if err != nil {
+			log.WithError(err).Fatal("failed to match Region")
+		}
+		return true
+	}
+
+	return false
+}
+
 // Match checks whether a resource matches the filter criteria.
 func (f Filter) Match(r terraform.Resource) bool {
 	resTypeFilters, found := f[r.Type]
@@ -252,7 +269,8 @@ func (f Filter) Match(r terraform.Resource) bool {
 		if rtf.MatchTagged(r.Tags) &&
 			rtf.MatchTags(r.Tags) &&
 			rtf.matchID(r.ID) &&
-			rtf.matchCreated(r.CreatedAt) {
+			rtf.matchCreated(r.CreatedAt) &&
+			rtf.MatchRegion(r.Region) {
 			return true
 		}
 	}
